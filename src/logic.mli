@@ -47,6 +47,8 @@ val all_solutions : Set.t -> bool String.Map.t list option
     result is [None]. *)
 val solve : Set.t -> bool String.Map.t option
 
+val evaluate : bool String.Map.t -> t -> t
+
 (** {2 Logical operators } *)
 
 (** Disjunction *)

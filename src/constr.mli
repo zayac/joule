@@ -4,7 +4,7 @@ open Core.Std
 type t = Term.t list * Term.t list
 
 (** A constraint on variable *)
-type var_bounds = Term.t Logic.Map.t * Term.t Logic.Map.t
+type var_bounds = Term.t Logic.Map.t
 
 val compare_t : t -> t -> int
 val t_of_sexp : Sexplib.Sexp.t -> t
@@ -27,3 +27,7 @@ val to_string : t -> string
 val get_vars : t -> String.Set.t * String.Set.t
 
 val print_constraints : var_bounds String.Map.t -> unit
+
+exception No_Solution of string
+
+val substitute : var_bounds String.Map.t -> bool String.Map.t -> Term.t String.Map.t

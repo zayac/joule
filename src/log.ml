@@ -22,7 +22,7 @@ let output_header s =
     if String.length header = 79 then
       fprintf out "%s=\n%!" header
     else
-    fprintf out "%s" header
+    fprintf out "%s\n%!" header
 
 module type S = sig
   val log: string Lazy.t -> unit
@@ -50,11 +50,11 @@ module Make (S: SECTION) = struct
       fprintf out "%s%s\n%!" section (Lazy.force lazy_msg)
 
   let logf fmt =
-    let print o = fprintf o "\n%!" in
     match !output with
-    | None ->  ikfprintf print stdout fmt
+    | None ->  ikfprintf (fun x -> ()) stdout fmt
     | Some out ->
       begin
+        let print o = fprintf o "\n%!" in
         fprintf out "%s" section;
         kfprintf print out fmt
       end

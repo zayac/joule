@@ -1,0 +1,5 @@
+$u = [int]
+$w = int
+$x = {}
+$y = [int]
+$z = [{}, int]

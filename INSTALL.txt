@@ -1,6 +1,6 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 501e8231909829d095521416d259b6e2) *)
-This is the INSTALL file for the cal distribution.
+(* DO NOT EDIT (digest: 57194d70e9d5ccce9ff09c47bac28344) *)
+This is the INSTALL file for the Joule distribution.
 
 This package uses OASIS to generate its build system. See section OASIS for
 full information.
@@ -9,14 +9,14 @@ Dependencies
 ============
 
 In order to compile this package, you will need:
-* ocaml (>= 4.00.1)
+* ocaml (>= 4.00.1) for all, test joule
 * findlib (>= 1.3.2)
 * core
 * sexplib
 * comparelib
 * ocamlgraph
 * ctypes
-* menhir
+* menhir for all, test joule
 
 Installing
 ==========

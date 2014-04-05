@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 1bd438c0e48ed82f6018f9d8636bdf9d) *)
+(* DO NOT EDIT (digest: 31c41e2851e6a5cd7766b0ed1755c7d7) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -584,7 +584,7 @@ let package_default =
      lib_c = [];
      flags =
        [
-          (["oasis_executable_cal_cclib"; "link"],
+          (["oasis_executable_joule_cclib"; "link"],
             [
                (OASISExpr.EBool true, S []);
                (OASISExpr.ETest ("system", "linux"),
@@ -600,7 +600,7 @@ let package_default =
                (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
                  S [A "-cclib"; A "-lpicosat"])
             ]);
-          (["oasis_executable_cal_cclib"; "ocamlmklib"; "c"],
+          (["oasis_executable_joule_cclib"; "ocamlmklib"; "c"],
             [
                (OASISExpr.EBool true, S []);
                (OASISExpr.ETest ("system", "linux"),

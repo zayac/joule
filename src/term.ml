@@ -254,12 +254,92 @@ let logic_map_to_term_map lm =
     | None -> Some key
     | Some value -> Some (Logic.And (value, key))))
 
-(*let unify ctx model term =*)
-  (*let transform map =*)
-    (*String.Map.map map ~f:(fun (logic, data) ->*)
-      (*(if Z3Solver.evaluate ctx model logic then Logic.True else Logic.False),*)
-      (*data) in*)
-  (*match term with*)
-  (*| Record (map, v) -> Record (transform map, v)*)
-  (*| Choice (map, v) -> Choice (transform map, v)*)
-  (*| x -> x*)
+let rec to_wff bools term =
+  let transform map =
+    String.Map.map 
+      ~f:(fun (logic, data) ->
+        Logic.evaluate bools logic, data
+      ) map in
+  match term with
+  | Record (map, v) -> Record (transform map, v)
+  | Choice (map, v) -> Choice (transform map, v)
+  | List (x, v) -> List (List.map ~f:(to_wff bools) x, v)
+  | Tuple x -> Tuple (List.map ~f:(to_wff bools) x)
+  | x -> x
+
+let rec join t t' =
+  let join_lst l l' =
+    List.map2_exn l l'
+      ~f:(fun t t' ->
+        match join t t' with
+        | None -> raise (Incomparable_Terms (t, t'))
+        | Some jt -> jt
+      ) in
+  match t, t' with
+  | Var _, _ -> raise (Non_Ground t)
+  | _, Var _ -> raise (Non_Ground t')
+  | t, Nil
+  | Nil, t -> Some t
+  | Symbol s, Symbol s' when Poly.(s = s') -> Some (Symbol s)
+  | Int i, Int i' when Poly.(i = i') -> Some (Int i)
+  | Tuple l, Tuple l' when Poly.(List.length l = List.length l') ->
+    begin
+      try
+        Some (Tuple (join_lst l l'))
+      with Incomparable_Terms (t, t') -> None
+    end
+  | List (l, None), List (l', None) ->
+    begin
+      try
+        if Poly.(List.length l = List.length l') then
+          Some (List (join_lst l l, None))
+        else if Poly.(List.length l > List.length l') then
+          let reduced = List.take l (List.length l') in
+          let lst = (join_lst reduced l') @ (List.drop l (List.length l')) in
+            Some (List (lst, None))
+        else
+          let reduced = List.take l' (List.length l) in
+          let lst = (join_lst reduced l) @ (List.drop l' (List.length l)) in
+            Some (List (lst, None))
+      with Incomparable_Terms (t, t') -> None
+    end
+  | List (_, Some _), _ -> raise (Non_Ground t')
+  | _, List (_, Some _) -> raise (Non_Ground t)
+  | Record (map, None), Record (map', None) ->
+    begin
+      try
+        let join_map = String.Map.merge map map' ~f:(fun ~key data ->
+          match data with
+          | `Left v
+          | `Right v -> Some v
+          | `Both ((l, t), (l', t')) ->
+            begin
+              match join t t' with
+              | None -> raise (Incomparable_Terms (t, t'))
+              | Some jt -> Some (Logic.(l * l'), jt)
+            end) in
+        Some (Record (join_map, None))
+      with Incomparable_Terms (t, t') -> None
+    end
+  | Record (_, Some _), _ -> raise (Non_Ground t')
+  | _, Record (_, Some _) -> raise (Non_Ground t)
+  | Choice (map, None), Choice (map', None) ->
+    begin
+      try
+        let join_map = String.Map.merge map map' ~f:(fun ~key data ->
+          match data with
+          | `Left v
+          | `Right v -> None
+          | `Both ((l, t), (l', t')) ->
+            begin
+              match join t t' with
+              | None -> raise (Incomparable_Terms (t, t'))
+              | Some jt -> Some (Logic.(l * l'), jt)
+            end) in
+        Some (Choice (join_map, None))
+      with Incomparable_Terms (t, t') -> None
+    end
+  | Choice (_, Some _), _ -> raise (Non_Ground t')
+  | _, Choice (_, Some _) -> raise (Non_Ground t)
+  | _, _ -> None
+
