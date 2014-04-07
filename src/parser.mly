@@ -52,9 +52,9 @@ let switch_of_alist_exn (startp, endp) l =
         startp endp;
     Term.Switch map
 
-(* convert a label-term association list into a correct map structure with
-   label conflict resolution. New constraints can be added to [bool_constrs]
-   list while resolving constraints. *)
+(* convert a label-term key-value pairs into a correct map structure with
+   label conflict resolution. New boolean constraints are added to
+   [bool_constrs]. *)
 let map_of_alist_exn (startp, endp) l =
   let open Core.Std in
   let multi_map = String.Map.of_alist_multi l in
@@ -65,16 +65,9 @@ let map_of_alist_exn (startp, endp) l =
   | (g, v) :: [] ->
     if not (List.is_empty gacc) then
       let gacc, vacc = g :: gacc, v :: vacc in
-(*
-      let andl = pairwise_not_and gacc in
-      let new_constr = Logic.Set.of_list andl in
-      log_bool new_constr; (* log boolean constraints *)
-      let _ = bool_constrs := Logic.Set.union new_constr !bool_constrs in
-*)
-      (Logic.list_of_disjuncts gacc,
-        switch_of_alist_exn (startp, endp)
-          (List.map2_exn ~f:(fun g t -> g, t) gacc vacc)
-      ) 
+      let logic = Logic.list_of_disjuncts gacc in
+      let lst =  List.map2_exn ~f:(fun g t -> g, t) gacc vacc in
+      logic, switch_of_alist_exn (startp, endp) lst
     else
       g, v
   | (g, v) :: tl -> f (g :: gacc) (v :: vacc) tl in
