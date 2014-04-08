@@ -34,7 +34,7 @@ let loop dot_output debug verbose filename =
     let constrs, logic = In_channel.with_file filename
         ~f:(fun inx -> Parser.parse Lexer.read (Lexing.from_channel inx)) in
     Log.logf "%d constraints have been read:" (List.length constrs);
-    List.iter constrs ~f:(fun el -> Log.logf "\t%s" (Constr.to_string el));
+    List.iter constrs ~f:(fun el -> Log.logf "  %s" (Constr.to_string el));
     (* graph construction *)
     Log.output_header "Graph construction";
     let g = Network.constrs_to_graph_exn constrs in
@@ -46,9 +46,24 @@ let loop dot_output debug verbose filename =
     match Solver.solve_exn traversal_list with
     | None -> print_endline "No satisfiable model is found"
     | Some x ->
-      let f ~key ~data =
-        printf "$%s = %s\n" key (Term.to_string data) in
-      String.Map.iter x ~f
+      begin
+        let f ~key ~data =
+          printf "$%s = %s\n" key (Term.to_string data) in
+        String.Map.iter x ~f;
+        (* output also values for variables without any constraints *)
+        let all_vars = G.fold_vertex
+          (fun v acc ->
+            match v with
+            | Env_Out
+            | Env_In -> acc
+            | Internal x -> String.Set.union x acc
+          ) g String.Set.empty in
+        String.Set.iter
+          (String.Set.diff all_vars (String.Set.of_list (String.Map.keys x)))
+          ~f:(fun x ->
+            f ~key:x ~data:Term.Nil
+          )
+      end
   with Lexer.Syntax_Error msg
      | Errors.Parsing_Error msg
      | Network.Topology_Error msg

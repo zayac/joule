@@ -81,14 +81,14 @@ let check_connectivity_exn g =
     let pred_vars = G.fold_pred_e
       (fun (_, (_, r), _) acc -> accumulate acc r) g vnode SS.empty in
     let succ_diff = SS.diff x succ_vars in
-    let pred_diff = SS.diff pred_vars x in
+    let pred_diff = SS.diff x pred_vars in
     let set_string s = String.concat ~sep:", " (SS.to_list s) in
     if not (SS.is_empty succ_diff) then
-        Log.logf "variables {%s} are not bounded from above"
-          (set_string succ_diff);
+      Log.logf "variables {%s} are not connected to a component that consumes \
+        the output" (set_string succ_diff);
     if not (SS.is_empty pred_diff) then
-      raise (topo_error (sprintf "variables {%s} are not used in terms for \
-        input channels terms" (set_string pred_diff)));
+      raise (topo_error (sprintf "variables {%s} are not connected to a \
+      component that provides an input" (set_string pred_diff)));
   | Env_In | Env_Out -> () in
   G.iter_vertex check g
 
@@ -98,11 +98,12 @@ let constrs_to_graph_exn cstrs =
   let g = ref G.empty in
   let add c =
     let src, edge, dest = constr_to_edge c in
+    let vertex = G.E.create src edge dest in
     if src = Env_In then env_in_found := true;
     if dest = Env_Out then env_out_found := true;
     Log.logf "adding edge (%s, \"%s\", %s) to the graph" (Node.to_string src)
       (Constr.to_string c) (Node.to_string dest);
-    g := G.add_edge_e !g (G.E.create src edge dest) in
+    g := G.add_edge_e !g vertex in
   List.iter ~f:add cstrs;
   if not !env_in_found then
     topo_error "The input of the network is not connected to the environment";
@@ -113,22 +114,30 @@ let constrs_to_graph_exn cstrs =
   check_connectivity_exn !g;
   !g
 
-let traversal_order g =
-  let module T = Graph.Topological.Make_stable(G) in
-  let topo = ref [] in
+let order g =
+  let q = Queue.create () in
+  G.iter_vertex
+    (fun v ->
+      if Int.(G.out_degree g v = 0) then Queue.enqueue q v
+    ) g;
   let traversed = ref Node.Set.empty in
-  let loops = ref [] in
-  let add_edges v =
-    List.iter
-      ~f:(fun (source, x, sink) ->
-        (*print_endline (Constr.to_string x);*)
-        if Node.Set.mem !traversed source then topo := x :: !topo
-        else loops := x :: !loops
-      )
-      (G.pred_e g v);
-    traversed := Node.Set.add !traversed v in
-  T.iter add_edges g;
-  let lst = !topo @ !loops in
+  let lst = ref [] in
+  while not (Queue.is_empty q) do
+    let v = Queue.dequeue_exn q in
+    if not (Node.Set.mem !traversed v) then
+      begin
+        G.iter_pred_e
+          (fun (s, e, _) ->
+            lst := e :: !lst;
+            Queue.enqueue q s
+          ) g v;
+      traversed := Node.Set.add !traversed v
+      end
+  done;
+  List.rev !lst
+
+let traversal_order g =
+  let lst = order g in
   let counter = ref 1 in
   List.iter
     ~f:(fun x ->

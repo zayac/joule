@@ -1,5 +1,7 @@
 open Core.Std
 
+module Log = Log.Make(struct let section = "solver:" end)
+
 exception Unsatisfiability_Error of string
 
 let unsat_error msg =
@@ -274,8 +276,7 @@ let set_bound_exn depth constrs var terms =
   String.Map.change constrs var (fun v ->
     match v with
     | None ->
-      Log.logf "%s%s for variable $%s to {%s}" (String.make depth ' ') b var
-        (print_map terms);
+      Log.logf "%s for variable $%s to {%s}" b var (print_map terms);
       Some terms
     | Some u ->
       let merged = merge_bounds (depth + 1) u terms in
@@ -284,8 +285,7 @@ let set_bound_exn depth constrs var terms =
           (Printf.sprintf "upper bounds for variable $%s are inconsistent" 
             var))
       else
-        Log.logf "%s%s for variable $%s to {%s}" (String.make depth ' ') b
-          var (print_map merged);
+        Log.logf "%s for variable $%s to {%s}" b var (print_map merged);
         Some merged
   )
 
@@ -721,6 +721,7 @@ let resolve_bound_constraints topo =
 
 let solve_exn lst =
   let constrs, logic = resolve_bound_constraints lst in
+  (*Logic.Set.iter ~f:(fun s -> print_endline (Logic.to_string s)) logic;*)
   try
     match Logic.solve logic with
     | None -> None
