@@ -8,7 +8,7 @@ val iteration_limit : int
 
 (** A unification procedure that finally returns unified variable constraints
     as well as logical constraints that need to be unified. *)
-val solve_exn : (Term.t list * Term.t list) list -> Term.t String.Map.t option
+val solve_exn : (Term.t list * Term.t list) list -> Logic.Set.t -> Term.t String.Map.t option
 
 (*
 val solve_senior_multi_exn : int -> [> `Lower | `Upper] ->

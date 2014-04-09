@@ -25,8 +25,8 @@ type solution =
   | Solutions of bool String.Map.t list
 
 let rec to_string = function
-  | False -> "0"
-  | True -> "1"
+  | False -> "false"
+  | True -> "true"
   | Not t -> Printf.sprintf "¬%s" (to_string t)
   | And (t, t') -> Printf.sprintf "(%s ∧ %s)" (to_string t) (to_string t')
   | Or (t, t') -> Printf.sprintf "(%s ∨ %s)" (to_string t) (to_string t')

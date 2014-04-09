@@ -43,7 +43,7 @@ let loop dot_output debug verbose filename =
     Log.output_header "Traversal order for constraints";
     let traversal_list = Network.traversal_order g in
     Log.output_header "Finding upper bounds for constraints";
-    match Solver.solve_exn traversal_list with
+    match Solver.solve_exn traversal_list logic with
     | None -> print_endline "No satisfiable model is found"
     | Some x ->
       begin

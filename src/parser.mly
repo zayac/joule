@@ -1,12 +1,13 @@
 %{
 
-module Log = Log.Make(struct let section = "parser:" end)
+module PLog = Log.Make(struct let section = "parser:" end)
+module LLog = Log.Make(struct let section = "logic:" end)
 
 let bool_constrs = ref Logic.Set.empty
 
 let log_bool set =
   if not (Logic.Set.is_empty set) then
-    Log.logf "boolean constraints {%s} have been added"
+    LLog.logf "adding boolean constraints {%s}"
       (Logic.set_to_string set)
 
 let pairwise_not_and l =
@@ -35,17 +36,15 @@ let switch_of_alist_exn (startp, endp) l =
     let map, bool_constrs' = Term.canonize_switch map in
     let keys = Logic.Map.keys map in
     (* add freshly generated constraints from canonization function *)
-    log_bool bool_constrs';
     bool_constrs := Logic.Set.union !bool_constrs bool_constrs';
     (* add constraints asserting pairwise logical expressions exclusion *)
     let pairwise_exclusion = Logic.Set.of_list (pairwise_not_and keys) in
-    log_bool pairwise_exclusion;
     bool_constrs := Logic.Set.union !bool_constrs pairwise_exclusion;
     (* add constraints asserting that at least one logical expression must be
        satisfiable *)
     let singleton = Logic.Set.singleton (Logic.list_of_disjuncts keys) in
-    log_bool singleton;
     bool_constrs := Logic.Set.union !bool_constrs singleton;
+    log_bool !bool_constrs;
     if Logic.Map.is_empty map then
       Errors.parse_error
         "a switch term does not contain any satisfiable logic expression"
