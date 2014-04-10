@@ -1,0 +1,9 @@
+nil <= [];
+nil <= {};
+{} <= [];
+[] <= {};
+[nil, nil, nil] <= nil;
+[nil, {}, nil] <= [nil, nil];
+[nil, nil, nil] <= [nil];
+{} <= [nil];
+[1, 2, 3, nil, nil] <= [nil, nil, nil, nil, nil];

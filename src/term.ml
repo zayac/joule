@@ -29,11 +29,10 @@ let rec to_string t =
   | None -> ""
   | Some v -> " | $" ^ v in
   let dict_el_to_string (l, (g, t)) =
-    let guard = if Logic.(g = True) then "" else
-      Printf.sprintf "(%s)" (Logic.to_string g) in
-    if Logic.(g <> False) then
-      Printf.sprintf "%s%s: %s" l guard (to_string t)
-    else "" in
+    let guard =
+      if Logic.(g = True) then "" else
+        Printf.sprintf "(%s)" (Logic.to_string g) in
+    Printf.sprintf "%s%s: %s" l guard (to_string t) in
   let print_dict x tail lsep rsep =
     let element_strs = L.map ~f:dict_el_to_string (SM.to_alist x) in
     S.concat [lsep;
@@ -46,8 +45,14 @@ let rec to_string t =
   | List (x, tail) ->
     S.concat ["["; S.concat ~sep:", " (L.map ~f:to_string x);
       tail_to_string tail; "]"]
-  | Record (x, tail) -> print_dict x tail "{" "}"
-  | Choice (x, tail) -> print_dict x tail "(:" ":)"
+  | Record (x, tail) ->
+    let map = String.Map.filter x
+      ~f:(fun ~key ~data:(g, _) -> Logic.(g <> False)) in
+    print_dict map tail "{" "}"
+  | Choice (x, tail) ->
+    let map = String.Map.filter x
+      ~f:(fun ~key ~data:(g, _) -> Logic.(g <> False)) in
+    print_dict map tail "(:" ":)"
   | Var x -> "$" ^ x
   | Switch x ->
     let alist = Logic.Map.to_alist x in

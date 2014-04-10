@@ -1,3 +1,4 @@
+open Core.Std
 
 let print_error ?(loc=None) fmt =
   let _ = match loc with
@@ -14,3 +15,18 @@ exception Parsing_Error of string
 let parse_error msg start finish =
   let open Location in
   raise (Parsing_Error (error ~loc:(Some (pos_loc start finish)) msg))
+
+let constraint_missing bound set =
+  let set_string s =
+    String.concat ~sep:", "
+      (List.map (String.Set.to_list s) ~f:(fun x -> "$" ^ x)) in
+  let ending, ending' =
+    match String.Set.length set, bound with
+    | 1, `Upper -> "an upper bound", "a term variable"
+    | 1, `Lower -> "a lower bound", "a term variable"
+    | 0, _ -> failwith "the set of variables is empty"
+    | _, `Upper -> "upper bounds", "term variables"
+    | _, `Lower -> "lower bounds", "term variables"
+    | _, _ -> failwith "invalid bound type" in
+  sprintf "missing a constraint that specifies %s for %s %s"
+    ending ending' (set_string set)

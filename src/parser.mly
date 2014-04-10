@@ -7,8 +7,7 @@ let bool_constrs = ref Logic.Set.empty
 
 let log_bool set =
   if not (Logic.Set.is_empty set) then
-    LLog.logf "adding boolean constraints {%s}"
-      (Logic.set_to_string set)
+    LLog.logf "adding boolean constraints {%s}" (Logic.set_to_string set)
 
 let pairwise_not_and l =
   let open Core.Std in
@@ -25,31 +24,29 @@ let pairwise_not_and l =
 
 let switch_of_alist_exn (startp, endp) l =
   let open Core.Std in
-  match Logic.Map.of_alist l with
-  | `Duplicate_key expr ->
-    Errors.parse_error
-      ("two or more terms are associated with logical expression " ^ 
-        (Logic.to_string expr))
-      startp
-      endp
-  | `Ok map ->
-    let map, bool_constrs' = Term.canonize_switch map in
-    let keys = Logic.Map.keys map in
-    (* add freshly generated constraints from canonization function *)
-    bool_constrs := Logic.Set.union !bool_constrs bool_constrs';
-    (* add constraints asserting pairwise logical expressions exclusion *)
-    let pairwise_exclusion = Logic.Set.of_list (pairwise_not_and keys) in
-    bool_constrs := Logic.Set.union !bool_constrs pairwise_exclusion;
-    (* add constraints asserting that at least one logical expression must be
-       satisfiable *)
-    let singleton = Logic.Set.singleton (Logic.list_of_disjuncts keys) in
-    bool_constrs := Logic.Set.union !bool_constrs singleton;
-    log_bool !bool_constrs;
-    if Logic.Map.is_empty map then
-      Errors.parse_error
-        "a switch term does not contain any satisfiable logic expression"
-        startp endp;
-    Term.Switch map
+  let multi_map = Logic.Map.of_alist_multi l in
+  let map = Logic.Map.fold multi_map ~init:Logic.Map.empty
+    ~f:(fun ~key ~data acc ->
+      match data with
+      | hd :: [] -> Logic.Map.add acc ~key ~data:hd
+      | hd :: tl ->
+        let _ = bool_constrs := Logic.(Set.add !bool_constrs ~-key) in
+        acc
+      | [] -> failwith "invalid argument"
+    ) in
+  let map, bool_constrs' = Term.canonize_switch map in
+  let keys = Logic.Map.keys map in
+  (* add freshly generated constraints from canonization function *)
+  bool_constrs := Logic.Set.union !bool_constrs bool_constrs';
+  (* add constraints asserting pairwise logical expressions exclusion *)
+  let pairwise_exclusion = Logic.Set.of_list (pairwise_not_and keys) in
+  bool_constrs := Logic.Set.union !bool_constrs pairwise_exclusion;
+  (* add constraints asserting that at least one logical expression must be
+     satisfiable *)
+  let singleton = Logic.Set.singleton (Logic.list_of_disjuncts keys) in
+  bool_constrs := Logic.Set.union !bool_constrs singleton;
+  log_bool !bool_constrs;
+  Term.Switch map
 
 (* convert a label-term key-value pairs into a correct map structure with
    label conflict resolution. New boolean constraints are added to
@@ -76,7 +73,7 @@ let map_of_alist_exn (startp, endp) l =
 %token <int> INT
 %token <string> VAR
 %token <string> ID
-%token NIL NOT OR AND
+%token NIL TRUE FALSE NOT OR AND
 %token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET LANGULAR RANGULAR
   LSMILE RSMILE
 %token SCOLON COLON COMMA BAR LEQ EQ EOF
@@ -92,7 +89,7 @@ constrs:
   | term+ EQ term+ SCOLON { ($3 @ $1), ($3 @ $1) }
   | error
     {
-      Errors.parse_error "Invalid constraint" $startpos $endpos
+      Errors.parse_error "Invalid term or constraint" $startpos $endpos
     }
 
 term:
@@ -154,7 +151,8 @@ guard:
   | LPAREN AND logical_term logical_term RPAREN { Logic.And ($3, $4) }
 
 logical_term:
-  | NIL { Logic.False }
+  | TRUE { Logic.True }
+  | FALSE { Logic.False }
   | VAR { Logic.Var $1 }
   | LPAREN OR logical_term logical_term RPAREN { Logic.Or ($3, $4) }
   | LPAREN AND logical_term logical_term RPAREN { Logic.And ($3, $4) }

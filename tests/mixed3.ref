@@ -1,0 +1,5 @@
+$a = nil
+$b = (:a: nil, aa: 10, c: t:)
+$d = (:a: nil, aa: 10:)
+$l = nil
+$x = (:a: nil, aa: 10, c: t:)

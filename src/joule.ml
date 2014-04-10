@@ -20,7 +20,7 @@ module Dot = Graph.Graphviz.Dot(struct
   end)
 
 let create_dot_output g dot_output =
-  Log.logf "outputting the network graph in dot format to %s" dot_output;
+  Log.logf "a network graph is saved in DOT format in '%s'" dot_output;
   Out_channel.with_file dot_output
     ~f:(fun oc -> Dot.output_graph oc g)
 
@@ -72,15 +72,14 @@ let loop dot_output debug verbose filename =
 
 let command =
   Command.basic
-    ~summary:"Resolve constraints from AstraKahn Term Algebra (AKTA)"
+    ~summary:"Constraint satisfaction tool for hierarchical data types"
     ~readme:(fun () -> "More detailed information")
     Command.Spec.(
       empty
-      +> flag "-dot-output" (optional string) ~doc:"string output network \
-        graph in dot format to a file provided as the argument"
+      +> flag "-dot-output" (optional string) ~doc:"string save a network \
+        graph in dot format in a file provided as the argument"
       +> flag "-debug" no_arg ~doc:" print debug information"
-      +> flag "-verbose" no_arg ~doc:" print preliminary computation \
-        results"
+      +> flag "-verbose" no_arg ~doc:" print auxiliary computation results"
       +> anon ("filename" %:string)
     )
     (fun dot_output debug verbose filename () ->

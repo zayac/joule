@@ -82,13 +82,10 @@ let check_connectivity_exn g =
       (fun (_, (_, r), _) acc -> accumulate acc r) g vnode SS.empty in
     let succ_diff = SS.diff x succ_vars in
     let pred_diff = SS.diff x pred_vars in
-    let set_string s = String.concat ~sep:", " (SS.to_list s) in
     if not (SS.is_empty succ_diff) then
-      Log.logf "variables {%s} are not connected to a component that consumes \
-        the output" (set_string succ_diff);
+      Log.log (lazy (Errors.constraint_missing `Upper succ_diff));
     if not (SS.is_empty pred_diff) then
-      raise (topo_error (sprintf "variables {%s} are not connected to a \
-      component that provides an input" (set_string pred_diff)));
+      raise (topo_error (Errors.constraint_missing `Lower pred_diff));
   | Env_In | Env_Out -> () in
   G.iter_vertex check g
 

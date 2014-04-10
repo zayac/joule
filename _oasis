@@ -37,3 +37,6 @@ Executable joule
 
 Test joule
   Command: ./scripts/run_all_tests.pl joule.native my myerr; ./scripts/compare_results.pl ref my referr myerr
+
+PostCleanCommand:
+  rm -f tests/*.my tests/*.myerr

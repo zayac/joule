@@ -30,6 +30,8 @@ rule read = parse
   | int      { INT (int_of_string (Lexing.lexeme lexbuf)) }
 (*  | float    { FLOAT (float_of_string (Lexing.lexeme lexbuf)) }*)
   | "nil"    { NIL }
+  | "true"   { TRUE }
+  | "false"  { FALSE }
   | "not"    { NOT }
   | "or"     { OR }
   | "and"    { AND }

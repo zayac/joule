@@ -1,0 +1,8 @@
+Uncaught exception:
+  
+  (Sys_error "tests/unsat3.t: No such file or directory")
+
+Raised by primitive operation at file "pervasives.ml", line 292, characters 20-46
+Called from file "lib/in_channel.ml", line 19, characters 46-65
+Called from file "src/joule.ml", line 34, characters 25-128
+Called from file "lib/exn.ml", line 69, characters 6-10

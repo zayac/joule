@@ -36,7 +36,7 @@ let set_to_string s =
   let sl = Set.to_list s in
   let sstring = List.map ~f:to_string sl in
   String.concat ~sep:", " sstring
-  
+
 let rec is_ground = function
   | False | True -> true
   | Not t -> is_ground t
@@ -253,6 +253,7 @@ let rec evaluate bools = function
       match evaluate bools t with
       | False -> True
       | True -> False
+      | _ -> failwith "invalid argument"
     end
   | Or (t, t') ->
     begin
@@ -260,6 +261,7 @@ let rec evaluate bools = function
       | True, _
       | _, True -> True
       | False, False -> False
+      | _ -> failwith "invalid argument"
     end
   | And (t, t') ->
     begin
@@ -267,6 +269,7 @@ let rec evaluate bools = function
       | True, True -> True
       | False, _ -> False
       | _, False -> False
+      | _ -> failwith "invalid argument"
     end
   | t -> t
 
