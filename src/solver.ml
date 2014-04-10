@@ -9,7 +9,9 @@ let unsat_error msg =
   let open Errors in
   raise (Unsatisfiability_Error (error msg))
 
-let iteration_limit = 1000
+let iteration_limit = ref 100
+
+let verbose_output = ref false
 
 let boolean_constraints = ref Logic.Set.empty
 
@@ -334,11 +336,11 @@ let set_list_bound depth constrs v lst =
 
 let rec solve_senior depth constrs left right =
   let logic_left, term_left = left in
-  let term_left, l = Equations.union term_left in
-  let logic_left = Logic.(l * logic_left) in
+  (*let term_left, l = Equations.union term_left in*)
+  (*let logic_left = Logic.(l * logic_left) in*)
   let logic_right, term_right = right in
-  let term_right, l = Equations.union term_right in
-  let logic_right = Logic.(l * logic_right) in
+  (*let term_right, l = Equations.union term_right in*)
+  (*let logic_right = Logic.(l * logic_right) in*)
   let open Term in
   let error t1 t2 =
     unsat_error
@@ -684,15 +686,9 @@ and solve_senior_multi_exn depth context leftm rightm =
     )
 
 let apply constraints (left, right) =
-  List.iter left
-    ~f:(fun t ->
-      let l_map = Logic.Map.singleton Logic.True t in
-      List.iter right
-        ~f:(fun t' ->
-          let l_map' = Logic.Map.singleton Logic.True t' in
-          constraints := solve_senior_multi_exn 0 !constraints l_map l_map'
-        )
-    )
+  let l_map = Logic.Map.singleton Logic.True left in
+  let r_map = Logic.Map.singleton Logic.True right in
+  constraints := solve_senior_multi_exn 0 !constraints l_map r_map
 
 (* a helper function to compare two context structures *)
 let ctx_equal (constrs, logic) (constrs', logic') =
@@ -724,27 +720,64 @@ let resolve_bound_constraints topo =
   let iter_counter = ref 1 in
   let constrs, bools = ref String.Map.empty, boolean_constraints in
   while not !fixed_point do
-    SLog.logf "traversal #%d" !iter_counter;
-    let constrs', bools' = constrs, bools in
+    SLog.logf "iteration #%d" !iter_counter;
+    if !verbose_output then printf "iteration #%d\n" !iter_counter;
+    let constrs', bools' = ref !constrs, ref !bools in
     List.iter ~f:(apply constrs) topo;
     (* The solver terminates when either the bounds stop to change or the
        number of iterations exceeds the iteration limit. *)
-    if ctx_equal (!constrs, !bools) (!constrs', !bools') || !iter_counter > iteration_limit then
+    if ctx_equal (!constrs, !bools) (!constrs', !bools') || !iter_counter > !iteration_limit then
       fixed_point := true
     else
       iter_counter := !iter_counter + 1;
   done;
   !constrs
 
-let solve_exn lst logic =
+let add_boolean_constraints constrs =
+  String.Map.iter constrs
+    ~f:(fun ~key ~data ->
+      let expr =
+        Logic.Map.fold data ~init:Logic.False
+          ~f:(fun ~key ~data acc -> Logic.(acc + key)) in
+      log_bool_constr 0 expr;
+      boolean_constraints := Logic.(Set.add !boolean_constraints expr)
+    )
+
+let solve_exn lst logic verbose limit =
+  let _ = verbose_output := verbose in
+  let _ = match limit with
+  | None -> ()
+  | Some limit -> iteration_limit := limit in
   boolean_constraints := logic;
   let constrs = resolve_bound_constraints lst in
+  add_boolean_constraints constrs;
+  if !verbose_output then
+    begin
+    printf "Upper bounds for term variables:\n";
+    String.Map.iter constrs
+      ~f:(fun ~key ~data ->
+        printf "$%s:\n" key;
+        Logic.Map.iter data
+          ~f:(fun ~key ~data ->
+            printf "  %s -> %s\n" (Logic.to_string key) (Term.to_string data)
+          )
+      );
+    printf "Boolean constraints:\n";
+    Logic.Set.iter !boolean_constraints
+      ~f:(fun x ->
+        printf "  %s\n" (Logic.to_string x);
+      )
+    end;
   try
     match Logic.solve !boolean_constraints with
     | None -> None
     | Some bool_map ->
+      if !verbose_output then
+        printf "A satisfiable assignment for boolean variables:\n";
       String.Map.iter bool_map
-        ~f:(fun ~key ~data ->
+                ~f:(fun ~key ~data ->
+          if !verbose_output then
+            printf "  $%s = %s\n" key (if data then "true" else "false");
           LLog.logf "$%s = %s" key (if data then "true" else "false")
         );
       Some (Constr.substitute constrs bool_map)

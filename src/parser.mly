@@ -68,6 +68,16 @@ let map_of_alist_exn (startp, endp) l =
       g, v
   | (g, v) :: tl -> f (g :: gacc) (v :: vacc) tl in
   String.Map.map ~f:(f [] []) multi_map
+
+let convert_constrs l r =
+  let open Core.Std in
+  List.fold l ~init:[]
+    ~f:(fun acc x ->
+      List.fold r ~init:acc
+        ~f:(fun acc y ->
+          (x, y) :: acc
+        )
+    )
 %}
 
 %token <int> INT
@@ -82,11 +92,15 @@ let map_of_alist_exn (startp, endp) l =
 %%
 
 parse:
-  | constrs* EOF { $1, !bool_constrs }
+  | constrs* EOF
+  {
+    let open Core.Std in
+    List.concat_no_order $1, !bool_constrs 
+  }
 
 constrs:
-  | term+ LEQ term+ SCOLON { $1, $3 }
-  | term+ EQ term+ SCOLON { ($3 @ $1), ($3 @ $1) }
+  | term+ LEQ term+ SCOLON { convert_constrs $1 $3 }
+  | term+ EQ term+ SCOLON { convert_constrs $1 $3 @ convert_constrs $3 $1 }
   | error
     {
       Errors.parse_error "Invalid term or constraint" $startpos $endpos

@@ -1,7 +1,7 @@
 open Core.Std
 
 module T = struct
-  type t = Term.t list * Term.t list with sexp, compare
+  type t = Term.t * Term.t with sexp, compare
 end
 include T
 include Comparable.Make(T)
@@ -11,16 +11,12 @@ type var_bounds = Term.t Logic.Map.t
 
 let hash = Hashtbl.hash
 
-let default = [], []
+let default = Term.(Nil, Nil)
 
 let to_string (l, r) =
-  let f x = String.concat ~sep:", " (List.map ~f:Term.to_string x) in
-  String.concat ~sep:" <= " [f l; f r]
+  sprintf "%s <= %s" (Term.to_string l) (Term.to_string r)
 
-let get_vars (l, r) =
-  let f = List.fold_left ~init:String.Set.empty
-    ~f:(fun s x -> String.Set.union s (Term.get_vars x)) in
-  f l, f r
+let get_vars (l, r) = Term.get_vars l, Term.get_vars r
 
 let print_constraints map =
   let constr_to_string c =

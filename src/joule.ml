@@ -24,7 +24,7 @@ let create_dot_output g dot_output =
   Out_channel.with_file dot_output
     ~f:(fun oc -> Dot.output_graph oc g)
 
-let loop dot_output debug verbose filename =
+let loop dot_output debug verbose limit filename =
   try
     Location.filename := filename;
     if debug then Log.set_output stdout;
@@ -43,11 +43,14 @@ let loop dot_output debug verbose filename =
     Log.output_header "Traversal order for constraints";
     let traversal_list = Network.traversal_order g in
     Log.output_header "Finding upper bounds for constraints";
-    match Solver.solve_exn traversal_list logic with
+    match Solver.solve_exn traversal_list logic verbose limit with
     | None -> print_endline "No satisfiable model is found"
     | Some x ->
       begin
+        if verbose then
+          printf "\nSolution:\n";
         let f ~key ~data =
+          if verbose then printf "  ";
           printf "$%s = %s\n" key (Term.to_string data) in
         String.Map.iter x ~f;
         (* output also values for variables without any constraints *)
@@ -80,10 +83,12 @@ let command =
         graph in dot format in a file provided as the argument"
       +> flag "-debug" no_arg ~doc:" print debug information"
       +> flag "-verbose" no_arg ~doc:" print auxiliary computation results"
+      +> flag "-iterations"(optional int) ~doc:"integer maximum number of \
+        iterations of the solver over constraints"
       +> anon ("filename" %:string)
     )
-    (fun dot_output debug verbose filename () ->
-      loop dot_output debug verbose filename)
+    (fun dot_output debug verbose iterations filename () ->
+      loop dot_output debug verbose iterations filename)
 
 let () =
   let picosat_version = Picosat.version () in

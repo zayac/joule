@@ -74,12 +74,10 @@ let check_connectivity_exn g =
     let module SS = String.Set in
     (* accumulate all vertices from the left and right parts of the
        neighbouring constraints *)
-    let accumulate acc = List.fold_left ~init:acc
-      ~f:(fun acc t -> SS.union acc (Term.get_vars t)) in
     let succ_vars = G.fold_succ_e
-      (fun (_, (l, _), _) acc -> accumulate acc l) g vnode SS.empty in
+      (fun (_, (l, _), _) acc -> SS.union acc (Term.get_vars l)) g vnode SS.empty in
     let pred_vars = G.fold_pred_e
-      (fun (_, (_, r), _) acc -> accumulate acc r) g vnode SS.empty in
+      (fun (_, (_, r), _) acc -> SS.union acc (Term.get_vars r)) g vnode SS.empty in
     let succ_diff = SS.diff x succ_vars in
     let pred_diff = SS.diff x pred_vars in
     if not (SS.is_empty succ_diff) then

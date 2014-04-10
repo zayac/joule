@@ -1,7 +1,7 @@
 open Core.Std
 
 (** A constraint for terms *)
-type t = Term.t list * Term.t list
+type t = Term.t * Term.t
 
 (** A constraint on variable *)
 type var_bounds = Term.t Logic.Map.t
