@@ -334,11 +334,11 @@ let set_list_bound depth constrs v lst =
 
 let rec solve_senior depth constrs left right =
   let logic_left, term_left = left in
-  (*let term_left, l = Equations.union term_left in*)
-  (*let logic_left = Logic.(l * logic_left) in*)
+  let term_left, l = Equations.union term_left in
+  let logic_left = Logic.(l * logic_left) in
   let logic_right, term_right = right in
-  (*let term_right, l = Equations.union term_right in*)
-  (*let logic_right = Logic.(l * logic_right) in*)
+  let term_right, l = Equations.union term_right in
+  let logic_right = Logic.(l * logic_right) in
   let open Term in
   let error t1 t2 =
     unsat_error

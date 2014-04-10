@@ -4,7 +4,7 @@ The description of terms and constraints structure is yet to come.
 
 ## Installation
 
-The solver is implemented in OCaml language and depends on the following packages (all of them can be install via [OPAM](http://opam.ocaml.org/) package manager):
+Joule is being implemented in OCaml language. Therefore, you need to have a fully-fledged OCaml compiler installed in your system. The solver depends on the following OCaml packages:
 
 * findlib
 * core
@@ -14,18 +14,23 @@ The solver is implemented in OCaml language and depends on the following package
 * ctypes
 * menhir
 
-The solver also heavily uses [PicoSAT](http://fmv.jku.at/picosat/) SAT solver (API version 953), so make sure that a linker is able to access the library via `-lpicologic` flag.
+It is suggested to install them via [OPAM](http://opam.ocaml.org/) package manager:
 
-Installation details can be found in
-[INSTALL.txt](https://github.com/zayac/joule/blob/master/INSTALL.txt)
-file.
+```
+opam install core sexplib comparelib ocamlgraph ctypes menhir oasis
+```
+
+The solver also uses [PicoSAT](http://fmv.jku.at/picosat/) SAT solver (API version 953), so the PicoSAT library must be available in the system. The linker accesses it via `-lpicologic` flag.
 
 ### PicoSAT library installation details
 
 #### OS X
 
-The library may be installed from an unofficial Homebrew repository:
-https://github.com/mht208/homebrew-formal
+The recommended way is to use [Homebrew](http://brew.sh/) to install PicoSAT library. The link below points to the stable version of the library that is available from [an unofficial Homebrew repository](https://github.com/mht208/homebrew-formal).
+
+```
+brew install https://raw.githubusercontent.com/mht208/homebrew-formal/73f246e453c35f144074d82518c475e7324e2a2e/picosat.rb
+```
 
 #### Ubuntu
 
