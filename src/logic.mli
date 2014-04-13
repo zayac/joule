@@ -13,15 +13,6 @@ type t =
   | And of t * t
   | Var of string
 
-type cnf =
-  | Valid
-  | Unsatisfiable
-  | Satisfiable of t list list
-
-type solution =
-  | Any
-  | Solutions of bool String.Map.t list
-
 val compare_t : t -> t -> int
 val t_of_sexp : Sexplib.Sexp.t -> t
 val sexp_of_t : t -> Sexplib.Sexp.t
@@ -39,21 +30,6 @@ val list_of_disjuncts : t list -> t
 (** Reduce boolean formula.  Unnecessary [True], [False] terms are removed from
     the formula, double negations are removed. *)
 val simplify : t -> t
-
-(** Convert formula to Conjunctive Normal Form (CNF).  Returns a list of
-    conjunctions.  A formula is simplified before conversion. *)
-val to_cnf : t -> cnf
-
-(** Find all assignments to variables in a conjunction of formulas in the list.
-    In case of satisfiability, the result is a list of all possible solutions,
-    i.e. a solution is a list of variable-value pairs, otherwise the result is
-    [None]. *)
-val all_solutions : Set.t -> bool String.Map.t list option
-
-(** Find only a single (any) assignment for all variables.  In case of
-    satisfiability, the result is a list of variable-value pairs, otherwise the
-    result is [None]. *)
-val solve : Set.t -> bool String.Map.t option
 
 val evaluate : bool String.Map.t -> t -> t
 

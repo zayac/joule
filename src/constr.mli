@@ -4,7 +4,7 @@ open Core.Std
 type t = Term.t * Term.t
 
 (** A constraint on variable *)
-type var_bounds = Term.t Logic.Map.t
+type var_bounds = Term.t Cnf.Map.t
 
 val compare_t : t -> t -> int
 val t_of_sexp : Sexplib.Sexp.t -> t

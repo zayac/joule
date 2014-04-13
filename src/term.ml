@@ -7,10 +7,10 @@ module T = struct
     | Symbol of string
     | Tuple of t list
     | List of t list * string option
-    | Record of (Logic.t * t) String.Map.t * string option
-    | Choice of (Logic.t * t) String.Map.t * string option
+    | Record of (Cnf.t * t) String.Map.t * string option
+    | Choice of (Cnf.t * t) String.Map.t * string option
     | Var of string
-    | Switch of t Logic.Map.t
+    | Switch of t Cnf.Map.t
   with sexp, compare
 end
 include T
@@ -29,12 +29,13 @@ let rec to_string t =
   | None -> ""
   | Some v -> " | $" ^ v in
   let dict_el_to_string (l, (g, t)) =
-    let guard =
-      if Logic.(g = True) then "" else
-        Printf.sprintf "(%s)" (Logic.to_string g) in
-    Printf.sprintf "%s%s: %s" l guard (to_string t) in
+    if Cnf.is_true g then
+      sprintf "%s: %s" l (to_string t)
+    else
+      sprintf "%s(%s): %s" l (Cnf.to_string g) (to_string t) in
   let print_dict x tail lsep rsep =
-    let element_strs = L.map ~f:dict_el_to_string (SM.to_alist x) in
+    let lst = List.filter ~f:(fun (l, (g, t)) -> not (Cnf.is_false g)) (SM.to_alist x) in
+    let element_strs = L.map ~f:dict_el_to_string lst in
     S.concat [lsep;
       S.concat ~sep:", " element_strs; tail_to_string tail; rsep] in
   match t with
@@ -45,19 +46,13 @@ let rec to_string t =
   | List (x, tail) ->
     S.concat ["["; S.concat ~sep:", " (L.map ~f:to_string x);
       tail_to_string tail; "]"]
-  | Record (x, tail) ->
-    let map = String.Map.filter x
-      ~f:(fun ~key ~data:(g, _) -> Logic.(g <> False)) in
-    print_dict map tail "{" "}"
-  | Choice (x, tail) ->
-    let map = String.Map.filter x
-      ~f:(fun ~key ~data:(g, _) -> Logic.(g <> False)) in
-    print_dict map tail "(:" ":)"
+  | Record (x, tail) -> print_dict x tail "{" "}"
+  | Choice (x, tail) -> print_dict x  tail "(:" ":)"
   | Var x -> "$" ^ x
   | Switch x ->
-    let alist = Logic.Map.to_alist x in
+    let alist = Cnf.Map.to_alist x in
     let sl = List.map
-      ~f:(fun (l, t) -> Printf.sprintf "%s : %s" (Logic.to_string l)
+      ~f:(fun (l, t) -> Printf.sprintf "%s : %s" (Cnf.to_string l)
       (to_string t)) alist in
     Printf.sprintf "<%s>" (String.concat ~sep:", " sl)
 
@@ -79,7 +74,7 @@ let rec get_vars t =
     SS.union tl (SM.fold ~init:SS.empty ~f:f map)
   | Switch x ->
     let f ~key:_ ~data acc = SS.union acc (get_vars data) in
-    Logic.Map.fold ~init:SS.empty ~f:f x
+    Cnf.Map.fold ~init:SS.empty ~f:f x
 
 
 let rec is_nil = function
@@ -100,9 +95,9 @@ let rec is_nil = function
   | Int _ | Symbol _ | Tuple _ | Choice (_, _) -> Some false
   | Switch x ->
     let is_nil_flag = ref true in
-    let _ = Logic.Map.iter
+    let _ = Cnf.Map.iter
       ~f:(fun ~key ~data ->
-        if not Logic.(key = False) &&
+        if not (Cnf.is_false key) &&
           not (Option.value ~default:false (is_nil data)) then
           is_nil_flag := false) x in
     if !is_nil_flag then Some true else None
@@ -121,9 +116,9 @@ let rec is_nil_exn t =
     | Record (_, Some _) -> raise (Non_Ground t)
     | Int _ | Symbol _ | Tuple _ | Choice (_, _)  -> false
     | Switch x ->
-      let _ = Logic.Map.iter
+      let _ = Cnf.Map.iter
         ~f:(fun ~key ~data ->
-          if not Logic.(key = False) && not (is_nil_exn data) then
+          if not (Cnf.is_false key) && not (is_nil_exn data) then
             raise (Non_Ground t)) x in
       true
   with Non_Ground _ -> raise (Non_Ground t)
@@ -145,14 +140,14 @@ let rec is_ground = function
   | Tuple x -> List.for_all ~f:is_ground x
   | Record (x, None)
   | Choice (x, None) ->
-    String.Map.for_all ~f:(fun (g, t) -> Logic.is_ground g && is_ground t) x
+    String.Map.for_all ~f:(fun (g, t) -> Cnf.is_ground g && is_ground t) x
   | Choice (_, _)
   | Record (_, _)
   | List (_, _)
   | Var _ -> false
-  | Switch x -> Logic.Map.fold ~init:true
+  | Switch x -> Cnf.Map.fold ~init:true
     ~f:(fun ~key ~data acc ->
-      if Logic.(key = False) then acc else acc && is_ground data) x
+      if Cnf.is_false key then acc else acc && is_ground data) x
 
 let rec seniority_exn t1 t2 =
   try
@@ -224,20 +219,6 @@ and seniority_maps_exn typ x x' =
   else if more then multiplier * 1
   else 0
 
-let logic_seniority_exn lm lm' =
-  let sat_disjunctive_terms = ref Logic.Set.empty in
-  let _ = Map.iter lm ~f:(fun ~key ~data ->
-    let term, logic = key, data in
-    Map.iter lm' ~f:(fun ~key ~data ->
-      let term', logic' = key, data in
-      try
-        if Int.(seniority_exn term term' > -1) then
-          sat_disjunctive_terms :=
-            Logic.Set.add !sat_disjunctive_terms Logic.(logic * logic')
-      with Incomparable_Terms _ ->
-        ())) in
-    !sat_disjunctive_terms
-
 let canonize_switch lmap =
   (* remove all false expressions *)
   let lmap = Logic.Map.fold ~init:Logic.Map.empty
@@ -253,17 +234,11 @@ let canonize_switch lmap =
     lmap, bool_constrs
   else lmap, Logic.Set.empty
 
-let logic_map_to_term_map lm =
-  Logic.Map.fold lm ~init:Map.empty ~f:(fun ~key ~data acc ->
-    Map.change acc data (function
-    | None -> Some key
-    | Some value -> Some (Logic.And (value, key))))
-
 let rec to_wff bools term =
   let transform map =
     String.Map.map 
       ~f:(fun (logic, data) ->
-        Logic.evaluate bools logic, data
+        Cnf.(from_logic (evaluate bools logic)), data
       ) map in
   match term with
   | Record (map, v) -> Record (transform map, v)
@@ -321,7 +296,7 @@ let rec join t t' =
             begin
               match join t t' with
               | None -> raise (Incomparable_Terms (t, t'))
-              | Some jt -> Some (Logic.(l * l'), jt)
+              | Some jt -> Some (Cnf.(l * l'), jt)
             end) in
         Some (Record (join_map, None))
       with Incomparable_Terms (t, t') -> None
@@ -339,7 +314,7 @@ let rec join t t' =
             begin
               match join t t' with
               | None -> raise (Incomparable_Terms (t, t'))
-              | Some jt -> Some (Logic.(l * l'), jt)
+              | Some jt -> Some (Cnf.(l * l'), jt)
             end) in
         Some (Choice (join_map, None))
       with Incomparable_Terms (t, t') -> None
@@ -347,4 +322,3 @@ let rec join t t' =
   | Choice (_, Some _), _ -> raise (Non_Ground t')
   | _, Choice (_, Some _) -> raise (Non_Ground t)
   | _, _ -> None
-

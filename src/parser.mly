@@ -3,15 +3,15 @@
 module PLog = Log.Make(struct let section = "parser:" end)
 module LLog = Log.Make(struct let section = "logic:" end)
 
-let bool_constrs = ref Logic.Set.empty
+let bool_constrs = ref Cnf.CSet.empty
 
 let log_bool set =
-  if not (Logic.Set.is_empty set) then
-    LLog.logf "adding boolean constraints {%s}" (Logic.set_to_string set)
+  if not (Cnf.CSet.is_empty set) then
+    LLog.logf "adding boolean constraints {%s}" (Cnf.to_string set)
 
 let pairwise_not_and l =
   let open Core.Std in
-  let open Logic in
+  let open Cnf in
   let generate_pairs l =
     let rec apply acc el = function
     | [] -> acc
@@ -20,31 +20,29 @@ let pairwise_not_and l =
     | [] -> acc
     | hd :: tl -> iter_left (apply acc hd tl) tl in
     iter_left [] l in
-  List.map ~f:(fun (x, y) -> ~-(x * y)) (generate_pairs l)
+  List.fold ~init:Cnf.make_true
+    ~f:(fun acc (x, y) -> Cnf.(acc + (~-(x + y))))
+    (generate_pairs l)
 
 let switch_of_alist_exn (startp, endp) l =
   let open Core.Std in
-  let multi_map = Logic.Map.of_alist_multi l in
-  let map = Logic.Map.fold multi_map ~init:Logic.Map.empty
+  let l = List.map l ~f:(fun (el, t) -> Cnf.from_logic el, t) in
+  let multi_map = Cnf.Map.of_alist_multi l in
+  let map = Cnf.Map.fold multi_map ~init:Cnf.Map.empty
     ~f:(fun ~key ~data acc ->
       match data with
-      | hd :: [] -> Logic.Map.add acc ~key ~data:hd
+      | hd :: [] -> Cnf.Map.add acc ~key ~data:hd
       | hd :: tl ->
-        let _ = bool_constrs := Logic.(Set.add !bool_constrs ~-key) in
+        let _ = bool_constrs := Cnf.(CSet.union !bool_constrs ~-key) in
         acc
       | [] -> failwith "invalid argument"
     ) in
-  let map, bool_constrs' = Term.canonize_switch map in
-  let keys = Logic.Map.keys map in
-  (* add freshly generated constraints from canonization function *)
-  bool_constrs := Logic.Set.union !bool_constrs bool_constrs';
-  (* add constraints asserting pairwise logical expressions exclusion *)
-  let pairwise_exclusion = Logic.Set.of_list (pairwise_not_and keys) in
-  bool_constrs := Logic.Set.union !bool_constrs pairwise_exclusion;
+  let keys = Cnf.Map.keys map in
+  bool_constrs := Cnf.CSet.union !bool_constrs (pairwise_not_and keys);
   (* add constraints asserting that at least one logical expression must be
      satisfiable *)
-  let singleton = Logic.Set.singleton (Logic.list_of_disjuncts keys) in
-  bool_constrs := Logic.Set.union !bool_constrs singleton;
+  let singleton = Cnf.list_of_disjuncts keys in
+  bool_constrs := Cnf.CSet.union !bool_constrs singleton;
   log_bool !bool_constrs;
   Term.Switch map
 
@@ -63,9 +61,9 @@ let map_of_alist_exn (startp, endp) l =
       let gacc, vacc = g :: gacc, v :: vacc in
       let logic = Logic.list_of_disjuncts gacc in
       let lst =  List.map2_exn ~f:(fun g t -> g, t) gacc vacc in
-      logic, switch_of_alist_exn (startp, endp) lst
+      (Cnf.from_logic logic), switch_of_alist_exn (startp, endp) lst
     else
-      g, v
+      (Cnf.from_logic g), v
   | (g, v) :: tl -> f (g :: gacc) (v :: vacc) tl in
   String.Map.map ~f:(f [] []) multi_map
 
@@ -88,7 +86,7 @@ let convert_constrs l r =
   LSMILE RSMILE
 %token SCOLON COLON COMMA BAR LEQ EQ EOF
 
-%start <Constr.t list * Logic.Set.t> parse
+%start <Constr.t list * Cnf.t> parse
 %%
 
 parse:
@@ -160,17 +158,17 @@ rec_entry:
 
 guard:
   | LPAREN logical_term RPAREN { $2 }
-  | LPAREN NOT NIL RPAREN { Logic.False }
-  | LPAREN OR logical_term logical_term RPAREN { Logic.Or ($3, $4) }
-  | LPAREN AND logical_term logical_term RPAREN { Logic.And ($3, $4) }
+  | LPAREN NOT logical_term RPAREN { Logic.(~-$3) }
+  | LPAREN OR logical_term logical_term RPAREN { Logic.($3 + $4) }
+  | LPAREN AND logical_term logical_term RPAREN { Logic.($3 * $4) }
 
 logical_term:
   | TRUE { Logic.True }
   | FALSE { Logic.False }
   | VAR { Logic.Var $1 }
-  | LPAREN OR logical_term logical_term RPAREN { Logic.Or ($3, $4) }
-  | LPAREN AND logical_term logical_term RPAREN { Logic.And ($3, $4) }
-  | LPAREN NOT logical_term RPAREN { Logic.Not $3 }
+  | LPAREN OR logical_term logical_term RPAREN { Logic.($3 + $4) }
+  | LPAREN AND logical_term logical_term RPAREN { Logic.($3 * $4) }
+  | LPAREN NOT logical_term RPAREN { Logic.(~-$3) }
 
 rec_list_tail:
   | BAR VAR { $2 }

@@ -7,7 +7,7 @@ include T
 include Comparable.Make(T)
 
 (** A constraint on variable *)
-type var_bounds = Term.t Logic.Map.t
+type var_bounds = Term.t Cnf.Map.t
 
 let hash = Hashtbl.hash
 
@@ -20,12 +20,10 @@ let get_vars (l, r) = Term.get_vars l, Term.get_vars r
 
 let print_constraints map =
   let constr_to_string c =
-    let l = Logic.Map.to_alist c in
+    let l = Cnf.Map.to_alist c in
     let sl = List.map l
       ~f:(fun (l, t) ->
-        if Logic.(l <> Logic.True) then
-          Printf.sprintf "[%s]%s" (Logic.to_string l) (Term.to_string t)
-        else Printf.sprintf "%s" (Term.to_string t)) in
+        Printf.sprintf "[%s]%s" (Cnf.to_string l) (Term.to_string t)) in
     String.concat ~sep:", " sl in
   let print_bound ~key ~data =
     let u = data in
@@ -38,11 +36,11 @@ let substitute constrs bools =
   let f x =
     let f' ~key ~data = function
       | None ->
-        if Logic.(evaluate bools key = True) then
+        if Logic.(Cnf.evaluate bools key = True) then
           Some (Term.to_wff bools data)
         else None
       | x -> x in
-    let term = Logic.Map.fold ~init:None ~f:f' x in
+    let term = Cnf.Map.fold ~init:None ~f:f' x in
     match term with
     | None -> raise (No_Solution "Solution doesn't exist")
     | Some x -> x in

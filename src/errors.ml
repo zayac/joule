@@ -24,9 +24,9 @@ let constraint_missing bound set =
     match String.Set.length set, bound with
     | 1, `Upper -> "an upper bound", "a term variable"
     | 1, `Lower -> "a lower bound", "a term variable"
-    | 0, _ -> failwith "the set of variables is empty"
+    | 0, _ -> assert false
     | _, `Upper -> "upper bounds", "term variables"
     | _, `Lower -> "lower bounds", "term variables"
-    | _, _ -> failwith "invalid bound type" in
+    | _, _ -> assert false in
   sprintf "missing a constraint that specifies %s for %s %s"
     ending ending' (set_string set)

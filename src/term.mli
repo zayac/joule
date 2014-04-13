@@ -8,10 +8,10 @@ type t =
   | Symbol of string
   | Tuple of t list
   | List of t list * string option
-  | Record of (Logic.t * t) String.Map.t * string option
-  | Choice of (Logic.t * t) String.Map.t * string option
+  | Record of (Cnf.t * t) String.Map.t * string option
+  | Choice of (Cnf.t * t) String.Map.t * string option
   | Var of string
-  | Switch of t Logic.Map.t
+  | Switch of t Cnf.Map.t
 
 val compare_t : t -> t -> int
 val t_of_sexp : Sexplib.Sexp.t -> t
@@ -55,18 +55,13 @@ val canonize : t -> t
     Throws an exception if one of the terms is not ground. *)
 val seniority_exn : t -> t -> int
 
-(** [logic_seniority t t'] *)
-val logic_seniority_exn : Logic.t Map.t -> Logic.t Map.t -> Logic.Set.t
-
-val canonize_switch : t Logic.Map.t -> t Logic.Map.t * Logic.Set.t
+(*val canonize_switch : t Cnf.Map.t -> t Cnf.Map.t * Cnf.t*)
 
 (** [get_vars t] returns a set of variable strings [s] from terms
     of the form [Var s] that are contained in [t] *)
 val get_vars : t -> String.Set.t
 
-(* val canonize_switch : t Logic.Map.t -> t Logic.Map.t * Logic.Set.t *)
-
-val logic_map_to_term_map : t Logic.Map.t -> Logic.t Map.t
+val canonize_switch : t Logic.Map.t -> t Logic.Map.t * Logic.Set.t
 
 val to_wff : bool String.Map.t -> t -> t
 
