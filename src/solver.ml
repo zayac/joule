@@ -33,29 +33,31 @@ let get_bound constrs var =
   | Some upper -> upper
 
 let merge_bounds depth old_terms new_terms =
-  let map = ref Cnf.Map.empty in
-  let iter ~key ~data =
-    let logic, term = key, data in
-    let iter' ~key ~data =
-      let logic', term' = key, data in
-      match Term.join term term' with
-      | None -> ()
-      | Some join ->
-        let combined = Cnf.(logic * logic') in
-        map := Cnf.Map.add !map combined join
-    in
-    Cnf.Map.iter new_terms ~f:iter' in
-  if Cnf.Map.is_empty old_terms && Cnf.Map.is_empty new_terms then
-    Cnf.Map.singleton Cnf.make_true Term.Nil
-  else if Cnf.Map.is_empty old_terms then new_terms
-  else if Cnf.Map.is_empty new_terms then old_terms
-  else begin
-    Cnf.Map.iter old_terms ~f:iter;
-    SLog.logf "%smerged upper bounds {%s} and {%s} into {%s}"
-      (String.make depth ' ') (print_map old_terms) (print_map new_terms)
-        (print_map !map);
-    !map
-  end
+  if Cnf.Map.equal Term.equal old_terms new_terms then old_terms
+  else
+    let map = ref Cnf.Map.empty in
+    let iter ~key ~data =
+      let logic, term = key, data in
+      let iter' ~key ~data =
+        let logic', term' = key, data in
+        match Term.join term term' with
+        | None -> ()
+        | Some join ->
+          let combined = Cnf.(logic * logic') in
+          map := Cnf.Map.add !map combined join
+      in
+      Cnf.Map.iter new_terms ~f:iter' in
+    if Cnf.Map.is_empty old_terms && Cnf.Map.is_empty new_terms then
+      Cnf.Map.singleton Cnf.make_true Term.Nil
+    else if Cnf.Map.is_empty old_terms then new_terms
+    else if Cnf.Map.is_empty new_terms then old_terms
+    else begin
+      Cnf.Map.iter old_terms ~f:iter;
+      SLog.logf "%smerged upper bounds '%s' and '%s' into '%s'"
+        (String.make depth ' ') (print_map old_terms) (print_map new_terms)
+          (print_map !map);
+      !map
+    end
 
 let combine_bounds old_terms new_terms =
   Cnf.Map.fold new_terms ~init:old_terms
@@ -282,7 +284,7 @@ let set_bound_exn depth constrs var terms =
   String.Map.change constrs var (fun v ->
     match v with
     | None ->
-      SLog.logf "%s for variable $%s to {%s}" b var (print_map terms);
+      SLog.logf "%s for variable $%s to '%s'" b var (print_map terms);
       Some terms
     | Some u ->
       let merged = merge_bounds (depth + 1) u terms in
@@ -452,10 +454,13 @@ let rec solve_senior depth constrs left right =
         if List.is_empty remr then constrs
         (* the list to the right has higher arity *)
         else raise (Term.Incomparable_Terms (term_left, term_right))
-      | [], None, Some v' -> constrs
+      | [], None, Some v' ->
+        constrs
       | [], Some v, _ ->
-        let tail_bounds = List.map remr ~f:(fun x ->
-          bound_terms_exn depth constrs logic_right x) in
+        let tail_bounds = List.map remr
+          ~f:(fun x ->
+            bound_terms_exn depth constrs logic_right x
+          ) in
         let tail_list = bound_combinations_list tail_bounds in
         let constrs, var_list =
           poly_var_to_list depth constrs var' logic_right in
@@ -664,11 +669,15 @@ let rec solve_senior depth constrs left right =
         raise (Term.Incomparable_Terms (t, t'))
       else constrs
   with Term.Incomparable_Terms (t1, t2) ->
-    let logic = Cnf.(logic_left * logic_right) in
-    let b = Cnf.(~- logic) in
-    log_bool_constr depth b;
-    boolean_constraints := Cnf.CSet.union !boolean_constraints b;
-    constrs
+    let logic = Cnf.(~-(logic_left * logic_right)) in
+    if Cnf.is_false logic then
+      unsat_error (sprintf "the seniority relation %s <= %s does not hold"
+        (Term.to_string term_left) (Term.to_string term_right))
+    else begin
+      log_bool_constr depth logic;
+      boolean_constraints := Cnf.CSet.union !boolean_constraints logic;
+      constrs
+    end
 
 and solve_senior_multi_exn depth context leftm rightm =
   Cnf.Map.fold leftm ~init:context

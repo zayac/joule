@@ -12,17 +12,19 @@ let log_bool set =
 let pairwise_not_and l =
   let open Core.Std in
   let open Cnf in
-  let generate_pairs l =
-    let rec apply acc el = function
-    | [] -> acc
-    | hd :: tl -> apply ((el, hd) :: acc) el tl in
-    let rec iter_left acc = function
-    | [] -> acc
-    | hd :: tl -> iter_left (apply acc hd tl) tl in
-    iter_left [] l in
-  List.fold ~init:Cnf.make_true
-    ~f:(fun acc (x, y) -> Cnf.(acc + (~-(x + y))))
-    (generate_pairs l)
+  if List.is_empty l then make_true
+  else
+    let generate_pairs l =
+      let rec apply acc el = function
+      | [] -> acc
+      | hd :: tl -> apply ((el, hd) :: acc) el tl in
+      let rec iter_left acc = function
+      | [] -> acc
+      | hd :: tl -> iter_left (apply acc hd tl) tl in
+      iter_left [] l in
+    List.fold ~init:make_false
+      ~f:(fun acc (x, y) -> acc + (~-(x + y)))
+      (generate_pairs l)
 
 let switch_of_alist_exn (startp, endp) l =
   let open Core.Std in

@@ -18,19 +18,18 @@ let is_true = CSet.is_empty
 
 let rec to_string t =
   if is_false t then "false"
+  else if is_true t then "true"
   else
-    if CSet.is_empty t then "true"
-    else
-      let lst = CSet.to_list t in
-      let lst = List.map ~f:(fun x -> Logic.Set.to_list x) lst in
-      String.concat ~sep:" ∧ "
-        (List.map lst
-          ~f:(fun x ->
-            "(" ^
-            String.concat ~sep:" ∨ " (List.map x ~f:(fun y -> Logic.to_string y))
-            ^ ")"
-          )
+    let lst = CSet.to_list t in
+    let lst = List.map ~f:(fun x -> Logic.Set.to_list x) lst in
+    String.concat ~sep:" ∧ "
+    (List.map lst
+        ~f:(fun x ->
+        "(" ^
+        String.concat ~sep:" ∨ " (List.map x ~f:(fun y -> Logic.to_string y))
+        ^ ")"
         )
+    )
 
 let is_ground t =
   CSet.fold t ~init:true
@@ -91,7 +90,7 @@ let evaluate bools t =
   let open Logic in
   CSet.fold t ~init:True
     ~f:(fun acc x ->
-      let result = Logic.Set.fold x ~init:True
+      let result = Logic.Set.fold x ~init:False
         ~f:(fun acc x ->
             match acc, Logic.evaluate bools x with
             | True, _
@@ -113,14 +112,15 @@ let (+) t t' =
         )
     ) in
   simplify result
-let (~-) t = 
-  let result = CSet.fold t ~init:CSet.empty
-    ~f:(fun acc set ->
-      let el = Logic.Set.fold set ~init:Logic.Set.empty
-        ~f:(fun acc clause -> Logic.Set.add acc clause) in
-      CSet.add acc el
-    ) in
-  simplify result
+let (~-) t =
+  if is_false t then make_true
+  else if is_true t then make_false
+  else
+    let result = CSet.fold t ~init:Logic.Set.empty
+      ~f:(fun acc set ->
+        Logic.(Set.union acc (Set.map set ~f:(~-)))
+      ) in
+    simplify (CSet.singleton result)
 let (==>) t t' = simplify (~-t + t')
 let (<==) t t' = simplify (t + ~-t')
 let (<=>) t t' = simplify ((t ==> t') * (t' ==> t))
