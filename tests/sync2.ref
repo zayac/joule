@@ -1,0 +1,4 @@
+$rest = nil
+$vdata = {x: int, y: int}
+$wdata = nil
+$z = nil

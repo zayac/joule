@@ -11,8 +11,8 @@ include T
 include Comparable.Make(T)
 
 
-let make_false : t = CSet.singleton (Logic.Set.singleton Logic.False)
-let make_true : t= CSet.empty
+let make_false = CSet.singleton (Logic.Set.singleton Logic.False)
+let make_true = CSet.empty
 let is_false t = CSet.mem t Logic.(Set.singleton False)
 let is_true = CSet.is_empty
 
@@ -116,11 +116,22 @@ let (~-) t =
   if is_false t then make_true
   else if is_true t then make_false
   else
-    let result = CSet.fold t ~init:Logic.Set.empty
-      ~f:(fun acc set ->
-        Logic.(Set.union acc (Set.map set ~f:(~-)))
-      ) in
-    simplify (CSet.singleton result)
+    (*let _ = printf "%s -> " (to_string t) in*)
+    let lst = ref [] in
+    CSet.iter t
+      ~f:(fun disj ->
+        let tmp = ref !lst in
+        lst := Logic.Set.fold disj ~init:[]
+          ~f:(fun acc el ->
+            if List.is_empty !tmp then
+              [Logic.(~-el)] :: acc
+            else
+            (List.map !tmp ~f:(fun l -> Logic.(~-el) :: l)) @ acc
+          )
+      );
+    let t' = CSet.of_list (List.map ~f:Logic.Set.of_list !lst) in
+    (*let _ = printf "%s\n" (to_string t') in*)
+    simplify t'
 let (==>) t t' = simplify (~-t + t')
 let (<==) t t' = simplify (t + ~-t')
 let (<=>) t t' = simplify ((t ==> t') * (t' ==> t))
@@ -130,5 +141,20 @@ let list_of_disjuncts lst =
   | [] -> make_true
   | hd :: [] -> hd
   | hd :: tl -> List.fold ~f:(fun acc x -> x + acc) ~init:hd tl
+
+let pairwise_not_and l =
+  if List.is_empty l then make_true
+  else
+    let generate_pairs l =
+      let rec apply acc el = function
+      | [] -> acc
+      | hd :: tl -> apply ((el, hd) :: acc) el tl in
+      let rec iter_left acc = function
+      | [] -> acc
+      | hd :: tl -> iter_left (apply acc hd tl) tl in
+      iter_left [] l in
+    List.fold ~init:make_true
+      ~f:(fun acc (x, y) -> acc * (~-(x * y)))
+      (generate_pairs l)
 
 

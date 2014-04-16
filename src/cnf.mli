@@ -29,3 +29,4 @@ val (<==) : t -> t -> t
 val (<=>) : t -> t -> t
 val list_of_disjuncts : t list -> t
 val simplify : t -> t
+val pairwise_not_and : t list -> t

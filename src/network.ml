@@ -66,6 +66,16 @@ let merge_vertices g =
   G.iter_vertex merge !g';
   !g'
 
+(* checks for the presence of cycles that cause infinite list traversals *)
+(*let infinite_lists_cycles g =*)
+  (*let module C = Graph.Components.Make(G) in*)
+  (*let lst = C.scc_list g in*)
+  (*List.iter lst*)
+    (*~f:(fun c ->*)
+      (*if List.length c = 1 then ()*)
+      (*else*)
+
+
 (* check that all internal vertices (i.e. variables) are connected to either
    other vertices or the environment *)
 let check_connectivity_exn g =

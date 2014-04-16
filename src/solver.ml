@@ -113,7 +113,7 @@ let rec merge_maps depth left right logic =
       let add l t =
         List.map !result
           ~f:(fun (logic, map) ->
-            Cnf.(l * logic), String.Map.add map ~key ~data:(l, t)
+            logic, String.Map.add map ~key ~data:(l, t)
           ) in
       match data with
       | `Left (l, t)
@@ -344,11 +344,6 @@ let rec solve_senior depth constrs left right =
   (*let term_right, l = Equations.union term_right in*)
   (*let logic_right = Logic.(l * logic_right) in*)
   let open Term in
-  let error t1 t2 =
-    unsat_error
-      (Printf.sprintf "the seniority relation %s <= %s does not hold"
-        (Term.to_string t1)
-        (Term.to_string t2)) in
   try
     SLog.logf "%ssolving constraint %s <= %s" (String.make depth ' ')
       (to_string term_left) (to_string term_right);
@@ -534,11 +529,14 @@ let rec solve_senior depth constrs left right =
     | Nil, Choice (map, var)
     | Nil, Record (map, var) ->
       begin
-        let constrs = String.Map.fold map ~init:constrs
-          ~f:(fun ~key ~data acc ->
-            let l, t = data in
-            solve_senior (depth + 1) acc left (l, t)
-          ) in
+        String.Map.iter map
+          ~f:(fun ~key ~data ->
+            let g, _ = data in
+            let logic_cstr = Cnf.(~-g) in
+              log_bool_constr depth logic_cstr;
+              boolean_constraints := Cnf.CSet.union !boolean_constraints
+                logic_cstr
+          );
         match var with
         | None -> constrs
         | Some v ->
@@ -583,7 +581,8 @@ let rec solve_senior depth constrs left right =
                     with Unsatisfiability_Error _ ->
                       var_logic := Cnf.(!var_logic * ~- guard * ~-guard'));
                   if not (String.Map.is_empty !var_rec) then
-                  var_bounds := Cnf.Map.add !var_bounds ~key:!var_logic ~data:(Record(!var_rec, None))
+                  var_bounds := Cnf.Map.add !var_bounds ~key:!var_logic
+                    ~data:(Record(!var_rec, None))
               end
             | _ -> assert false
           );
@@ -637,7 +636,8 @@ let rec solve_senior depth constrs left right =
                   with Unsatisfiability_Error _ ->
                     var_logic := Cnf.(!var_logic * ~-guard * ~-guard'));
               if not (String.Map.is_empty !var_rec) then
-                var_bounds := Cnf.Map.add !var_bounds ~key:!var_logic ~data:(Choice(!var_rec, None))
+                var_bounds := Cnf.Map.add !var_bounds ~key:!var_logic
+                  ~data:(Choice(!var_rec, None))
               end
             | _ -> assert false
           );
@@ -739,7 +739,8 @@ let resolve_bound_constraints topo =
     List.iter ~f:(apply constrs) topo;
     (* The solver terminates when either the bounds stop to change or the
        number of iterations exceeds the iteration limit. *)
-    if ctx_equal (!constrs, !bools) (!constrs', !bools') || !iter_counter > !iteration_limit then
+    if ctx_equal (!constrs, !bools) (!constrs', !bools')
+      || !iter_counter > !iteration_limit then
       fixed_point := true
     else
       iter_counter := !iter_counter + 1;
@@ -753,7 +754,12 @@ let add_boolean_constraints constrs =
         Cnf.Map.fold data ~init:Cnf.make_false
           ~f:(fun ~key ~data acc -> Cnf.(acc + key)) in
       log_bool_constr 0 expr;
-      boolean_constraints := Cnf.(CSet.union !boolean_constraints expr)
+      boolean_constraints := Cnf.(CSet.union !boolean_constraints expr);
+      let lst = Cnf.Map.keys data in
+      if List.length lst > 1 then
+        let expr' = Cnf.pairwise_not_and (Cnf.Map.keys data) in
+        let _ = log_bool_constr 0 expr' in
+        boolean_constraints := Cnf.(CSet.union !boolean_constraints expr')
     )
 
 let solve_exn lst logic verbose limit =

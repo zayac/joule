@@ -9,23 +9,6 @@ let log_bool set =
   if not (Cnf.CSet.is_empty set) then
     LLog.logf "adding boolean constraints {%s}" (Cnf.to_string set)
 
-let pairwise_not_and l =
-  let open Core.Std in
-  let open Cnf in
-  if List.is_empty l then make_true
-  else
-    let generate_pairs l =
-      let rec apply acc el = function
-      | [] -> acc
-      | hd :: tl -> apply ((el, hd) :: acc) el tl in
-      let rec iter_left acc = function
-      | [] -> acc
-      | hd :: tl -> iter_left (apply acc hd tl) tl in
-      iter_left [] l in
-    List.fold ~init:make_false
-      ~f:(fun acc (x, y) -> acc + (~-(x + y)))
-      (generate_pairs l)
-
 let switch_of_alist_exn (startp, endp) l =
   let open Core.Std in
   let l = List.map l ~f:(fun (el, t) -> Cnf.from_logic el, t) in
@@ -40,12 +23,15 @@ let switch_of_alist_exn (startp, endp) l =
       | [] -> failwith "invalid argument"
     ) in
   let keys = Cnf.Map.keys map in
-  bool_constrs := Cnf.CSet.union !bool_constrs (pairwise_not_and keys);
+  let _ = if List.length keys > 1 then
+    let l = Cnf.pairwise_not_and keys in
+    let _ = log_bool l in
+    bool_constrs := Cnf.CSet.union !bool_constrs l in
   (* add constraints asserting that at least one logical expression must be
      satisfiable *)
   let singleton = Cnf.list_of_disjuncts keys in
-  bool_constrs := Cnf.CSet.union !bool_constrs singleton;
-  log_bool !bool_constrs;
+  let _ = log_bool singleton in
+  let _ = bool_constrs := Cnf.CSet.union !bool_constrs singleton in
   Term.Switch map
 
 (* convert a label-term key-value pairs into a correct map structure with
