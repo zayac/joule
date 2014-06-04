@@ -10,12 +10,15 @@ Homepage:         https://github.com/zayac/joule
 Plugins:          META (0.4), StdFiles (0.4), DevFiles (0.4)
 XStdFilesAUTHORS: false
 XStdFilesREADME:  false
-BuildTools:     ocamlbuild, camlp4o, menhir
+BuildTools:       ocamlbuild, camlp4o, menhir
 
-Synopsis:         Constraint solver for Data Description Language in AstraKahn language
+Synopsis:         Tool for components' interfaces coordination in stream processing language
+
 Description:
-  Joule is a solver for constraints formulated in Data Description Language.
-  It is used in the Constraint Aggregation Layer for AstraKahn language.
+  Given a set of constraints that represent producer-consumer relations for
+  message types in channels of a stream processing network, Joule verifies the
+  consistency of the constraints.  Moreover, it finds values for undefined
+  (generic) types in the network that do not cause violation of constraints.
 
 Executable joule
   Path:           src

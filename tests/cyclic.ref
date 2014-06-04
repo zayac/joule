@@ -1,5 +1,5 @@
 $u = [int]
 $w = int
-$x = {}
+$x = {b: nil}
 $y = [int]
-$z = [{}, int]
+$z = [{b: nil}, int]

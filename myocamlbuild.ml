@@ -657,15 +657,26 @@ let platform =
   | "" -> "unknown"
   | platform -> String.trim platform
 
+let synopsis =
+  match run_and_read "sed -n 's/Synopsis:[ \\t]*\\(.*\\)/\\1/p' _oasis" with
+  | "" -> "unknown synopsis"
+  | text -> String.trim text
+
+let description =
+  match run_and_read "sed -n '/Description:/,/Executable/{\n\tp\n}'\ _oasis\
+  | sed '1d; $d;' | sed 's/^  //g'" with
+  | "" -> "unknown description"
+  | text -> String.trim text
+
 let setup_info () =
-  let write_version version time platform ocaml_version ch =
+  let write_build version time platform ocaml_version ch =
     Printf.fprintf ch
       "let version = %S\nlet compile_time = %S\nlet platform = %S\n\
-let ocaml_version = %S\n"
-      version time platform ocaml_version;
+let ocaml_version = %S\nlet synopsis = %S\nlet description = %S\n"
+      version time platform ocaml_version synopsis description;
     close_out ch in
-  open_out "src/version.ml"
-  |> write_version version time platform ocaml_version;;
+  open_out "src/build.ml"
+  |> write_build version time platform ocaml_version;;
 
 dispatch 
   (MyOCamlbuildBase.dispatch_combine

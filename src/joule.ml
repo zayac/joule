@@ -75,8 +75,8 @@ let loop dot_output debug verbose limit filename =
 
 let command =
   Command.basic
-    ~summary:"Constraint satisfaction tool for hierarchical data types"
-    ~readme:(fun () -> "More detailed information")
+    ~summary:Build.synopsis
+    ~readme:(fun () -> Build.description)
     Command.Spec.(
       empty
       +> flag "-dot-output" (optional string) ~doc:"string save a network \
@@ -95,7 +95,7 @@ let () =
   let build_info = Printf.sprintf
     "Version: %s\nOcaml version: %s\nPicoSAT version: %s\nBuild platform: %s\n\
      Build date: %s"
-    (Version.version) (Version.ocaml_version) picosat_version (Version.platform)
-      (Version.compile_time) in
+    (Build.version) (Build.ocaml_version) picosat_version (Build.platform)
+      (Build.compile_time) in
   Command.run ~version:(Version.version) ~build_info
     command

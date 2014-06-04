@@ -164,11 +164,12 @@ let rec bound_terms_exn depth constrs logic term =
               ~f:(fun ~key ~data acc ->
                 match data with
                 | Term.List (l, None) ->
-                (Cnf.(logic * key * logic'), head @ l) :: acc
+                  (Cnf.(logic * key * logic'), head @ l) :: acc
                 | Term.List (l, _) ->
-                raise (Unsatisfiability_Error
+                  (* unreachable state: all terms must be ground *)
+                  failwith
                     (Printf.sprintf "expected a ground list term, but %s found"
-                    (Term.to_string data)))
+                    (Term.to_string data))
                 | _ -> acc
               )
           ) in  (* TODO fix here *)
@@ -204,18 +205,19 @@ let rec bound_terms_exn depth constrs logic term =
                     let lst = merge_maps depth head String.Map.empty logic' in
                     lst @ acc
                 | Term.Record (map, _) ->
-                    raise (Unsatisfiability_Error
-                      (Printf.sprintf "expected a ground list term, but %s found"
-                      (Term.to_string data)))
+                  (* unreachable state: all terms must be ground *)
+                  failwith
+                    (Printf.sprintf "expected a ground list term, but %s found"
+                    (Term.to_string data))
                 | _ -> acc
               )
           ) in
         (* if tail variable does not have bounding term that is a record,
            throw error *)
         let _ = if List.is_empty combined then
-          raise (Unsatisfiability_Error
+          unsat_error 
             (Printf.sprintf "Missing record as a upper bound for variable $%s"
-              var)) in
+              var) in
         (* vefify the consistency of generated bounds *)
         let l = List.map combined
           ~f:(fun (logic, lst) -> logic, Record (lst, None)) in
@@ -255,17 +257,19 @@ let rec bound_terms_exn depth constrs logic term =
                     let lst = merge_maps depth head String.Map.empty logic' in
                     lst @ acc
                 | Term.Choice (map, _) ->
-                    raise (Unsatisfiability_Error
+                  (* unreachable state: all terms must be ground *)
+                  failwith
                       (Printf.sprintf "expected a ground list term, but %s found"
-                      (Term.to_string data)))
+                      (Term.to_string data))
                 | _ -> acc
               )
           ) in
         (* if tail variable does not have bounding term that is a choice,
            throw error *)
         let _ = if List.is_empty combined then
-          raise (Unsatisfiability_Error
-            (Printf.sprintf "Missing record as a upper bound for variable $%s" var)) in
+          unsat_error
+            (Printf.sprintf "Missing record as a upper bound for variable $%s"
+            var) in
         (* vefify the consistency of generated bounds *)
         let l = List.map combined
           ~f:(fun (logic, lst) -> logic, Choice (lst, None)) in
@@ -289,9 +293,9 @@ let set_bound_exn depth constrs var terms =
     | Some u ->
       let merged = merge_bounds (depth + 1) u terms in
       if Cnf.Map.is_empty merged then
-        raise (unsat_error
-          (Printf.sprintf "the upper bounds for variable $%s are inconsistent" 
-            var))
+        unsat_error
+          (Printf.sprintf "the upper bounds for variable $%s are inconsistent"
+            var)
       else
         SLog.logf "%s for variable $%s to {%s}" b var (print_map merged);
         Some merged
@@ -797,4 +801,4 @@ let solve_exn lst logic verbose limit =
         );
       Some (Constr.substitute constrs bool_map)
   with Constr.No_Solution t ->
-    raise (Unsatisfiability_Error t)
+    unsat_error t
