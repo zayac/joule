@@ -46,14 +46,25 @@ let simplify t =
           if Set.mem x True then make_true
           else make_false
         else
-          let lst = Set.fold x ~init:Set.empty
+          let disj = Set.fold x ~init:Set.empty
             ~f:(fun acc el ->
               match el with
-              | Not (Var _)
-              | Var _ -> Set.add acc el
+              | Not (Var v) ->
+                begin
+                  match Set.find acc ~f:(Logic.(=) (Var v)) with
+                  | None -> Set.add acc el
+                  | Some el' -> Set.remove acc el'
+                end
+              | Var v ->
+                begin
+                  match Set.find acc ~f:(Logic.(=) (Not (Var v))) with
+                  | None -> Set.add acc el
+                  | Some el' -> Set.remove acc el'
+                end
               | _ -> acc
             ) in
-            CSet.singleton lst in
+          if Set.is_empty disj then CSet.empty
+          else CSet.singleton disj in
       if is_false acc || is_false result then make_false
       else if CSet.is_empty acc then result
       else if CSet.is_empty result then acc
@@ -118,18 +129,18 @@ let (~-) t =
   else
     (*let _ = printf "%s -> " (to_string t) in*)
     let lst = ref [] in
+    (*print_endline (to_string t);*)
     CSet.iter t
       ~f:(fun disj ->
         let tmp = ref !lst in
         lst := Logic.Set.fold disj ~init:[]
           ~f:(fun acc el ->
-            if List.is_empty !tmp then
-              [Logic.(~-el)] :: acc
-            else
-            (List.map !tmp ~f:(fun l -> Logic.(~-el) :: l)) @ acc
-          )
+            if List.is_empty !tmp then [Logic.(~-el)] :: acc
+            else (List.map !tmp ~f:(fun l -> Logic.(~-el) :: l)) @ acc
+          );
       );
-    let t' = CSet.of_list (List.map ~f:Logic.Set.of_list !lst) in
+    let tmp = (List.map ~f:Logic.Set.of_list !lst) in
+    let t' = CSet.of_list tmp in
     (*let _ = printf "%s\n" (to_string t') in*)
     simplify t'
 let (==>) t t' = simplify (~-t + t')

@@ -26,6 +26,10 @@ let create_dot_output g dot_output =
 
 let loop dot_output debug verbose limit filename =
   try
+    (*let l = Logic.((Var "a") * (Var "q") * ((Var "a") + (Var "q"))) in*)
+    (*let l' = Logic.(~-(Var "b") * (Var "a") * (Var "q") * (~-(Var "a") + (Var "b") + (Var "q"))) in*)
+    (*let cnf = Cnf.from_logic Logic.(~-(l <=> l')) in*)
+    (*let _ = print_endline (Cnf.to_string cnf) in*)
     Location.filename := filename;
     if debug then Log.set_output stdout;
     Log.logf "reading from %s" filename;
@@ -45,14 +49,20 @@ let loop dot_output debug verbose limit filename =
     Log.output_header "Finding upper bounds for constraints";
     match Solver.solve_exn traversal_list logic verbose limit with
     | None -> print_endline "No satisfiable model is found"
-    | Some x ->
+    | Some (bools, terms) ->
       begin
         if verbose then
           printf "\nSolution:\n";
+        String.Map.iter bools
+          ~f:(fun ~key ~data ->
+            if verbose then printf "  ";
+            printf "%s = %s\n" key (if data then "true" else "false"));
         let f ~key ~data =
           if verbose then printf "  ";
           printf "$%s = %s\n" key (Term.to_string data) in
-        String.Map.iter x ~f;
+        if not (String.Map.is_empty bools) then
+          print_newline ();
+        String.Map.iter terms ~f;
         (* output also values for variables without any constraints *)
         let all_vars = G.fold_vertex
           (fun v acc ->
@@ -62,7 +72,7 @@ let loop dot_output debug verbose limit filename =
             | Internal x -> String.Set.union x acc
           ) g String.Set.empty in
         String.Set.iter
-          (String.Set.diff all_vars (String.Set.of_list (String.Map.keys x)))
+          (String.Set.diff all_vars (String.Set.of_list (String.Map.keys terms)))
           ~f:(fun x ->
             f ~key:x ~data:Term.Nil
           )

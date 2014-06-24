@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: d0b9be0a30d9accf109626a23d30e813)
+# DO NOT EDIT (digest: 1710bf1dffb7462efbe35064981bbcf1)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -14,16 +14,19 @@
 "_darcs": -traverse
 "_darcs": not_hygienic
 # Executable joule
-<src/joule.{native,byte}>: oasis_executable_joule_cclib
-<src/joule.{native,byte}>: package(comparelib)
-<src/joule.{native,byte}>: package(comparelib.syntax)
-<src/joule.{native,byte}>: package(core)
-<src/joule.{native,byte}>: package(ctypes)
-<src/joule.{native,byte}>: package(ctypes.foreign)
-<src/joule.{native,byte}>: package(ocamlgraph)
-<src/joule.{native,byte}>: package(sexplib)
-<src/joule.{native,byte}>: package(sexplib.syntax)
-<src/joule.{native,byte}>: package(threads)
+"src/joule.native": oasis_executable_joule_cclib
+"src/joule.native": oasis_executable_joule_dlllib
+"src/joule.native": oasis_executable_joule_byte
+<src/*.ml{,i}>: oasis_executable_joule_byte
+"src/joule.native": package(comparelib)
+"src/joule.native": package(comparelib.syntax)
+"src/joule.native": package(core)
+"src/joule.native": package(ctypes)
+"src/joule.native": package(ctypes.foreign)
+"src/joule.native": package(ocamlgraph)
+"src/joule.native": package(sexplib)
+"src/joule.native": package(sexplib.syntax)
+"src/joule.native": package(threads)
 <src/*.ml{,i}>: package(comparelib)
 <src/*.ml{,i}>: package(comparelib.syntax)
 <src/*.ml{,i}>: package(core)

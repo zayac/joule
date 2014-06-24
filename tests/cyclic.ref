@@ -1,5 +1,7 @@
+q = true
+
 $u = [int]
 $w = int
-$x = {b: nil}
+$x = {b: int}
 $y = [int]
-$z = [{b: nil}, int]
+$z = [{b: int}, int]

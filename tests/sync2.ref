@@ -1,3 +1,5 @@
+p = true
+
 $rest = nil
 $vdata = {x: int, y: int}
 $wdata = nil

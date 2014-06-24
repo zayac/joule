@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 3a7b0fa48b1421e823524829f7e6594a) *)
+(* DO NOT EDIT (digest: 62df44e3bd493ef70dafd15b3f037ba7) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -612,7 +612,13 @@ let package_default =
                       A "-cclib";
                       A "-lpicosat"
                    ]);
-               (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+               (OASISExpr.EAnd
+                  (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+                    OASISExpr.EFlag "static_picosat"),
+                 S [A "-cclib"; A "-force_load /usr/local/lib/libpicosat.a"]);
+               (OASISExpr.EAnd
+                  (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+                    OASISExpr.ENot (OASISExpr.EFlag "static_picosat")),
                  S [A "-cclib"; A "-lpicosat"])
             ]);
           (["oasis_executable_joule_cclib"; "ocamlmklib"; "c"],
@@ -620,9 +626,29 @@ let package_default =
                (OASISExpr.EBool true, S []);
                (OASISExpr.ETest ("system", "linux"),
                  S [A "-Xlinker"; A "--no-as-needed"; A "-lpicosat"]);
-               (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+               (OASISExpr.EAnd
+                  (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+                    OASISExpr.EFlag "static_picosat"),
+                 S [A "-force_load /usr/local/lib/libpicosat.a"]);
+               (OASISExpr.EAnd
+                  (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+                    OASISExpr.ENot (OASISExpr.EFlag "static_picosat")),
                  S [A "-lpicosat"])
-            ])
+            ]);
+          (["oasis_executable_joule_dlllib"; "link"; "byte"],
+            [
+               (OASISExpr.EBool true, S []);
+               (OASISExpr.EAnd
+                  (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+                    OASISExpr.ENot (OASISExpr.EFlag "static_picosat")),
+                 S [A "-dllib"; P "-lpicosat"])
+            ]);
+          (["oasis_executable_joule_byte"; "ocaml"; "link"; "byte"],
+            [(OASISExpr.EBool true, S [A "-g"])]);
+          (["oasis_executable_joule_byte"; "ocaml"; "ocamldep"; "byte"],
+            [(OASISExpr.EBool true, S [A "-g"])]);
+          (["oasis_executable_joule_byte"; "ocaml"; "compile"; "byte"],
+            [(OASISExpr.EBool true, S [A "-g"])])
        ];
      includes = []
   }
@@ -630,7 +656,7 @@ let package_default =
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default package_default;;
 
-# 634 "myocamlbuild.ml"
+# 660 "myocamlbuild.ml"
 (* OASIS_STOP *)
 
 open Ocamlbuild_plugin;;
@@ -663,7 +689,7 @@ let synopsis =
   | text -> String.trim text
 
 let description =
-  match run_and_read "sed -n '/Description:/,/Executable/{\n\tp\n}'\ _oasis\
+  match run_and_read "sed -n '/Description:/,/Flag/{\n\tp\n}'\ _oasis\
   | sed '1d; $d;' | sed 's/^  //g'" with
   | "" -> "unknown description"
   | text -> String.trim text

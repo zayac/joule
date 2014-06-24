@@ -98,8 +98,13 @@ let find_models set single_model =
     done;
     Solutions !result
 
-let solve (set : Cnf.t) =
+let solve set =
   match find_models set true with
   | Any -> Some String.Map.empty
   | Solutions [] -> None
   | Solutions (hd :: tl) -> Some hd
+
+let equal l l' =
+  match solve Cnf.(~-(l <=> l')) with
+  | None -> true
+  | _ -> false

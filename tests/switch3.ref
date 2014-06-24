@@ -1,2 +1,7 @@
+a = true
+b = false
+c = true
+d = false
+
 $v = {}
 $w = {}

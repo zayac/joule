@@ -7,4 +7,4 @@ exception Unsatisfiability_Error of string
 (** A unification procedure that finally returns unified variable constraints
     as well as logical constraints that need to be unified. *)
 val solve_exn : Constr.t list -> Cnf.t -> bool -> int option
-  -> Term.t String.Map.t option
+  -> (bool String.Map.t * Term.t String.Map.t) option

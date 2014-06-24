@@ -12,13 +12,16 @@ XStdFilesAUTHORS: false
 XStdFilesREADME:  false
 BuildTools:       ocamlbuild, camlp4o, menhir
 
-Synopsis:         Tool for components' interfaces coordination in stream processing language
+Synopsis:         Tool for interface coordination in a programming language based on Kahn Process Networks
 
 Description:
-  Given a set of constraints that represent producer-consumer relations for
-  message types in channels of a stream processing network, Joule verifies the
-  consistency of the constraints.  Moreover, it finds values for undefined
-  (generic) types in the network that do not cause violation of constraints.
+  Given a set of constraints that represents producer-consumer relations for
+  messages in KPN channels, Joule verifies the consistency of the constraints
+  and finds specific instances for all type variables if such exist.
+
+Flag static_picosat
+  Description:    Link PicoSAT as a static library
+  Default:        false
 
 Executable joule
   Path:           src
@@ -32,11 +35,16 @@ Executable joule
                   threads,
                   ctypes,
                   ctypes.foreign
-  CompiledObject: best
+  CompiledObject: native
+  ByteOpt:        -g
   if system(linux)
     CCLib:        -Xlinker --no-as-needed -lpicosat
   else
-    CCLib:        -lpicosat
+    if flag(static_picosat)
+      CCLib:      '-force_load /usr/local/lib/libpicosat.a'
+    else
+      DllLib:     -lpicosat
+      CCLib:      -lpicosat
 
 Test joule
   Command: ./scripts/run_all_tests.pl joule.native my myerr; ./scripts/compare_results.pl ref my referr myerr
