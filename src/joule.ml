@@ -11,25 +11,22 @@ module Dot = Graph.Graphviz.Dot(struct
   let vertex_attributes _ = [`Shape `Circle]
   let vertex_name v =
     String.concat ["\""; Network.Node.to_string v; "\""]
-  let default_vertex_attributes _ = [ `Style `Filled;
-    `Color 0x6495ED;
+  let default_vertex_attributes _ = [ `Style `Filled; `Color 0x6495ED;
     `Fontcolor 0xFFFFFF;
     `Fontsize 10;
+    `Fontname "Helvetica"]
+  let default_edge_attributes _ = [ `Fontcolor 0x000000; `Fontsize 11;
     `Fontname "Helvetica"]
   let graph_attributes _ = []
   end)
 
 let create_dot_output g dot_output =
-  Log.logf "a network graph is saved in DOT format in '%s'" dot_output;
+  Log.logf "a network graph is saved in .dot format in '%s'" dot_output;
   Out_channel.with_file dot_output
     ~f:(fun oc -> Dot.output_graph oc g)
 
 let loop dot_output debug verbose limit filename =
   try
-    (*let l = Logic.((Var "a") * (Var "q") * ((Var "a") + (Var "q"))) in*)
-    (*let l' = Logic.(~-(Var "b") * (Var "a") * (Var "q") * (~-(Var "a") + (Var "b") + (Var "q"))) in*)
-    (*let cnf = Cnf.from_logic Logic.(~-(l <=> l')) in*)
-    (*let _ = print_endline (Cnf.to_string cnf) in*)
     Location.filename := filename;
     if debug then Log.set_output stdout;
     Log.logf "reading from %s" filename;
@@ -46,9 +43,9 @@ let loop dot_output debug verbose limit filename =
     (* create a network of constraints *)
     Log.output_header "Traversal order for constraints";
     let traversal_list = Network.traversal_order g in
-    Log.output_header "Finding upper bounds for constraints";
+    Log.output_header "Solving constraints";
     match Solver.solve_exn traversal_list logic verbose limit with
-    | None -> print_endline "No satisfiable model is found"
+    | None -> print_endline "No solution is found"
     | Some (bools, terms) ->
       begin
         if verbose then
@@ -89,12 +86,12 @@ let command =
     ~readme:(fun () -> Build.description)
     Command.Spec.(
       empty
-      +> flag "-dot-output" (optional string) ~doc:"string save a network \
-        graph in dot format in a file provided as the argument"
+      +> flag "-dot-output" (optional string) ~doc:"string save a KPN graph \
+        graph in .dot format and store in a file provided as an argument"
       +> flag "-debug" no_arg ~doc:" print debug information"
       +> flag "-verbose" no_arg ~doc:" print auxiliary computation results"
       +> flag "-iterations"(optional int) ~doc:"integer maximum number of \
-        iterations of the solver over constraints"
+           iterations for the solver"
       +> anon ("filename" %:string)
     )
     (fun dot_output debug verbose iterations filename () ->
@@ -103,7 +100,7 @@ let command =
 let () =
   let picosat_version = Picosat.version () in
   let build_info = Printf.sprintf
-    "Version: %s\nOcaml version: %s\nPicoSAT version: %s\nBuild platform: %s\n\
+    "Version: %s\nOCaml version: %s\nPicoSAT version: %s\nBuild platform: %s\n\
      Build date: %s"
     (Build.version) (Build.ocaml_version) picosat_version (Build.platform)
       (Build.compile_time) in

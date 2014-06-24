@@ -1,0 +1,10 @@
+a = false
+b = false
+q = true
+
+$u = [int]
+$w = int
+$x = nil
+$y = [int]
+$z = [nil, int]
+$q = nil

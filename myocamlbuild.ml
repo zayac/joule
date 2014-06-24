@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 62df44e3bd493ef70dafd15b3f037ba7) *)
+(* DO NOT EDIT (digest: 21fbf818d17ff64dfa614803a1320f56) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -39,10 +39,10 @@ module OASISExpr = struct
   open OASISGettext
 
 
-  type test = string 
+  type test = string
 
 
-  type flag = string 
+  type flag = string
 
 
   type t =
@@ -52,10 +52,10 @@ module OASISExpr = struct
     | EOr of t * t
     | EFlag of flag
     | ETest of test * string
-    
 
 
-  type 'a choices = (t * 'a) list 
+
+  type 'a choices = (t * 'a) list
 
 
   let eval var_get t =
@@ -430,10 +430,10 @@ module MyOCamlbuildBase = struct
   module OC = Ocamlbuild_pack.Ocaml_compiler
 
 
-  type dir = string 
-  type file = string 
-  type name = string 
-  type tag = string 
+  type dir = string
+  type file = string
+  type name = string
+  type tag = string
 
 
 (* # 62 "src/plugins/ocamlbuild/MyOCamlbuildBase.ml" *)
@@ -448,7 +448,7 @@ module MyOCamlbuildBase = struct
          * directory.
          *)
         includes:  (dir * dir list) list;
-      } 
+      }
 
 
   let env_filename =
@@ -689,8 +689,7 @@ let synopsis =
   | text -> String.trim text
 
 let description =
-  match run_and_read "sed -n '/Description:/,/Flag/{\n\tp\n}'\ _oasis\
-  | sed '1d; $d;' | sed 's/^  //g'" with
+  match run_and_read "sed -n '/^Description:/,/^Flag/p' _oasis | sed '1d; $d;' | sed 's/^  //g'" with
   | "" -> "unknown description"
   | text -> String.trim text
 

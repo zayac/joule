@@ -35,7 +35,7 @@ Executable joule
                   threads,
                   ctypes,
                   ctypes.foreign
-  CompiledObject: native
+  CompiledObject: best
   ByteOpt:        -g
   if system(linux)
     CCLib:        -Xlinker --no-as-needed -lpicosat
