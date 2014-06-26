@@ -1,7 +1,7 @@
 open Core.Std
 open Logic
 
-(** A generic non-ground term in AKTA *)
+(** A generic non-ground term in Message Description Language *)
 type t =
   | Nil
   | Int of int
@@ -55,14 +55,16 @@ val canonize : t -> t
     Throws an exception if one of the terms is not ground. *)
 val seniority_exn : t -> t -> int
 
-(*val canonize_switch : t Cnf.Map.t -> t Cnf.Map.t * Cnf.t*)
-
 (** [get_vars t] returns a set of variable strings [s] from terms
     of the form [Var s] that are contained in [t] *)
 val get_vars : t -> String.Set.t
 
+(** Removes 'false' Boolean expressions from a switch.  Generates Boolean
+    constraints if necessary. *)
 val canonize_switch : t Logic.Map.t -> t Logic.Map.t * Logic.Set.t
 
+(** Converts term to a well-formed term given a set of Boolean values *)
 val to_wff : bool String.Map.t -> t -> t
 
+(** Finds a join term for two terms *)
 val join : t -> t -> t option

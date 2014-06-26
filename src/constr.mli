@@ -1,9 +1,12 @@
+(* A representation of a constraint (seniority relation) *)
+
 open Core.Std
 
-(** A constraint for terms *)
+(** A constraint is a pair of terms *)
 type t = Term.t * Term.t
 
-(** A constraint on variable *)
+(** A collection of terms guarded by a Boolean expression (in CNF) that are
+    potential upper bounds for a single variable *)
 type var_bounds = Term.t Cnf.Map.t
 
 val compare_t : t -> t -> int
@@ -19,15 +22,18 @@ val hash : t -> int
 (** The default value *)
 val default : t
 
-(** Convert contraint to syntaxical representation *)
-val to_string : t -> string
+(** Converts a Boolean expression to string.  An optional argument [rel]
+    specifies a string represenation for the seniority relation symbol *)
+val to_string : ?rel:string -> t -> string
 
 (** [vars t] returns two sets of variables from terms of the form [Vars s] in
-    the left and right parts of the constraint. *)
+    the left and right parts of the constraint *)
 val get_vars : t -> String.Set.t * String.Set.t
 
+(** A debugging function for printing the content of the upper bound array *)
 val print_constraints : var_bounds String.Map.t -> unit
 
-exception No_Solution of string
-
+(** [substitute ub bv] replaces Boolean variables in [ub] with ground Boolean
+    values from [bv] and returns a map of well-formed terms that represent
+    upper bounds for each variable in the map *)
 val substitute : var_bounds String.Map.t -> bool String.Map.t -> Term.t String.Map.t

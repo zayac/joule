@@ -4,6 +4,7 @@ module SLog = Log.Make(struct let section = "solver:" end)
 module LLog = Log.Make(struct let section = "logic:" end)
 
 exception Unsatisfiability_Error of string
+exception No_Solution of string
 
 let unsat_error msg =
   let open Errors in
@@ -395,8 +396,8 @@ let rec solve_senior depth constrs left right =
   let logic_combined = Cnf.(logic_left * logic_right) in
   let open Term in
   try
-    SLog.logf "%ssolving constraint %s <= %s" (String.make depth ' ')
-      (to_string term_left) (to_string term_right);
+    SLog.logf "%ssolving constraint %s" (String.make depth ' ')
+      (Constr.to_string (term_left, term_right));
     match term_left, term_right with
     | Var s, Var s' ->
       let rightm = bound_terms_exn depth constrs logic_combined term_right in
@@ -821,5 +822,5 @@ let solve_exn lst logic verbose limit =
     | None -> None
     | Some bool_map ->
       Some (bool_map, (Constr.substitute constrs bool_map))
-  with Constr.No_Solution t ->
+  with No_Solution t ->
     unsat_error t

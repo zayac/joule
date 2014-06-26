@@ -10,24 +10,29 @@ end
 include T
 include Comparable.Make(T)
 
-
 let make_false = CSet.singleton (Logic.Set.singleton Logic.False)
 let make_true = CSet.empty
 let is_false t = CSet.mem t Logic.(Set.singleton False)
 let is_true = CSet.is_empty
 
-let rec to_string t =
+let to_string ?(sand=" ∧ ") ?(sor=" ∨ ") ?(snot="¬") ?vprefix t =
   if is_false t then "false"
   else if is_true t then "true"
   else
     let lst = CSet.to_list t in
     let lst = List.map ~f:(fun x -> Logic.Set.to_list x) lst in
-    String.concat ~sep:" ∧ "
+    String.concat ~sep:sand
     (List.map lst
         ~f:(fun x ->
-        "(" ^
-        String.concat ~sep:" ∨ " (List.map x ~f:(fun y -> Logic.to_string y))
-        ^ ")"
+          String.concat ["(";
+           String.concat ~sep:sor (List.map x
+             ~f:(fun y ->
+               match vprefix with
+               | None -> Logic.to_string ~sand ~sor ~snot y
+               | Some vp -> Logic.to_string ~sand ~sor ~vprefix:vp y
+             ));
+           ")"
+          ]
         )
     )
 
@@ -127,9 +132,7 @@ let (~-) t =
   if is_false t then make_true
   else if is_true t then make_false
   else
-    (*let _ = printf "%s -> " (to_string t) in*)
     let lst = ref [] in
-    (*print_endline (to_string t);*)
     CSet.iter t
       ~f:(fun disj ->
         let tmp = ref !lst in
@@ -141,7 +144,6 @@ let (~-) t =
       );
     let tmp = (List.map ~f:Logic.Set.of_list !lst) in
     let t' = CSet.of_list tmp in
-    (*let _ = printf "%s\n" (to_string t') in*)
     simplify t'
 let (==>) t t' = simplify (~-t + t')
 let (<==) t t' = simplify (t + ~-t')
@@ -167,5 +169,4 @@ let pairwise_not_and l =
     List.fold ~init:make_true
       ~f:(fun acc (x, y) -> acc * (~-(x * y)))
       (generate_pairs l)
-
 

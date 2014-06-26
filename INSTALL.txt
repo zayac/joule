@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: b0935d47b8f899a65556396fe111a3a8) *)
+(* DO NOT EDIT (digest: d66cfd912909576400c2f9dd4db809e5) *)
 
 This is the INSTALL file for the Joule distribution.
 
@@ -11,14 +11,14 @@ Dependencies
 
 In order to compile this package, you will need:
 
-* ocaml (>= 4.00.1) for all, test joule
+* ocaml (>= 4.00.1) for all, test joule, doc api-joule
 * findlib (>= 1.3.2)
 * core
 * sexplib
 * comparelib
 * ocamlgraph
 * ctypes
-* menhir for all, test joule
+* menhir for all, test joule, doc api-joule
 
 Installing
 ==========

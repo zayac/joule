@@ -1,3 +1,4 @@
+(** A Kahn Process Network construction and verification module *)
 open Core.Std
 
 exception Topology_Error of string
@@ -31,10 +32,10 @@ module G : sig
     Graph.Persistent.Digraph.ConcreteBidirectionalLabeled(Node)(Constr))
 end
 
-(** Convert a constraint to an edge *)
+(** Converts a constraint to an edge *)
 val constr_to_edge : Constr.t -> G.edge
 
-(** Convert an edge to a constraint *)
+(** Converts an edge to a constraint *)
 val edge_to_constr: G.edge -> Constr.t
 
 (** [constrs_to_graph_exn cl] converts a list of constraints into a graph

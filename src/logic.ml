@@ -13,18 +13,13 @@ end
 include T
 include Comparable.Make(T)
 
-let rec to_string = function
+let rec to_string ?(sand=" ∧ ") ?(sor=" ∨ ") ?(snot="¬") ?vprefix = function
   | False -> "false"
   | True -> "true"
-  | Not t -> Printf.sprintf "¬%s" (to_string t)
-  | And (t, t') -> Printf.sprintf "(%s ∧ %s)" (to_string t) (to_string t')
-  | Or (t, t') -> Printf.sprintf "(%s ∨ %s)" (to_string t) (to_string t')
-  | Var v -> "$" ^ v
-
-let set_to_string s =
-  let sl = Set.to_list s in
-  let sstring = List.map ~f:to_string sl in
-  String.concat ~sep:", " sstring
+  | Not t -> Printf.sprintf "%s%s" snot (to_string t)
+  | And (t, t') -> Printf.sprintf "(%s%s%s)" (to_string t) sand (to_string t')
+  | Or (t, t') -> Printf.sprintf "(%s%s%s)" (to_string t) sor (to_string t')
+  | Var v -> (Option.value ~default:"" vprefix) ^ v
 
 let rec is_ground = function
   | False | True -> true

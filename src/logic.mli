@@ -1,6 +1,4 @@
-(** A wrapper over PicoSAT to ease solution of a SAT problem.  Boolean formulas
-    can be provided in an arbitrary form (not CNF).  The solver can find all
-    models instead of a single one. *)
+(** Boolean expressions in an arbitrary form *)
 
 open Core.Std
 
@@ -19,19 +17,23 @@ val sexp_of_t : t -> Sexplib.Sexp.t
 
 include Comparable.S with type t := t
 
-(** Boolean formula string representation. *)
-val to_string : t -> string
+(** Converts a Boolean expression to string.  Auxiliary optional arguments specify
+    - [sand] -- string representation of the conjunction symbol;
+    - [sor] -- string representation of the disjunction symbol;
+    - [snot] -- string representation of the negation symbol;
+    - [vprefix] -- a prefix string that is inserted before every Boolean variable.
 
-val set_to_string : Set.t -> string
+*)
+val to_string : ?sand:string -> ?sor:string -> ?snot:string -> ?vprefix:string -> t -> string
+(** Checks whether a Boolean expression does not contain variables *)
 val is_ground : t -> bool
-
-val list_of_disjuncts : t list -> t
-
-(** Reduce boolean formula.  Unnecessary [True], [False] terms are removed from
-    the formula, double negations are removed. *)
-val simplify : t -> t
-
+(** Replaces variables in a Boolean expression [t] with the ones provided in
+    the map and simplifies the expression *)
 val evaluate : bool String.Map.t -> t -> t
+(** Constructs a disjunction of Boolean expressions that are provided in a list *)
+val list_of_disjuncts : t list -> t
+(** Tries to reduce and to simplify a Boolean expression *)
+val simplify : t -> t
 
 (** {2 Logical operators } *)
 

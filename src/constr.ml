@@ -13,8 +13,8 @@ let hash = Hashtbl.hash
 
 let default = Term.(Nil, Nil)
 
-let to_string (l, r) =
-  sprintf "%s <= %s" (Term.to_string l) (Term.to_string r)
+let to_string ?(rel=" ⊑ ") (l, r) =
+  sprintf "%s%s%s" (Term.to_string l) rel (Term.to_string r)
 
 let get_vars (l, r) = Term.get_vars l, Term.get_vars r
 
@@ -42,7 +42,10 @@ let substitute constrs bools =
       | x -> x in
     let term = Cnf.Map.fold ~init:None ~f:f' x in
     match term with
-    | None -> raise (No_Solution "Solution doesn't exist")
+    | None ->
+      (* a solution does not exist. It has to be verified by generating
+         additional Boolean constraints *)
+      assert false
     | Some x -> x in
   String.Map.map constrs ~f
 

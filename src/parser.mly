@@ -67,8 +67,7 @@ let convert_constrs l r =
 %}
 
 %token <int> INT
-%token <string> VAR
-%token <string> ID
+%token <string> VAR ID
 %token NIL TRUE FALSE NOT OR AND
 %token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET LANGULAR RANGULAR
   LSMILE RSMILE
@@ -89,7 +88,7 @@ constrs:
   | term+ EQ term+ SCOLON { convert_constrs $1 $3 @ convert_constrs $3 $1 }
   | error
     {
-      Errors.parse_error "Invalid term or constraint" $startpos $endpos
+      Errors.parse_error "invalid term or constraint" $startpos $endpos
     }
 
 term:
@@ -141,7 +140,7 @@ rec_entry:
     }
   | error
     {
-      Errors.parse_error "Invalid record entry" $startpos $endpos
+      Errors.parse_error "invalid record entry" $startpos $endpos
     }
 
 guard:
@@ -153,10 +152,14 @@ guard:
 logical_term:
   | TRUE { Logic.True }
   | FALSE { Logic.False }
-  | VAR { Logic.Var $1 }
+  | ID { Logic.Var $1 }
   | LPAREN OR logical_term logical_term RPAREN { Logic.($3 + $4) }
   | LPAREN AND logical_term logical_term RPAREN { Logic.($3 * $4) }
   | LPAREN NOT logical_term RPAREN { Logic.(~-$3) }
+  | VAR
+    {
+      Errors.parse_error "invalid Boolean expression" $startpos $endpos
+    }
 
 rec_list_tail:
   | BAR VAR { $2 }

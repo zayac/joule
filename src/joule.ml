@@ -104,5 +104,5 @@ let () =
      Build date: %s"
     (Build.version) (Build.ocaml_version) picosat_version (Build.platform)
       (Build.compile_time) in
-  Command.run ~version:(Version.version) ~build_info
+  Command.run ~version:(Build.version) ~build_info
     command

@@ -75,6 +75,20 @@ let merge_vertices g =
       (*if List.length c = 1 then ()*)
       (*else*)
 
+let constraint_missing bound set =
+  let set_string s =
+    String.concat ~sep:", "
+      (List.map (String.Set.to_list s) ~f:(fun x -> "$" ^ x)) in
+  let ending, ending' =
+    match String.Set.length set, bound with
+    | 1, `Upper -> "an upper bound", "a term variable"
+    | 1, `Lower -> "a lower bound", "a term variable"
+    | 0, _ -> assert false
+    | _, `Upper -> "upper bounds", "term variables"
+    | _, `Lower -> "lower bounds", "term variables"
+    | _, _ -> assert false in
+  sprintf "missing a constraint that specifies %s for %s %s"
+    ending ending' (set_string set)
 
 (* check that all internal vertices (i.e. variables) are connected to either
    other vertices or the environment *)
@@ -91,9 +105,9 @@ let check_connectivity_exn g =
     let succ_diff = SS.diff x succ_vars in
     let pred_diff = SS.diff x pred_vars in
     if not (SS.is_empty succ_diff) then
-      Log.log (lazy (Errors.constraint_missing `Upper succ_diff));
+      Log.log (lazy (constraint_missing `Upper succ_diff));
     if not (SS.is_empty pred_diff) then
-      raise (topo_error (Errors.constraint_missing `Lower pred_diff));
+      raise (topo_error (constraint_missing `Lower pred_diff));
   | Env_In | Env_Out -> () in
   G.iter_vertex check g
 

@@ -62,5 +62,5 @@ rule read = parse
         let open Errors in
         let open Location in
         raise (Syntax_Error (error ~loc:(Some (curr lexbuf))
-        (Printf.sprintf "Unexpected char: '%s'" (Lexing.lexeme lexbuf))))
+        (Printf.sprintf "unexpected character: '%s'" (Lexing.lexeme lexbuf))))
       }
