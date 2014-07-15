@@ -63,7 +63,7 @@ let transform_term logic term =
       let switch2 = Util.switch_of_alist_exn
         [ Logic.(Var new_bool_var), Term.(Var new_term_var);
           Logic.(~-(Var new_bool_var)), t' ] logic in
-      constrs := !constrs @ [switch1, t; switch2, t'];
+      constrs := !constrs @ [switch1, t; switch2, t'; Term.Var new_term_var, Term.Nil];
       return_switch
     | Tuple l ->
       Tuple (List.map l ~f:transform)

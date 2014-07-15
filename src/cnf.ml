@@ -58,21 +58,21 @@ let simplify t =
                 begin
                   match Set.find acc ~f:(Logic.(=) (Var v)) with
                   | None -> Set.add acc el
-                  | Some el' -> Set.remove acc el'
+                  | Some el' -> Set.add (Set.remove acc el') True
                 end
               | Var v ->
                 begin
                   match Set.find acc ~f:(Logic.(=) (Not (Var v))) with
                   | None -> Set.add acc el
-                  | Some el' -> Set.remove acc el'
+                  | Some el' -> Set.add (Set.remove acc el') True
                 end
               | _ -> acc
             ) in
-          if Set.is_empty disj then CSet.empty
+          if Set.mem disj True then make_true
           else CSet.singleton disj in
       if is_false acc || is_false result then make_false
-      else if CSet.is_empty acc then result
-      else if CSet.is_empty result then acc
+      else if is_true acc then result
+      else if is_true result then acc
       else CSet.union acc result
     )
 

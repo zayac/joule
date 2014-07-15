@@ -107,7 +107,7 @@ let check_connectivity_exn g =
     if not (SS.is_empty succ_diff) then
       Log.log (lazy (constraint_missing `Upper succ_diff));
     if not (SS.is_empty pred_diff) then
-      raise (topo_error (constraint_missing `Lower pred_diff));
+      Log.log (lazy (constraint_missing `Upper pred_diff))
   | Env_In | Env_Out -> () in
   G.iter_vertex check g
 

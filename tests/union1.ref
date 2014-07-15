@@ -1,2 +1,5 @@
+a = false
+
 $a = nil
 $b = nil
+$c = nil

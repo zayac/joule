@@ -1,7 +1,7 @@
-q = true
+q = false
 
-$u = [int]
-$w = int
-$x = {b: int}
-$y = [int]
-$z = [{b: int}, int]
+$u = [char]
+$w = char
+$x = {}
+$y = [char]
+$z = [{}, char]

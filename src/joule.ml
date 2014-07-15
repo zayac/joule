@@ -34,6 +34,7 @@ let loop dot_output debug verbose limit filename =
     Log.output_header "Syntax Analysis/Parsing";
     let constrs, logic = In_channel.with_file filename
         ~f:(fun inx -> Parser.parse Lexer.read (Lexing.from_channel inx)) in
+    let constrs, logic = Transform.union constrs logic in
     Log.logf "%d constraints have been read:" (List.length constrs);
     List.iter constrs ~f:(fun el -> Log.logf "  %s" (Constr.to_string el));
     (* graph construction *)

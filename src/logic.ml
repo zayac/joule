@@ -70,9 +70,10 @@ let rec evaluate bools = function
   | Var t ->
     begin
       match String.Map.find bools t with
-      | Some true -> True
-      | Some false
-      | None -> False
+      | Some true
+      (* convention: priority goes to True *)
+      | None -> True
+      | Some false -> False
     end
   | Not t ->
     begin

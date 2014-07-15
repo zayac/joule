@@ -1,10 +1,10 @@
 a = true
-b = false
-q = true
+b = true
+q = false
 
+$u = [char]
+$w = char
+$x = {}
+$y = [char]
+$z = [{}, char]
 $q = nil
-$u = [int]
-$w = int
-$x = nil
-$y = [int]
-$z = [nil, int]

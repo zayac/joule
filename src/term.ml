@@ -272,7 +272,7 @@ let rec join t t' =
     begin
       try
         if Poly.(List.length l = List.length l') then
-          Some (List (join_lst l l, None))
+          Some (List (join_lst l l', None))
         else if Poly.(List.length l > List.length l') then
           let reduced = List.take l (List.length l') in
           let lst = (join_lst reduced l') @ (List.drop l (List.length l')) in

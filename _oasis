@@ -52,7 +52,7 @@ Document "api-joule"
   Type: ocamlbuild (0.3)
   BuildTools: ocamlbuild, ocamldoc
   XOCamlbuildPath: src/
-  XOCamlbuildModules: Cnf, Constr, Equations, Errors, Location, Log, Logic, Network, Picosat, Sat, Solver, Term
+  XOCamlbuildModules: Cnf, Constr, Transform, Errors, Location, Log, Logic, Network, Picosat, Sat, Solver, Term
 
 Test joule
   Command: ./scripts/run_all_tests.pl joule.native my myerr; ./scripts/compare_results.pl ref my referr myerr
