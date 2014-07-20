@@ -48,8 +48,8 @@ let simplify t =
       let result =
         let open Logic in
         if Set.is_empty (Set.filter x ~f:(fun el -> Poly.(el <> True && el <> False))) then
-          if Set.mem x True then make_true
-          else make_false
+          if Set.mem x True then Logic.true_set
+          else Logic.false_set
         else
           let disj = Set.fold x ~init:Set.empty
             ~f:(fun acc el ->
@@ -68,12 +68,26 @@ let simplify t =
                 end
               | _ -> acc
             ) in
-          if Set.mem disj True then make_true
-          else CSet.singleton disj in
-      if is_false acc || is_false result then make_false
-      else if is_true acc then result
-      else if is_true result then acc
-      else CSet.union acc result
+          if Set.mem disj True then Logic.true_set else disj in
+      let to_add = ref true in
+      let acc = CSet.filter acc
+        ~f:(fun x ->
+          if !to_add && Logic.Set.subset x result then
+            let _ = to_add := false in true
+          else if !to_add && Logic.Set.subset result x then
+            false
+          else
+            true
+        ) in
+      if !to_add then
+        if Logic.Set.equal result Logic.true_set then CSet.union acc make_true
+        else if Logic.Set.equal result Logic.false_set then CSet.union acc make_false
+        else CSet.add acc result
+      else acc
+      (*if is_false acc || is_false result then make_false*)
+      (*else if is_true acc then result*)
+      (*else if is_true result then acc*)
+      (*else CSet.union acc result*)
     )
 
 let rec from_logic = function

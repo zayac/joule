@@ -55,3 +55,5 @@ val ( <== ) : t -> t -> t
 (** Equivalence *)
 val ( <=> ) : t -> t -> t
 
+val true_set : Set.t
+val false_set : Set.t

@@ -39,6 +39,7 @@ let rec to_string t =
     S.concat [lsep;
       S.concat ~sep:", " element_strs; tail_to_string tail; rsep] in
   match t with
+  | List ([], None)
   | Nil -> "nil"
   | Int x -> string_of_int x
   | Symbol x -> x
@@ -46,6 +47,8 @@ let rec to_string t =
   | List (x, tail) ->
     S.concat ["["; S.concat ~sep:", " (L.map ~f:to_string x);
       tail_to_string tail; "]"]
+  | Record (x, None)
+      when String.Map.for_all x ~f:(fun (l, _) -> Cnf.is_false l) -> "nil"
   | Record (x, tail) -> print_dict x tail "{" "}"
   | Choice (x, tail) -> print_dict x  tail "(:" ":)"
   | Var x -> "$" ^ x

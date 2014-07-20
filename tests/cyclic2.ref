@@ -4,7 +4,7 @@ q = false
 
 $u = [char]
 $w = char
-$x = {}
+$x = nil
 $y = [char]
-$z = [{}, char]
+$z = [nil, char]
 $q = nil

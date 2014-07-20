@@ -3,5 +3,5 @@ b = false
 c = true
 d = false
 
-$v = {}
-$w = {}
+$v = nil
+$w = nil

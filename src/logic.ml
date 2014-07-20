@@ -28,6 +28,9 @@ let rec is_ground = function
   | And (t, t') -> is_ground t && is_ground t'
   | Var _ -> false
 
+let true_set = Set.singleton True
+let false_set = Set.singleton False
+
 let rec simplify = function
   | Not t ->
     begin

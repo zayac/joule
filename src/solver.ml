@@ -27,7 +27,7 @@ let add_bool_constr depth b =
 let print_map tm =
   let tl = Cnf.Map.to_alist tm in
   let sl = List.map tl ~f:(fun (l, t) ->
-    Printf.sprintf "[%s]%s" (Cnf.to_string l) (Term.to_string t)) in
+    Printf.sprintf "%s: %s" (Cnf.to_string l) (Term.to_string t)) in
   String.concat ~sep:", " sl
 
 let get_bound constrs var =
@@ -367,7 +367,7 @@ let set_bound_exn depth constrs var terms =
           (Printf.sprintf "the upper bounds for variable $%s are inconsistent"
             var)
       else
-        SLog.logf "%s for variable $%s to {%s}" b var (print_map merged);
+        SLog.logf "%s for variable $%s to <%s>" b var (print_map merged);
         Some merged
   )
 
@@ -540,32 +540,32 @@ let rec solve_senior depth constrs left right =
         set_list_bound depth constrs v !merged
       | reml, _, _ ->
         begin
-        let constrs, var_list =
-          poly_var_to_list depth constrs var' logic_right in
-        let heads lst =
-          List.fold lst ~init:(Cnf.Map.empty, [])
-            ~f:(fun (hds, tls) (logic, lst) ->
-              match lst with
-              | hd :: tl ->
-                (add_to_map depth hds logic hd), (logic, tl) :: tls
-              | [] ->
-                (add_to_map depth hds logic Term.Nil), (logic, []) :: tls
-            ) in
-        let constrs, tail_list =
-          List.fold reml ~init:(constrs, var_list)
-            ~f:(fun (constrs, tail_list) x ->
-              let head, tail_list = heads tail_list in
-              let head = if Cnf.Map.is_empty head then
-                Cnf.Map.singleton logic_right Term.Nil
-              else head in
-              let left = Cnf.Map.singleton logic_left term_left in
-              let constrs =
-                solve_senior_multi_exn (depth + 1) constrs left head in
-              constrs, tail_list
-            ) in
-        match var with
-        | Some v -> set_list_bound depth constrs v tail_list
-        | None -> constrs
+          let constrs, var_list =
+            poly_var_to_list depth constrs var' logic_right in
+          let heads lst =
+            List.fold lst ~init:(Cnf.Map.empty, [])
+              ~f:(fun (hds, tls) (logic, lst) ->
+                match lst with
+                | hd :: tl ->
+                  (add_to_map depth hds logic hd), (logic, tl) :: tls
+                | [] ->
+                  (add_to_map depth hds logic Term.Nil), (logic, []) :: tls
+              ) in
+          let constrs, tail_list =
+            List.fold reml ~init:(constrs, var_list)
+              ~f:(fun (constrs, tail_list) x ->
+                let head, tail_list = heads tail_list in
+                let head = if Cnf.Map.is_empty head then
+                  Cnf.Map.singleton logic_right Term.Nil
+                else head in
+                let left = Cnf.Map.singleton logic_left term_left in
+                let constrs =
+                  solve_senior_multi_exn (depth + 1) constrs left head in
+                constrs, tail_list
+              ) in
+          match var with
+          | Some v -> set_list_bound depth constrs v tail_list
+          | None -> constrs
         end
       end
     (* record/choice processing *)
@@ -617,7 +617,7 @@ let rec solve_senior depth constrs left right =
           ) in
         let constrs_ref = ref constrs in
         let var_bounds = ref Cnf.Map.empty in
-        Cnf.Map.iter bounds 
+        Cnf.Map.iter bounds
           ~f:(fun ~key ~data ->
             let logic = Cnf.(key * logic_right) in
             match data with
@@ -798,7 +798,7 @@ let resolve_bound_constraints topo =
       || !iter_counter > !iteration_limit then
       fixed_point := true
     else
-      iter_counter := !iter_counter + 2;
+      iter_counter := !iter_counter + 1;
   done;
   !constrs
 
@@ -830,7 +830,7 @@ let solve_exn lst logic verbose limit =
             printf "  %s -> %s\n" (Cnf.to_string key) (Term.to_string data)
           )
       );
-    printf "Boolean constraints:\n  %s\n" (Cnf.to_string !boolean_constraints);
+    printf "Boolean constraints:\n  %s\n" Cnf.(to_string (simplify !boolean_constraints));
     end;
   try
     match Sat.solve !boolean_constraints with
