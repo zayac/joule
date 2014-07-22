@@ -1,9 +1,9 @@
 a = false
 b = false
 c = false
-d = false
+d = true
 e = false
-f = true
+f = false
 g = true
 
 $x = {a: 0}

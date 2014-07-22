@@ -11,6 +11,10 @@ let error ?(loc=None) msg =
   (print_error ~loc:loc str_formatter; flush_str_formatter ()) ^ msg
 
 exception Parsing_Error of string
+exception Unsatisfiability_Error of string
+
+let unsat_error msg =
+  raise (Unsatisfiability_Error (error msg))
   
 let parse_error msg start finish =
   let open Location in

@@ -1,9 +1,9 @@
-a = false
+a = true
 b = false
-c = true
-d = false
+c = false
+d = true
 e = false
-f = true
+f = false
 
 $x = nil
 $y = nil

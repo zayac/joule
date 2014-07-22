@@ -33,19 +33,22 @@ let print_constraints map =
 exception No_Solution of string
 
 let substitute constrs bools =
-  let f x =
-    let f' ~key ~data = function
-      | None ->
-        if Logic.(Cnf.evaluate bools key = True) then
-          Some (Term.to_wff bools data)
-        else None
-      | x -> x in
-    let term = Cnf.Map.fold ~init:None ~f:f' x in
-    match term with
+  let f ~key ~data acc =
+    (* store all terms that match a Boolean condition *)
+    let candidates = ref Term.Set.empty in
+    let f' ~key ~data =
+      if Logic.(Cnf.evaluate bools key = True) then
+        candidates := Term.Set.add !candidates (Term.to_wff bools data) in
+    Cnf.Map.iter ~f:f' data;
+    let result = Term.Set.fold !candidates ~init:None
+      ~f:(fun acc el ->
+        match acc with
+        | None -> Some el
+        | Some old_el -> Term.join old_el el
+      ) in
+    match result with
     | None ->
-      (* a solution does not exist. It has to be verified by generating
-         additional Boolean constraints *)
-      assert false
-    | Some x -> x in
-  String.Map.map constrs ~f
+      Errors.unsat_error (sprintf "A solution for variable $%s does not exist" key)
+    | Some term -> String.Map.add acc ~key ~data:term in
+    String.Map.fold constrs ~init:String.Map.empty ~f
 

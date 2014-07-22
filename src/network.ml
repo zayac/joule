@@ -36,7 +36,7 @@ let constr_to_edge c =
 
 let edge_to_constr (_, e, _) = e
 
-(* merge vertices that contain same variables *)
+(* merge vertices that contain the same subset of variables *)
 let merge_vertices g =
   let g' = ref g in
   let merge = function
@@ -46,19 +46,20 @@ let merge_vertices g =
       let module SS = String.Set in
       if SS.subset v v' && not (SS.equal v v') then
         begin
-          Log.logf "merging node %s with node %s" (Node.to_string vnode) 
+          Log.logf "merging a node %s with a node %s" (Node.to_string vnode) 
             (Node.to_string vnode');
-          let succ_edges = G.succ_e !g' vnode in
-          let pred_edges = G.pred_e !g' vnode in
-          List.iter ~f:(fun (src, e, dest) ->
-            g' := G.add_edge_e !g' (G.E.create (Internal v') e dest);
-            g' := G.remove_edge_e !g' (src, e, dest)) succ_edges;
-          List.iter ~f:(fun (src, e, dest) ->
-            g' := G.add_edge_e !g' (G.E.create src e (Internal v'));
-            g' := G.remove_edge_e !g' (src, e, dest)) pred_edges;
-          if G.in_degree !g' (Internal v) = 0
-            && G.out_degree !g' (Internal v) = 0 then
-            g' := G.remove_vertex !g' (Internal v)
+          if G.mem_vertex !g' vnode then
+            let succ_edges = G.succ_e !g' vnode in
+            let pred_edges = G.pred_e !g' vnode in
+            List.iter ~f:(fun (src, e, dest) ->
+                g' := G.add_edge_e !g' (G.E.create (Internal v') e dest);
+                g' := G.remove_edge_e !g' (src, e, dest)) succ_edges;
+            List.iter ~f:(fun (src, e, dest) ->
+                g' := G.add_edge_e !g' (G.E.create src e (Internal v'));
+                g' := G.remove_edge_e !g' (src, e, dest)) pred_edges;
+            if G.in_degree !g' (Internal v) = 0
+                && G.out_degree !g' (Internal v) = 0 then
+                g' := G.remove_vertex !g' (Internal v)
         end
     | Env_In | Env_Out -> () in
     G.iter_vertex update !g'

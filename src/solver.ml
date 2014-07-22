@@ -3,12 +3,7 @@ open Core.Std
 module SLog = Log.Make(struct let section = "solver:" end)
 module LLog = Log.Make(struct let section = "logic:" end)
 
-exception Unsatisfiability_Error of string
 exception No_Solution of string
-
-let unsat_error msg =
-  let open Errors in
-  raise (Unsatisfiability_Error (error msg))
 
 let iteration_limit = ref 100
 
@@ -18,7 +13,7 @@ let boolean_constraints = ref Cnf.CSet.empty
 
 let log_bool_constr depth b =
   let indent = String.make depth ' ' in
-  LLog.logf "%sadding boolean constraint '%s'" indent (Cnf.to_string b)
+  LLog.logf "%sadding a boolean constraint '%s'" indent (Cnf.to_string b)
 
 let add_bool_constr depth b =
   log_bool_constr depth b;
@@ -62,6 +57,9 @@ let add_to_map depth map logic term =
     else map
 
 let merge_bounds depth old_terms new_terms =
+  (*Cnf.Map.iter old_terms ~f:(fun ~key ~data -> printf "%s -> %s\n" (Cnf.to_string key) (Term.to_string data));*)
+  (*print_newline ();*)
+  (*Cnf.Map.iter new_terms ~f:(fun ~key ~data -> printf "%s -> %s\n" (Cnf.to_string key) (Term.to_string data));*)
   if Cnf.Map.is_empty old_terms && Cnf.Map.is_empty new_terms then
     Cnf.Map.singleton Cnf.make_true Term.Nil
   else if Cnf.Map.is_empty old_terms then new_terms
@@ -103,10 +101,12 @@ let merge_bounds depth old_terms new_terms =
           Cnf.Map.iter !old_map
             ~f:(fun ~key ~data ->
               let logic, term = key, data in
-              if Term.equal term term' then
-                new_map := add_to_map depth !new_map Cnf.(logic + logic') term
-              else
+              (*if Term.equal term term' then*)
+                (*new_map := add_to_map depth !new_map Cnf.(logic + logic') term*)
+              (*else*)
               begin
+                (* Notice that two terms that correspond to the same Boolean
+                   guards may be added to the map *)
                 new_map := add_to_map depth !new_map Cnf.(logic * ~-logic') term;
                 new_map := add_to_map depth !new_map Cnf.(~-logic * logic') term';
                 match Term.join term term' with
@@ -116,7 +116,32 @@ let merge_bounds depth old_terms new_terms =
               end
             );
         );
-    !new_map
+    (*print_newline ();*)
+    (*Cnf.Map.iter !new_map ~f:(fun ~key ~data -> printf "%s -> %s\n" (Cnf.to_string key) (Term.to_string data));*)
+
+    (*!new_map*)
+    let all_terms = ref Term.Set.empty in
+    Cnf.Map.fold !new_map ~init:Cnf.Map.empty
+      ~f:(fun ~key ~data acc ->
+        let data' = data in
+        if Term.Set.mem !all_terms data then acc
+        else
+          let combined =
+            Cnf.Map.fold !new_map ~init:key
+              ~f:(fun ~key ~data acc ->
+                if Term.equal data data' then Cnf.(acc + key)
+                else acc
+              ) in
+          all_terms := Term.Set.add !all_terms data;
+          let result = Cnf.Map.change acc combined (function
+          | None -> Some data
+          | Some old ->
+            match Term.join data old with
+            | None -> add_bool_constr depth Cnf.(~-combined); None
+            | Some join_term -> Some join_term
+          ) in
+          result
+      )
 
 let combine_bounds old_terms new_terms =
   Cnf.Map.fold new_terms ~init:old_terms
@@ -129,7 +154,7 @@ let combine_bounds old_terms new_terms =
           let relation = Term.seniority_exn old_term new_term in
           if relation < 1 then Some new_term else Some old_term
         with Term.Incomparable_Terms (t1, t2) ->
-          unsat_error (Printf.sprintf "constraint violation between old bound
+          Errors.unsat_error (Printf.sprintf "constraint violation between old bound
            (%s) and new one (%s)" (Term.to_string old_term)
            (Term.to_string new_term)))
     )
@@ -282,7 +307,7 @@ let rec bound_terms_exn depth constrs logic term =
         (* if tail variable does not have bounding term that is a record,
            throw error *)
         let _ = if List.is_empty combined then
-          unsat_error 
+          Errors.unsat_error 
             (Printf.sprintf "Missing record as a upper bound for variable $%s"
               var) in
         (* verify the consistency of generated bounds *)
@@ -335,7 +360,7 @@ let rec bound_terms_exn depth constrs logic term =
         (* if tail variable does not have bounding term that is a choice,
            throw error *)
         let _ = if List.is_empty combined then
-          unsat_error
+          Errors.unsat_error
             (Printf.sprintf "Missing record as a upper bound for variable $%s"
             var) in
         (* vefify the consistency of generated bounds *)
@@ -363,7 +388,7 @@ let set_bound_exn depth constrs var terms =
     | Some u ->
       let merged = merge_bounds (depth + 1) u terms in
       if Cnf.Map.is_empty merged then
-        unsat_error
+        Errors.unsat_error
           (Printf.sprintf "the upper bounds for variable $%s are inconsistent"
             var)
       else
@@ -412,7 +437,7 @@ let rec solve_senior depth constrs left right =
   let logic_combined = Cnf.(logic_left * logic_right) in
   let open Term in
   try
-    SLog.logf "%ssolving constraint %s" (String.make depth ' ')
+    SLog.logf "%ssolving a constraint %s" (String.make depth ' ')
       (Constr.to_string (term_left, term_right));
     match term_left, term_right with
     | Var s, Var s' ->
@@ -639,7 +664,7 @@ let rec solve_senior depth constrs left right =
                       (guard', term') (guard, term) in
                       add_bool_constr depth Cnf.(guard ==> guard');
                       constrs_ref := constrs
-                    with Unsatisfiability_Error _ ->
+                    with Errors.Unsatisfiability_Error _ ->
                       var_logic := Cnf.(!var_logic * ~- guard * ~-guard'));
                   if not (String.Map.is_empty !var_rec) then
                     var_bounds := add_to_map depth !var_bounds !var_logic
@@ -687,7 +712,7 @@ let rec solve_senior depth constrs left right =
                       (guard', term') (guard, term) in
                     add_bool_constr depth Cnf.(guard' ==> guard);
                     constrs_ref := constrs
-                  with Unsatisfiability_Error _ ->
+                  with Errors.Unsatisfiability_Error _ ->
                     var_logic := Cnf.(!var_logic * ~-guard * ~-guard'));
               if not (String.Map.is_empty !var_rec) then
                 var_bounds := add_to_map depth !var_bounds !var_logic
@@ -725,7 +750,7 @@ let rec solve_senior depth constrs left right =
   with Term.Incomparable_Terms (t1, t2) ->
     let logic = Cnf.(~-(logic_left * logic_right)) in
     if Cnf.is_false logic then
-      unsat_error (sprintf "the seniority relation %s <= %s does not hold"
+      Errors.unsat_error (sprintf "the seniority relation %s <= %s does not hold"
         (Term.to_string term_left) (Term.to_string term_right))
     else begin
       add_bool_constr depth logic;
@@ -778,16 +803,19 @@ let ctx_equal (constrs, logic) (constrs', logic') =
                 )
       );
     !eq
- 
+
 let resolve_bound_constraints topo =
-  SLog.logf "setting least upper bounds for constraints";
+  SLog.logf "setting the least upper bounds for constraints";
   let fixed_point = ref false in
   let iter_counter = ref 1 in
   let constrs, bools = ref String.Map.empty, boolean_constraints in
-  (*String.Set.iter !Transform.term_variables*)
-    (*~f:(fun el ->*)
-      (*constrs := String.Map.add !constrs ~key:el ~data:(Cnf.Map.singleton Cnf.make_true Term.Nil)*)
-    (* );*)
+  (* Set the initial upper bound, which is nil, for all term variables *)
+  let union =
+    String.Set.union !Transform.initial_term_variables !Transform.additional_term_variables in
+  String.Set.iter union
+    ~f:(fun el ->
+      constrs := String.Map.add !constrs ~key:el ~data:(Cnf.Map.singleton Cnf.make_true Term.Nil)
+     );
   while not !fixed_point do
     SLog.logf "iteration #%d" !iter_counter;
     let constrs', bools' = ref !constrs, ref !bools in
@@ -833,10 +861,12 @@ let solve_exn lst logic verbose limit =
     printf "Boolean constraints:\n  %s\n" Cnf.(to_string (simplify !boolean_constraints));
     end;
   try
-    match Sat.solve !boolean_constraints with
+    match Sat.solve_max !boolean_constraints with
     | None -> None
     | Some bool_map ->
-      let bool_map = String.Set.fold !Transform.bool_variables ~init:bool_map
+      let union =
+        String.Set.union !Transform.initial_bool_variables !Transform.additional_bool_variables in
+      let bool_map = String.Set.fold union ~init:bool_map
       ~f:(fun acc el ->
         if not (String.Map.mem bool_map el) then
           String.Map.add acc ~key:el ~data:true
@@ -844,4 +874,4 @@ let solve_exn lst logic verbose limit =
       ) in
       Some (bool_map, (Constr.substitute constrs bool_map))
   with No_Solution t ->
-    unsat_error t
+    Errors.unsat_error t

@@ -2,7 +2,6 @@ open Core.Std
 
 (** The exception is thrown when it is found that the network has unsatisfied
     constraints. *)
-exception Unsatisfiability_Error of string
 exception No_Solution of string
 
 (** A unification procedure that finally returns unified variable constraints

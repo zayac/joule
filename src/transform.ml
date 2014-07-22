@@ -1,9 +1,11 @@
 
 open Core.Std
 
-let bool_variables = ref String.Set.empty
+let initial_bool_variables = ref String.Set.empty
+let additional_bool_variables = ref String.Set.empty
 let bool_var_candidate = ref "a"
-let term_variables = ref String.Set.empty
+let initial_term_variables = ref String.Set.empty
+let additional_term_variables = ref String.Set.empty
 let term_var_candidate = ref "a"
 
 let next_var_name s =
@@ -25,7 +27,8 @@ let next_var_name s =
   !s'
 
 let get_free_bool_var () =
-  while String.Set.mem !bool_variables !bool_var_candidate do
+  while String.Set.mem !initial_bool_variables !bool_var_candidate ||
+        String.Set.mem !additional_bool_variables !bool_var_candidate do
     bool_var_candidate := next_var_name !bool_var_candidate
   done;
   let result = !bool_var_candidate in
@@ -33,7 +36,8 @@ let get_free_bool_var () =
   result
 
 let get_free_term_var () =
-  while String.Set.mem !term_variables !term_var_candidate do
+  while String.Set.mem !initial_term_variables !term_var_candidate ||
+        String.Set.mem !additional_term_variables !bool_var_candidate do
     term_var_candidate := next_var_name !term_var_candidate
   done;
   let result = !term_var_candidate in
@@ -49,9 +53,9 @@ let transform_term logic term =
       let t = transform t in
       let t' = transform t' in
       let new_bool_var = get_free_bool_var () in
-      bool_variables := String.Set.add !bool_variables new_bool_var;
+      additional_bool_variables := String.Set.add !additional_bool_variables new_bool_var;
       let new_term_var = get_free_term_var () in
-      term_variables := String.Set.add !term_variables new_term_var;
+      additional_term_variables := String.Set.add !additional_term_variables new_term_var;
       let return_switch = Util.switch_of_alist_exn
         [ Logic.(Var new_bool_var), Term.(Var new_term_var);
           Logic.(~-(Var new_bool_var)), Tuple [Symbol "union"; t; t']

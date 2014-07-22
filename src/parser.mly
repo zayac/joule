@@ -47,8 +47,9 @@ term:
   | ID { Term.Symbol $1 }
   | VAR
   {
-      Transform.term_variables := Core.Std.String.Set.add !Transform.term_variables $1;
-      Term.Var $1
+    let module T = Transform in
+    T.initial_term_variables := Core.Std.String.Set.add !T.initial_term_variables $1;
+    Term.Var $1
   }
   | LPAREN term+ RPAREN
     {
@@ -108,7 +109,8 @@ logical_term:
   | FALSE { Logic.False }
   | ID
     {
-      Transform.bool_variables := Core.Std.String.Set.add !Transform.bool_variables $1;
+      let module T = Transform in
+      T.initial_bool_variables := Core.Std.String.Set.add !T.initial_bool_variables $1;
       Logic.Var $1
     }
   | LPAREN OR logical_term logical_term RPAREN { Logic.($3 + $4) }
@@ -120,4 +122,9 @@ logical_term:
     }
 
 rec_list_tail:
-  | BAR VAR { $2 }
+  | BAR VAR
+    {
+      let module T = Transform in
+      T.initial_term_variables := Core.Std.String.Set.add !T.initial_term_variables $2;
+      $2 
+    }

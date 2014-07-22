@@ -74,26 +74,27 @@ let find_models set single_model =
     let module IM = Int.Map in
     let module SM = String.Map in
     while !loop do
-        if Poly.(Picosat.sat !psat Int.(~-1) = Picosat.Satisfiable) then
+      if Poly.(Picosat.sat !psat Int.(~-1) = Picosat.Satisfiable) then
         match get_solution psat with
         | Some x ->
-            let assignment = ref SM.empty in
-            let counter = ref 1 in
-            List.iter ~f:(fun v ->
-            ignore (Picosat.add !psat Int.(~-1 * !counter * v));
-            (* add a variable value to the assignment *)
-            assignment :=
+          let assignment = ref SM.empty in
+          let counter = ref 1 in
+          List.iter
+            ~f:(fun v ->
+              ignore (Picosat.add !psat Int.(~-1 * !counter * v));
+              (* add a variable value to the assignment *)
+              assignment :=
                 SM.add
                 ~key:(IM.find_exn imap !counter)
                 ~data:(if Int.(v > 0) then true else false)
                 !assignment;
-            counter := Int.(!counter + 1)
+              counter := Int.(!counter + 1)
             ) x;
-            ignore (Picosat.add !psat 0);
-            result :=  !assignment :: !result;
-            if single_model then loop := false
+          ignore (Picosat.add !psat 0);
+          result :=  !assignment :: !result;
+          if single_model then loop := false
         | None -> loop := false
-        else
+      else
         loop := false
     done;
     Solutions !result
@@ -103,6 +104,24 @@ let solve set =
   | Any -> Some String.Map.empty
   | Solutions [] -> None
   | Solutions (hd :: tl) -> Some hd
+
+let solve_max set =
+  match find_models set false with
+  | Any -> Some String.Map.empty
+  | Solutions [] -> None
+  | Solutions (hd :: tl) ->
+    let trues x =
+      String.Map.fold x ~init:0
+        ~f:(fun ~key ~data acc ->
+          if data then acc + 1 else acc
+        ) in
+    let count, result = List.fold tl ~init:((trues hd), hd)
+      ~f:(fun (count, bools) el ->
+        let count' = trues el in
+        if count' > count then count', el
+        else count, bools
+      ) in
+    Some result
 
 let equal l l' =
   match solve Cnf.(~-(l <=> l')) with

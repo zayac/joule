@@ -35,7 +35,7 @@ let loop dot_output debug verbose limit filename =
     let constrs, logic = In_channel.with_file filename
         ~f:(fun inx -> Parser.parse Lexer.read (Lexing.from_channel inx)) in
     let constrs, logic = Transform.union constrs logic in
-    Log.logf "%d constraints have been read:" (List.length constrs);
+    Log.logf "The network contains %d constraints:" (List.length constrs);
     List.iter constrs ~f:(fun el -> Log.logf "  %s" (Constr.to_string el));
     (* graph construction *)
     Log.output_header "Graph construction";
@@ -50,15 +50,21 @@ let loop dot_output debug verbose limit filename =
     | Some (bools, terms) ->
       begin
         if verbose then
-          printf "\nSolution:\n";
+          printf "\nExtended solution:\n";
         String.Map.iter bools
           ~f:(fun ~key ~data ->
-            if verbose then printf "  ";
-            printf "%s = %s\n" key (if data then "true" else "false"));
+            if verbose then
+              printf "  %s = %s\n" key (if data then "true" else "false")
+            else if String.Set.mem !Transform.initial_bool_variables key then
+              printf "%s = %s\n" key (if data then "true" else "false")
+          );
         let f ~key ~data =
-          if verbose then printf "  ";
-          printf "$%s = %s\n" key (Term.to_string data) in
-        if not (String.Map.is_empty bools) then
+          if verbose then
+            printf "  $%s = %s\n" key (Term.to_string data)
+          else if String.Set.mem !Transform.initial_term_variables key then
+            printf "$%s = %s\n" key (Term.to_string data) in
+        if (not verbose && not (String.Set.is_empty !Transform.initial_bool_variables)) ||
+          (verbose && not (String.Map.is_empty bools)) then
           print_newline ();
         String.Map.iter terms ~f;
         (* output also values for variables without any constraints *)
@@ -78,7 +84,7 @@ let loop dot_output debug verbose limit filename =
   with Lexer.Syntax_Error msg
      | Errors.Parsing_Error msg
      | Network.Topology_Error msg
-     | Solver.Unsatisfiability_Error msg ->
+     | Errors.Unsatisfiability_Error msg ->
   Printf.eprintf "%s\n" msg
 
 let command =

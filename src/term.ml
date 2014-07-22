@@ -36,8 +36,7 @@ let rec to_string t =
   let print_dict x tail lsep rsep =
     let lst = List.filter ~f:(fun (l, (g, t)) -> not (Cnf.is_false g)) (SM.to_alist x) in
     let element_strs = L.map ~f:dict_el_to_string lst in
-    S.concat [lsep;
-      S.concat ~sep:", " element_strs; tail_to_string tail; rsep] in
+    S.concat [lsep; S.concat ~sep:", " element_strs; tail_to_string tail; rsep] in
   match t with
   | List ([], None)
   | Nil -> "nil"
@@ -55,7 +54,7 @@ let rec to_string t =
   | Switch x ->
     let alist = Cnf.Map.to_alist x in
     let sl = List.map
-      ~f:(fun (l, t) -> Printf.sprintf "%s : %s" (Cnf.to_string l)
+      ~f:(fun (l, t) -> Printf.sprintf "%s: %s" (Cnf.to_string l)
       (to_string t)) alist in
     Printf.sprintf "<%s>" (String.concat ~sep:", " sl)
 
@@ -168,6 +167,7 @@ let rec seniority_exn t1 t2 =
     | x, Nil when is_nil_exn x -> 0
     | _, Nil -> 1
     | Nil, _ -> -1
+    | Int i, Int i' -> Int.compare i' i
     | Tuple x, Tuple x' ->
       if not (Int.equal (List.length x) (List.length x')) then
         raise (Incomparable_Terms (t1, t2))

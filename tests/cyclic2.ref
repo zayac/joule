@@ -2,9 +2,9 @@ a = true
 b = true
 q = false
 
+$q = nil
 $u = [char]
 $w = char
 $x = nil
 $y = [char]
 $z = [nil, char]
-$q = nil
