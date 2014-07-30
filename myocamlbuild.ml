@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 21fbf818d17ff64dfa614803a1320f56) *)
+(* DO NOT EDIT (digest: 3703312bc57b5b8db5174d6a93363b37) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -614,6 +614,15 @@ let package_default =
                    ]);
                (OASISExpr.EAnd
                   (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+                    OASISExpr.EFlag "static_ffi"),
+                 S
+                   [
+                      A "-cclib";
+                      A
+                        "-force_load /usr/local/Cellar/libffi/3.0.13/lib/libffi.a"
+                   ]);
+               (OASISExpr.EAnd
+                  (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
                     OASISExpr.EFlag "static_picosat"),
                  S [A "-cclib"; A "-force_load /usr/local/lib/libpicosat.a"]);
                (OASISExpr.EAnd
@@ -626,6 +635,14 @@ let package_default =
                (OASISExpr.EBool true, S []);
                (OASISExpr.ETest ("system", "linux"),
                  S [A "-Xlinker"; A "--no-as-needed"; A "-lpicosat"]);
+               (OASISExpr.EAnd
+                  (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+                    OASISExpr.EFlag "static_ffi"),
+                 S
+                   [
+                      A
+                        "-force_load /usr/local/Cellar/libffi/3.0.13/lib/libffi.a"
+                   ]);
                (OASISExpr.EAnd
                   (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
                     OASISExpr.EFlag "static_picosat"),
@@ -656,7 +673,7 @@ let package_default =
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default package_default;;
 
-# 660 "myocamlbuild.ml"
+# 677 "myocamlbuild.ml"
 (* OASIS_STOP *)
 
 open Ocamlbuild_plugin;;

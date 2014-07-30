@@ -23,6 +23,10 @@ Flag static_picosat
   Description:    Link PicoSAT as a static library
   Default:        false
 
+Flag static_ffi
+  Description:    Link Foreign Function Interface (FFI) as a static library
+  Default:        false
+
 Executable joule
   Path:           src
   MainIs:         joule.ml
@@ -40,6 +44,8 @@ Executable joule
   if system(linux)
     CCLib:        -Xlinker --no-as-needed -lpicosat
   else
+    if flag(static_ffi)
+      CCLib:        '-force_load /usr/local/Cellar/libffi/3.0.13/lib/libffi.a'
     if flag(static_picosat)
       CCLib:      '-force_load /usr/local/lib/libpicosat.a'
     else

@@ -35,8 +35,11 @@ let loop dot_output debug verbose limit filename =
     let constrs, logic = In_channel.with_file filename
         ~f:(fun inx -> Parser.parse Lexer.read (Lexing.from_channel inx)) in
     let constrs, logic = Transform.union constrs logic in
-    Log.logf "The network contains %d constraints:" (List.length constrs);
-    List.iter constrs ~f:(fun el -> Log.logf "  %s" (Constr.to_string el));
+    if verbose then
+      begin
+        printf "The network contains %d constraints:\n" (List.length constrs);
+        List.iter constrs ~f:(fun el -> printf "  %s\n" (Constr.to_string el))
+      end;
     (* graph construction *)
     Log.output_header "Graph construction";
     let g = Network.constrs_to_graph_exn constrs in
