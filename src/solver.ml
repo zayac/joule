@@ -811,7 +811,7 @@ let resolve_bound_constraints topo =
   let constrs, bools = ref String.Map.empty, boolean_constraints in
   (* Set the initial upper bound, which is nil, for all term variables *)
   let union =
-    String.Set.union !Transform.initial_term_variables !Transform.additional_term_variables in
+    String.Set.union !Transform.initial_term_variables !Transform.union_term_variables in
   String.Set.iter union
     ~f:(fun el ->
       constrs := String.Map.add !constrs ~key:el ~data:(Cnf.Map.singleton Cnf.make_true Term.Nil)
