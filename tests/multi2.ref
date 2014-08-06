@@ -3,4 +3,4 @@ $b = (:a: nil, aa: 10, c: t:)
 $d = (:a: nil, aa: 10:)
 $k = nil
 $l = [35]
-$x = (:a: nil, aa: 10, c: t:)
+$x = (:a: 10, c: t:)

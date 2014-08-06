@@ -35,6 +35,7 @@ rule read = parse
   | "not"    { NOT }
   | "or"     { OR }
   | "and"    { AND }
+  | "none"   { NONE }
   | '{'      { LBRACE }
   | '}'      { RBRACE }
   | "(:"     { LSMILE }

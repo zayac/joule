@@ -18,9 +18,9 @@ let convert_constrs l r =
 
 %token <int> INT
 %token <string> VAR ID
+%token NONE
 %token NIL TRUE FALSE NOT OR AND
-%token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET LANGULAR RANGULAR
-  LSMILE RSMILE
+%token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET LANGULAR RANGULAR LSMILE RSMILE
 %token SCOLON COLON COMMA BAR LEQ EQ EOF
 
 %start <Constr.t list * Cnf.t> parse
@@ -57,6 +57,7 @@ term:
       (* tuple of one element equals to the element itself *)
       if Poly.(List.length $2 = 1) then List.hd_exn $2 else Term.Tuple $2
     }
+  | NONE
   | LSMILE RSMILE
     {
       let open Core.Std in

@@ -5,7 +5,13 @@ val initial_bool_variables : String.Set.t ref
 val additional_bool_variables : String.Set.t ref
 
 val initial_term_variables : String.Set.t ref
-val union_term_variables : String.Set.t ref
+val additional_term_variables : String.Set.t ref
+
+val union_variables : (string * string) String.Map.t ref
+
+val union_cache : String.Set.t GuardedVar.Map.t ref
+
+val get_free_bool_var : unit -> string
 
 (** transform a union term to a form specified in the description of [union]
     function and generated additional constraints for terms. *)

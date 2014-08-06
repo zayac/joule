@@ -1,12 +1,18 @@
-
 open Core.Std
+
+module Log = Log.Make(struct let section = "transform:" end)
 
 let initial_bool_variables = ref String.Set.empty
 let additional_bool_variables = ref String.Set.empty
 let bool_var_candidate = ref "a"
+
 let initial_term_variables = ref String.Set.empty
-let union_term_variables = ref String.Set.empty
+let additional_term_variables = ref String.Set.empty
 let term_var_candidate = ref "a"
+
+let union_variables = ref String.Map.empty
+
+let union_cache = ref GuardedVar.Map.empty
 
 let next_var_name s =
   let s' = ref "" in
@@ -33,29 +39,58 @@ let get_free_bool_var () =
   done;
   let result = !bool_var_candidate in
   let _ = bool_var_candidate := next_var_name !bool_var_candidate in
+  additional_bool_variables := String.Set.add !additional_bool_variables result;
   result
 
 let get_free_term_var () =
   while String.Set.mem !initial_term_variables !term_var_candidate ||
-        String.Set.mem !union_term_variables !bool_var_candidate do
+        String.Set.mem !additional_term_variables !bool_var_candidate do
     term_var_candidate := next_var_name !term_var_candidate
   done;
   let result = !term_var_candidate in
   let _ = term_var_candidate := next_var_name !term_var_candidate in
+  additional_term_variables := String.Set.add !additional_term_variables result;
   result
 
+let union_terms_to_vars union_var t t' =
+  let constrs = ref [] in
+  let open Term in
+  let transform t =
+    match t with
+    | Var v -> v
+    | t ->
+      let v = get_free_term_var () in
+      let _ = constrs := !constrs @ [Var v, t; t, Var v] in
+      v in
+  let t =
+    match t with
+    | Var _ -> t
+    | _ -> (Var (transform t)) in
+  let t' =
+    match t' with
+    | Var _ -> t'
+    | _ -> (Var (transform t')) in
+  match t, t' with
+  | Var v, Var v' ->
+    union_variables :=
+      String.Map.add !union_variables ~key:union_var ~data:(v, v');
+    t, t', !constrs
+  | _ -> assert false (* unreachable state *)
+  
 let to_union logic term =
   let constrs = ref [] in
   let rec transform term =
     let open Term in
     match term with
     | Tuple [Symbol "union"; t; t'] ->
+      Log.logf "transforming a term %s" (to_string term);
       let t = transform t in
       let t' = transform t' in
       let new_bool_var = get_free_bool_var () in
-      additional_bool_variables := String.Set.add !additional_bool_variables new_bool_var;
       let new_term_var = get_free_term_var () in
-      union_term_variables := String.Set.add !union_term_variables new_term_var;
+      (* make sure that union term subterms are only variables *)
+      let t, t', new_constrs = union_terms_to_vars new_term_var t t' in
+      let _ = constrs := !constrs @ new_constrs in
       let return_switch = Util.switch_of_alist_exn
         [ Logic.(Var new_bool_var), Term.(Var new_term_var);
           Logic.(~-(Var new_bool_var)), Tuple [Symbol "union"; t; t']

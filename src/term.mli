@@ -68,3 +68,8 @@ val to_wff : bool String.Map.t -> t -> t
 
 (** Finds a join term for two terms *)
 val join : t -> t -> t option
+
+(** [none] is a bottom choice term equivalent to empty choice [(: :)] *)
+val none : t
+
+val is_choice : t -> bool

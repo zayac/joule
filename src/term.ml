@@ -49,6 +49,7 @@ let rec to_string t =
   | Record (x, None)
       when String.Map.for_all x ~f:(fun (l, _) -> Cnf.is_false l) -> "nil"
   | Record (x, tail) -> print_dict x tail "{" "}"
+  | Choice (x, None) when String.Map.is_empty x -> "none"
   | Choice (x, tail) -> print_dict x  tail "(:" ":)"
   | Var x -> "$" ^ x
   | Switch x ->
@@ -312,7 +313,7 @@ let rec join t t' =
         let join_map = String.Map.merge map map' ~f:(fun ~key data ->
           match data with
           | `Left v
-          | `Right v -> None
+          | `Right v -> (* None *) Some v
           | `Both ((l, t), (l', t')) ->
             begin
               match join t t' with
@@ -325,3 +326,9 @@ let rec join t t' =
   | Choice (_, Some _), _ -> raise (Non_Ground t')
   | _, Choice (_, Some _) -> raise (Non_Ground t)
   | _, _ -> None
+
+let none = Choice (String.Map.empty, None)
+
+let is_choice = function
+  | Choice _ -> true
+  | _ -> false
