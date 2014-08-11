@@ -262,6 +262,8 @@ let rec join t t' =
   match t, t' with
   | Var _, _ -> raise (Non_Ground t)
   | _, Var _ -> raise (Non_Ground t')
+  | Choice _, Nil
+  | Nil, Choice _ -> Some Nil
   | t, Nil
   | Nil, t -> Some t
   | Symbol s, Symbol s' when Poly.(s = s') -> Some (Symbol s)

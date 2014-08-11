@@ -1,0 +1,6 @@
+a = false
+b = true
+c = true
+
+$x = {e: nil, f: nil, q: nil}
+$y = {q: nil}

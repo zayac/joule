@@ -87,7 +87,8 @@ let loop dot_output debug verbose limit filename =
   with Lexer.Syntax_Error msg
      | Errors.Parsing_Error msg
      | Network.Topology_Error msg
-     | Errors.Unsatisfiability_Error msg ->
+     | Errors.Unsatisfiability_Error msg
+     | Sys_error msg ->
   Printf.eprintf "%s\n" msg
 
 let command =
