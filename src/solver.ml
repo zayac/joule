@@ -26,8 +26,8 @@ let log_bool_constr depth b =
   let indent = String.make depth ' ' in
   LLog.logf "%sadding a boolean constraint '%s'" indent (Cnf.to_string b)
 
-let add_bool_constr depth b =
-  if not (Cnf.is_true b) then
+let add_bool_constr depth (b: Cnf.t) =
+  if not (Cnf.is_true b) && not (Cnf.CSet.subset b !boolean_constraints) then
     let _ = log_bool_constr depth b in
     boolean_constraints := Cnf.CSet.union !boolean_constraints b
 
@@ -449,7 +449,7 @@ let rec set_bound_exn depth constrs var terms =
         Errors.unsat_error
           (Printf.sprintf "the upper bounds for variable $%s are inconsistent"
              var)
-      else
+      else if not (Cnf.Map.equal Term.equal merged u) then
         SLog.logf "%s for variable $%s to <%s>" b var (print_map merged);
       Some merged
   )
@@ -507,7 +507,13 @@ let rec solve_senior depth constrs left right =
     match term_left, term_right with
     | _, Nil -> constrs
     | Var s, Var s' ->
-      if may_be_choice s logic_combined || may_be_choice s' logic_combined then
+      let left_choice = may_be_choice s logic_combined in
+      let right_choice = may_be_choice s' logic_combined in
+      if left_choice || right_choice then
+        let constrs =
+          if not left_choice then
+            assert_choice depth constrs s logic_combined
+          else constrs in
         let leftm = bound_terms_exn depth constrs logic_combined term_left in
         let constrs = set_bound_exn (depth + 1) constrs s' leftm in
         constrs
@@ -908,6 +914,11 @@ let rec solve_senior depth constrs left right =
                 )
           | Some s' ->
             (* possible values of the left tail variable *)
+            (* if [s'] is not a choice, then we need to drop all the current
+               values to [none] and to start computations again from the bottom
+               of the semilattice *)
+            if not (may_be_choice s' logic_combined) then
+              cstrs := assert_choice depth !cstrs s' logic_combined;
             let bounds = bound_terms_exn depth !cstrs logic_combined (Var s') in
             let result = ref Cnf.(Map.singleton logic_combined (Term.Choice(!left_values, None))) in
             Cnf.Map.iter bounds
@@ -946,6 +957,11 @@ let rec solve_senior depth constrs left right =
                     match v with
                     | None -> ()
                     | Some s ->
+                      (* if [s] is not a choice, then we need to drop all the
+                         current values to [none] and to start computations
+                         again from the bottom of the semilattice *)
+                      if not (may_be_choice s logic_combined) then
+                        cstrs := assert_choice depth !cstrs s logic_combined;
                       let bounds = bound_terms_exn depth !cstrs logic_combined (Var s) in
                       Cnf.Map.iter bounds
                         ~f:(fun ~key ~data ->
@@ -1007,6 +1023,11 @@ let rec solve_senior depth constrs left right =
           | None -> ()
           | Some s ->
             (* possible values of the right tail variable *)
+            (* if [s] is not a choice, then we need to drop all the current
+               values to [none] and to start computations again from the bottom
+               of the semilattice *)
+            if not (may_be_choice s logic_combined) then
+              cstrs := assert_choice depth !cstrs s logic_combined;
             let bounds = bound_terms_exn depth !cstrs logic_combined (Var s) in
             Cnf.Map.iter bounds
               ~f:(fun ~key ~data ->
