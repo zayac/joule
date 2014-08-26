@@ -67,7 +67,7 @@ val canonize_switch : t Logic.Map.t -> t Logic.Map.t * Logic.Set.t
 val to_wff : bool String.Map.t -> t -> t
 
 (** Finds a join term for two terms *)
-val join : t -> t -> t option
+val join : t -> t -> (t * Cnf.Set.t) option
 
 (** [none] is a bottom choice term equivalent to empty choice [(: :)] *)
 val none : t

@@ -253,40 +253,47 @@ let rec to_wff bools term =
 
 let rec join t t' =
   let join_lst l l' =
+    let s = ref Cnf.Set.empty in
     List.map2_exn l l'
       ~f:(fun t t' ->
         match join t t' with
         | None -> raise (Incomparable_Terms (t, t'))
-        | Some jt -> jt
-      ) in
+        | Some (jt, c) ->
+          s := Cnf.Set.union !s c;
+          jt
+      ), !s in
   match t, t' with
   | Var _, _ -> raise (Non_Ground t)
   | _, Var _ -> raise (Non_Ground t')
   | Choice _, Nil
-  | Nil, Choice _ -> Some Nil
+  | Nil, Choice _ -> Some (Nil, Cnf.Set.empty)
   | t, Nil
-  | Nil, t -> Some t
-  | Symbol s, Symbol s' when Poly.(s = s') -> Some (Symbol s)
-  | Int i, Int i' when Poly.(i = i') -> Some (Int i)
+  | Nil, t -> Some (t, Cnf.Set.empty)
+  | Symbol s, Symbol s' when Poly.(s = s') -> Some (Symbol s, Cnf.Set.empty)
+  | Int i, Int i' when Poly.(i = i') -> Some (Int i, Cnf.Set.empty)
   | Tuple l, Tuple l' when Poly.(List.length l = List.length l') ->
     begin
       try
-        Some (Tuple (join_lst l l'))
+        let lst, s = join_lst l l' in
+        Some (Tuple lst, s)
       with Incomparable_Terms (t, t') -> None
     end
   | List (l, None), List (l', None) ->
     begin
       try
         if Poly.(List.length l = List.length l') then
-          Some (List (join_lst l l', None))
+          let lst, s = join_lst l l' in
+          Some (List (lst, None), s)
         else if Poly.(List.length l > List.length l') then
           let reduced = List.take l (List.length l') in
-          let lst = (join_lst reduced l') @ (List.drop l (List.length l')) in
-            Some (List (lst, None))
+          let lst, s = join_lst reduced l' in
+          let lst' = lst @ (List.drop l (List.length l')) in
+            Some (List (lst', None), s)
         else
           let reduced = List.take l' (List.length l) in
-          let lst = (join_lst reduced l) @ (List.drop l' (List.length l)) in
-            Some (List (lst, None))
+          let lst, s = join_lst reduced l in
+          let lst' = lst @ (List.drop l' (List.length l)) in
+            Some (List (lst', None), s)
       with Incomparable_Terms (t, t') -> None
     end
   | List (_, Some _), _ -> raise (Non_Ground t')
@@ -294,6 +301,7 @@ let rec join t t' =
   | Record (map, None), Record (map', None) ->
     begin
       try
+        let s = ref Cnf.Set.empty in
         let join_map = String.Map.merge map map' ~f:(fun ~key data ->
           match data with
           | `Left v
@@ -302,9 +310,13 @@ let rec join t t' =
             begin
               match join t t' with
               | None -> raise (Incomparable_Terms (t, t'))
-              | Some jt -> Some (Cnf.(l * l'), jt)
+              | Some (jt, c) ->
+                s := Cnf.Set.union !s c;
+                let _ = if not (Cnf.equal l l') then
+                  s := Cnf.Set.add !s Cnf.(l <=> l') in
+                Some (Cnf.(l + l'), jt)
             end) in
-        Some (Record (join_map, None))
+        Some (Record (join_map, None), !s)
       with Incomparable_Terms (t, t') -> None
     end
   | Record (_, Some _), _ -> raise (Non_Ground t')
@@ -312,6 +324,7 @@ let rec join t t' =
   | Choice (map, None), Choice (map', None) ->
     begin
       try
+        let s = ref Cnf.Set.empty in
         let join_map = String.Map.merge map map' ~f:(fun ~key data ->
           match data with
           | `Left v
@@ -320,9 +333,13 @@ let rec join t t' =
             begin
               match join t t' with
               | None -> raise (Incomparable_Terms (t, t'))
-              | Some jt -> Some (Cnf.(l * l'), jt)
+              | Some (jt, c) ->
+                s := Cnf.Set.union !s c;
+                if not (Cnf.equal l l') then
+                  s := Cnf.Set.add !s Cnf.(l <=> l');
+                Some (Cnf.(l * l'), jt)
             end) in
-        Some (Choice (join_map, None))
+        Some (Choice (join_map, None), !s)
       with Incomparable_Terms (t, t') -> None
     end
   | Choice (_, Some _), _ -> raise (Non_Ground t')

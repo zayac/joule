@@ -45,28 +45,30 @@ let get_bound constrs var =
   | Some upper -> upper
 
 let add_to_map depth map logic term =
-  match Sat.solve Cnf.(~-(logic <=> Cnf.make_false)) with
-  | None -> map
-  | Some _ ->
+  if Option.is_some (Sat.solve Cnf.(~-(logic <=> Cnf.make_false))) then
     let added = ref false in
     let map = Cnf.Map.fold map ~init:Cnf.Map.empty
                 ~f:(fun ~key ~data acc ->
-                  match Sat.solve Cnf.(~-(key <=> logic)) with  (* FIXME bottleneck *)
-                  | None ->
+                  if Option.is_some (Sat.solve Cnf.(~-(key <=> logic))) then (* FIXME bottleneck *)
+                    Cnf.Map.add map ~key ~data
+                  else
                     begin
                       let _ = added := true in
                       match Term.join data term with
                       | None ->
                         let _ = add_bool_constr depth Cnf.(~-logic) in
                         acc
-                      | Some glb ->
+                      | Some (glb, c) ->
+                        (*Cnf.Set.iter c*)
+                          (*~f:(fun el ->*)
+                            (*add_bool_constr depth Cnf.((logic * key) ==> el)*)
+                          (* );*)
                         Cnf.Map.add map ~key ~data:glb
                     end
-                  | Some _ ->
-                    Cnf.Map.add map ~key ~data
                 ) in
-    if not !added then Cnf.Map.add map ~key:logic ~data:term
+    if not !added then (Cnf.Map.add map ~key:logic ~data:term)
     else map
+  else map
 
 let merge_bounds depth old_terms new_terms =
   if Cnf.Map.is_empty old_terms && Cnf.Map.is_empty new_terms then
@@ -75,39 +77,12 @@ let merge_bounds depth old_terms new_terms =
   else if Cnf.Map.is_empty new_terms then old_terms
   else if Cnf.Map.equal Term.equal old_terms new_terms then old_terms
   else
-    let new_map = ref Cnf.Map.empty in
-    let old_map = ref Cnf.Map.empty in
-    let old_map' = ref Cnf.Map.empty in
-    Cnf.Map.iter2 old_terms new_terms
-      ~f:(fun ~key ~data ->
-        match data with
-        | `Left term ->
-          old_map := Cnf.Map.add !old_map ~key ~data:term
-        | `Right term' ->
-          old_map' := Cnf.Map.add !old_map' ~key ~data:term'
-        | `Both (term, term') ->
-          begin
-            match Term.join term term' with
-            | None -> add_bool_constr depth Cnf.(~-key)
-            | Some glb ->
-              new_map := Cnf.Map.add !new_map ~key ~data:glb
-          end
-      );
-    if Cnf.Map.is_empty !old_map then
-      Cnf.Map.iter !old_map'
-        ~f:(fun ~key ~data ->
-          new_map := add_to_map depth !new_map key data
-        )
-    else if Cnf.Map.is_empty !old_map' then
-      Cnf.Map.iter !old_map
-        ~f:(fun ~key ~data ->
-          new_map := add_to_map depth !new_map key data
-        )
-    else
-      Cnf.Map.iter !old_map'
+    begin
+      let new_map = ref Cnf.Map.empty in
+      Cnf.Map.iter old_terms
         ~f:(fun ~key ~data ->
           let logic', term' = key, data in
-          Cnf.Map.iter !old_map
+          Cnf.Map.iter new_terms
             ~f:(fun ~key ~data ->
               let logic, term = key, data in
               begin
@@ -117,15 +92,13 @@ let merge_bounds depth old_terms new_terms =
                 new_map := add_to_map depth !new_map Cnf.(~-logic * logic') term';
                 match Term.join term term' with
                 | None -> add_bool_constr depth Cnf.(~-(logic * logic'))
-                | Some join_term ->
+                | Some (join_term, log) ->
+                  (*Cnf.Set.iter log ~f:(fun el -> add_bool_constr depth Cnf.((logic * logic') ==> el));*)
+                  new_map := add_to_map depth !new_map Cnf.(logic * logic') join_term;
                   new_map := add_to_map depth !new_map Cnf.(logic * logic') join_term
               end
             );
         );
-    (*print_newline ();*)
-    (*Cnf.Map.iter !new_map ~f:(fun ~key ~data -> printf "%s -> %s\n" (Cnf.to_string key) (Term.to_string data));*)
-
-    (*!new_map*)
     let all_terms = ref Term.Set.empty in
     Cnf.Map.fold !new_map ~init:Cnf.Map.empty
       ~f:(fun ~key ~data acc ->
@@ -144,10 +117,13 @@ let merge_bounds depth old_terms new_terms =
             | Some old ->
               match Term.join data old with
               | None -> add_bool_constr depth Cnf.(~-combined); None
-              | Some join_term -> Some join_term
+              | Some (join_term, l) ->
+                  (*Cnf.Set.iter l ~f:(fun el -> add_bool_constr depth Cnf.(key ==> el));*)
+                Some join_term
           ) in
           result
       )
+  end
 
 let combine_bounds old_terms new_terms =
   Cnf.Map.fold new_terms ~init:old_terms
@@ -216,6 +192,27 @@ let rec merge_maps depth left right logic =
     );
   !result
 
+let map_of_alist_safe l =
+  let multi = Cnf.Map.of_alist_multi l in
+  Cnf.Map.fold multi ~init:Cnf.Map.empty
+    ~f:(fun ~key ~data acc ->
+      match data with
+      | hd :: [] -> Cnf.Map.add acc ~key ~data:hd
+      | lst ->
+        let result = List.fold lst ~init:(Some Term.Nil)
+          ~f:(fun acc el ->
+            match acc with
+            | None -> None
+            | Some acc ->
+              begin
+                match Term.join acc el with
+                | None -> None
+                | Some (jt, c) -> Some jt
+              end) in
+        match result with
+        | None -> acc
+        | Some data -> Cnf.Map.add acc ~key ~data)
+  
 let rec bound_terms_exn depth constrs logic term =
   let open Term in
   let module CM = Cnf.Map in
@@ -236,16 +233,22 @@ let rec bound_terms_exn depth constrs logic term =
     let l = List.map x ~f:(fun x -> bound_terms_exn depth constrs logic x) in
     let term_list =
       List.map (bound_combinations_list l) ~f:(fun (l, t) -> l, Tuple t) in
-    let result = CM.of_alist_exn term_list in
-    result
+    (* TODO Problem here *)
+    List.iter term_list
+      ~f:(fun (c, t) ->
+        printf "%s -> %s\n" (Cnf.to_string c) (Term.to_string t)
+      );
+    (*CM.of_alist_exn term_list*)
+    map_of_alist_safe term_list
   | List (x, s) ->
     let l = List.map x ~f:(fun x -> bound_terms_exn depth constrs logic x) in
     let term_list = bound_combinations_list l in
     begin
       match s with
       | None ->
-        CM.of_alist_exn
-          (List.map term_list ~f:(fun (l, t) -> l, List (t, None)))
+        (*CM.of_alist_exn*)
+          (*(List.map term_list ~f:(fun (l, t) -> l, List (t, None)))*)
+        map_of_alist_safe (List.map term_list ~f:(fun (l, t) -> l, List (t, None)))
       | Some var ->
         let bounds = bound_terms_exn depth constrs logic (Var var) in
         let lst = List.fold term_list ~init:[]
@@ -267,9 +270,6 @@ let rec bound_terms_exn depth constrs logic term =
                     ) in  (* TODO fix here *)
         List.fold lst ~init:CM.empty
           ~f:(fun acc (l, t) ->
-            (*printf "%s -> %s" (Cnf.to_string l) (Term.to_string (List(t,*)
-            (*None)));*)
-            (*print_newline ();*)
             add_to_map depth acc l (List(t, None))
           )
     end
@@ -283,7 +283,8 @@ let rec bound_terms_exn depth constrs logic term =
         let combined = List.map term_map
                          ~f:(fun (logic, lst) ->
                            logic, Record (String.Map.of_alist_exn lst, None)) in
-        CM.of_alist_exn combined
+        (*CM.of_alist_exn combined*)
+        map_of_alist_safe combined
       | Some var ->
         let bounds = bound_terms_exn depth constrs logic (Var var) in
         let data = List.map term_map
@@ -319,7 +320,8 @@ let rec bound_terms_exn depth constrs logic term =
         (* verify the consistency of generated bounds *)
         let l = List.map combined
                   ~f:(fun (logic, lst) -> logic, Record (lst, None)) in
-        CM.of_alist_exn l
+        (*CM.of_alist_exn l*)
+        map_of_alist_safe l
     end
   (* TODO fix copy/paste *)
   | Choice (map, s) ->
@@ -334,7 +336,8 @@ let rec bound_terms_exn depth constrs logic term =
                          ~f:(fun (logic, lst) ->
                            logic, Choice (String.Map.of_alist_exn lst, None)
                          ) in
-        CM.of_alist_exn combined
+        (*CM.of_alist_exn combined*)
+        map_of_alist_safe combined
       | Some var ->
         (* list of values for the left term *)
         let data = List.map term_map
@@ -369,10 +372,11 @@ let rec bound_terms_exn depth constrs logic term =
             Errors.unsat_error
               (Printf.sprintf "Missing record as a upper bound for variable $%s"
                  var) in
-        (* vefify the consistency of generated bounds *)
+        (* verify the consistency of generated bounds *)
         let l = List.map combined
                   ~f:(fun (logic, lst) -> logic, Choice (lst, None)) in
-        CM.of_alist_exn l
+        (*CM.of_alist_exn l*)
+        map_of_alist_safe l
     end
   | Var x ->
     get_bound constrs x
@@ -386,8 +390,9 @@ let prepare_record_term cr cr' logic map =
         let contains, contains' =
           String.Set.mem !cr key, String.Set.mem !cr' key
         in
-        if contains && contains' then
+        if contains || contains' then
           map, map'
+        (* TODO check whether the code fragment below is required *)
         else if contains then
           let _ = cr' := String.Set.add !cr' key in
           map, String.Map.add map' ~key ~data:(Cnf.(~-g), t)
@@ -410,7 +415,7 @@ let rec set_bound_exn depth constrs var terms =
     let t = Term.canonize t in
     if Term.is_nil_exn t then Term.Nil else t in
   let union_variables = String.Map.find !Transform.union_variables var in
-  let terms = Cnf.Map.fold ~init:Cnf.Map.empty
+  let terms = Cnf.Map.fold terms ~init:Cnf.Map.empty
                 ~f:(fun ~key ~data acc ->
                   let term = simplify data in
                   let _ = match union_variables with
@@ -436,7 +441,7 @@ let rec set_bound_exn depth constrs var terms =
                       | _ -> ()
                   in
                   add_to_map depth acc key term
-                ) terms in
+                ) in
   let b = (String.make depth ' ') ^ "setting the least upper bound" in
   String.Map.change !cstrs var (fun v ->
     match v with

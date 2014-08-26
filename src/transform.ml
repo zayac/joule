@@ -55,8 +55,6 @@ let get_free_term_var () =
 let union_terms_to_vars union_var t t' =
   let constrs = ref [] in
   let open Term in
-  (*print_endline (Term.to_string t);*)
-  (*print_endline (Term.to_string t');*)
   let transform t =
     match t with
     | Var v -> v
