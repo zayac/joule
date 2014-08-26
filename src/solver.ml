@@ -62,7 +62,7 @@ let add_to_map depth map logic term =
                         (*Cnf.Set.iter c*)
                           (*~f:(fun el ->*)
                             (*add_bool_constr depth Cnf.((logic * key) ==> el)*)
-                          (* );*)
+                           (* );*)
                         Cnf.Map.add map ~key ~data:glb
                     end
                 ) in
@@ -118,7 +118,7 @@ let merge_bounds depth old_terms new_terms =
               match Term.join data old with
               | None -> add_bool_constr depth Cnf.(~-combined); None
               | Some (join_term, l) ->
-                  (*Cnf.Set.iter l ~f:(fun el -> add_bool_constr depth Cnf.(key ==> el));*)
+                (*Cnf.Set.iter l ~f:(fun el -> add_bool_constr depth Cnf.(key ==> el));*)
                 Some join_term
           ) in
           result
@@ -234,10 +234,10 @@ let rec bound_terms_exn depth constrs logic term =
     let term_list =
       List.map (bound_combinations_list l) ~f:(fun (l, t) -> l, Tuple t) in
     (* TODO Problem here *)
-    List.iter term_list
-      ~f:(fun (c, t) ->
-        printf "%s -> %s\n" (Cnf.to_string c) (Term.to_string t)
-      );
+    (*List.iter term_list*)
+      (*~f:(fun (c, t) ->*)
+        (*printf "%s -> %s\n" (Cnf.to_string c) (Term.to_string t)*)
+      (* );*)
     (*CM.of_alist_exn term_list*)
     map_of_alist_safe term_list
   | List (x, s) ->
@@ -1185,6 +1185,40 @@ let add_boolean_constraints constrs =
       add_bool_constr 0 expr
     )
 
+let add_union_boolean_constraints constrs =
+  String.Map.iter !Transform.union_variables
+    ~f:(fun ~key ~data ->
+      let var, var' = data in
+      let map = String.Map.find_exn constrs var in
+      let map' = String.Map.find_exn constrs var' in
+      Cnf.Map.iter map
+        ~f:(fun ~key ~data ->
+          let condition, term = key, data in
+          match term with
+          | Term.Record (map, None) ->
+            Cnf.Map.iter map'
+              ~f:(fun ~key ~data ->
+                let condition', term' = key, data in
+                match term' with
+                | Term.Record (map', None) ->
+                  begin
+                  if Option.is_some (Sat.solve Cnf.(condition <=> condition')) then
+                    String.Map.iter2 map map'
+                      ~f:(fun ~key ~data ->
+                        match data with
+                        | `Both ((g, t), (g', t')) ->
+                          (*printf "%s or %s\n" (Cnf.to_string g) (Cnf.to_string g');*)
+                          add_bool_constr 1 Cnf.(~-(g * g'))
+                        | _ -> ()
+                      )
+                  end
+                | _ -> ()
+              )
+          | _ -> ()
+        )
+    )
+
+
 let solve_exn lst logic verbose limit =
   let _ = verbose_output := verbose in
   let _ = match limit with
@@ -1193,6 +1227,7 @@ let solve_exn lst logic verbose limit =
   boolean_constraints := logic;
   let constrs = resolve_bound_constraints lst in
   add_boolean_constraints constrs;
+  add_union_boolean_constraints constrs;
   if !verbose_output then
     begin
       printf "Upper bounds for term variables:\n";
