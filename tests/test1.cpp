@@ -2,15 +2,22 @@
 
 using namespace std;
 
-struct X {
+class X {
+	const int ap;
+	void baz() const;
+public:
   int a;
   vector<int> v;
-  X* const b;
-  unsigned long foo(void * const, char, int, double);
-  void bar();
+  X * const b;
+  class Y {
+  	int a;
+  };
+  unsigned long foo(void * const, vector<int>, int, double);
+  void bar() const;
 };
 
-struct Y {
+class Y {
+public:
 	void baz();
     void baz() const;
     X* const b;
@@ -20,4 +27,4 @@ union Z {
   long c;
 };
 
-struct Nil {};
+class Nil {};

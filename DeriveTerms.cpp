@@ -3,6 +3,8 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "TermConverter.h"
 
+#include <iostream>
+
 using namespace std;
 
 using namespace clang::tooling;
@@ -31,8 +33,14 @@ class ClassPrinter : public MatchFinder::MatchCallback {
 public:
 
     virtual void run(const MatchFinder::MatchResult &Result) {
+        ASTContext *Context = Result.Context;
         if (const CXXRecordDecl *RD = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("recDecl")) {
-            TC.parseRecord(RD);
+            // We do not want to parse header files!
+            if (!RD || !Context->getSourceManager().isInMainFile(RD->getLocation()))
+                return;
+            if (!RD->getParent()->isRecord()) {
+                TC.parseRecord(RD);
+            }
         }
     }
 };
