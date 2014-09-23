@@ -6,7 +6,7 @@ class X {
 	const int ap;
 	void baz() const;
 public:
-  int a;
+  volatile int a;
   vector<int> v;
   X * const b;
   class Y {

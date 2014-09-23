@@ -38,8 +38,8 @@ public:
             // We do not want to parse header files!
             if (!RD || !Context->getSourceManager().isInMainFile(RD->getLocation()))
                 return;
-            if (!RD->getParent()->isRecord()) {
-                TC.parseRecord(RD);
+            if (!RD->getParent()->isRecord() && RD->isClass() && RD->isExternallyVisible() && !RD->isAbstract()) {
+                TC.addClass(TC.parseRecord(RD));
             }
         }
     }
@@ -54,7 +54,7 @@ int main(int argc, const char **argv) {
     MatchFinder Finder;
     Finder.addMatcher(ClassMatcher, &Printer);
 
-    Tool.run(newFrontendActionFactory(&Finder).get());
-    TC.printClassTerms();
+    if(!Tool.run(newFrontendActionFactory(&Finder).get()))
+        TC.printClassTerms();
     return 0;
 }
