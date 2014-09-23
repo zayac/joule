@@ -17,7 +17,7 @@ let convert_constrs l r =
 %}
 
 %token <int> INT
-%token <string> VAR ID
+%token <string> VAR ID STRING
 %token NONE
 %token NIL TRUE FALSE NOT OR AND
 %token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET LANGULAR RANGULAR LSMILE RSMILE
@@ -44,7 +44,8 @@ constrs:
 term:
   | NIL { Term.Nil }
   | INT { Term.Int $1 }
-  | ID { Term.Symbol $1 }
+  | ID { Term.Symbol (Core.Std.String.concat ["\""; $1; "\""]) }
+  | STRING { Term.Symbol $1 }
   | VAR
   {
     let module T = Transform in
@@ -87,7 +88,7 @@ switch_entry:
     }
 
 rec_entry:
-  | ID guard? COLON term
+  | label guard? COLON term
     {
       let t = match $2 with
       | None -> Logic.True
@@ -97,6 +98,19 @@ rec_entry:
   | error
     {
       Errors.parse_error "invalid record entry" $startpos $endpos
+    }
+
+label:
+  | ID
+    {
+      Core.Std.String.concat ["\""; $1; "\""]
+    }
+  | STRING
+    {
+      if String.length $1 <= 2 then
+        Errors.parse_error "Empty string as a label is not allowed" $startpos $endpos
+      else
+        $1
     }
 
 guard:

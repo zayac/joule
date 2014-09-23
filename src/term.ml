@@ -29,6 +29,12 @@ let rec to_string t =
   | None -> ""
   | Some v -> " | $" ^ v in
   let dict_el_to_string (l, (g, t)) =
+    (* remove quotation marks if label consists of a single word *)
+    let l =
+      if not (String.contains l ' ') && Int.(String.length l > 2) then
+        String.strip ~drop:(Char.(=) '"') l
+      else l
+    in
     if Cnf.is_true g then
       sprintf "%s: %s" l (to_string t)
     else
@@ -41,7 +47,10 @@ let rec to_string t =
   | List ([], None)
   | Nil -> "nil"
   | Int x -> string_of_int x
-  | Symbol x -> x
+  | Symbol x ->
+    if not (String.contains x ' ') && Int.(String.length x > 2) then
+      String.strip ~drop:(Char.(=) '"') x
+    else x
   | Tuple x -> S.concat ["("; S.concat ~sep:" " (L.map ~f:to_string x); ")"]
   | List (x, tail) ->
     S.concat ["["; S.concat ~sep:", " (L.map ~f:to_string x);

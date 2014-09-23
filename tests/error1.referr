@@ -1,0 +1,2 @@
+File "tests/error1.t", line 1, characters 7-9:
+Error: Empty string as a label is not allowed

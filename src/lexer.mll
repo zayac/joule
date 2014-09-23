@@ -24,6 +24,8 @@ let newline = '\r' | '\n' | "\r\n"
 let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 let var = '$' id
 
+let str = '"' [' ' '!' '#'-'~']* '"'
+
 rule read = parse
   | white    { read lexbuf }
   | newline  { next_line lexbuf; read lexbuf }
@@ -53,6 +55,7 @@ rule read = parse
   | "<="     { LEQ }
   | '='      { EQ }
   | id as i  { ID i }
+  | str as s { STRING s }
   | var as i {
                let open Core.Std in
                VAR (String.suffix i (String.length i - 1)) 
