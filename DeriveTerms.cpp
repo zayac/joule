@@ -1,17 +1,13 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "TermConverter.h"
-
-#include <iostream>
-
-using namespace std;
+#include "ComponentAnalysis.h"
+#include "Interface.h"
 
 using namespace clang::tooling;
 using namespace llvm;
 using namespace clang;
 using namespace clang::ast_matchers;
-
 
 // Apply a custom category to all command-line options so that they are the
 // only ones displayed.
@@ -25,22 +21,35 @@ static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 // A help message for this specific tool can be added afterwards.
 static cl::extrahelp MoreHelp("\nMore help text...");
 
-DeclarationMatcher ClassMatcher = recordDecl(unless(isImplicit())).bind("recDecl");
+DeclarationMatcher ComponentMatcher = functionDecl(isDefinition(), returns(asString("variant"))).bind("componentVariantDecl");
+StatementMatcher MessageCallMatcher = callExpr(hasDeclaration(functionDecl(returns(asString("message"))))).bind("messageCall");
 
-TermConverter TC;
-
-class ClassPrinter : public MatchFinder::MatchCallback {
+class ComponentAnalyser : public MatchFinder::MatchCallback {
+    std::string function_name = "";
+    interface::Interface comp_int;
 public:
+
+    virtual void printInputInterface() {
+        comp_int.printInputInterface();
+    }
+
+    virtual void printOutputInterface() {
+        comp_int.printOutputInterface();
+    }
 
     virtual void run(const MatchFinder::MatchResult &Result) {
         ASTContext *Context = Result.Context;
-        if (const CXXRecordDecl *RD = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("recDecl")) {
-            // We do not want to parse header files!
-            if (!RD || !Context->getSourceManager().isInMainFile(RD->getLocation()))
+        if (const FunctionDecl *FD = Result.Nodes.getNodeAs<FunctionDecl>("componentVariantDecl")) {
+            function_name = FD->getNameAsString();
+            interface::message msg = component_analysis::getMessageFromFunctionDecl(FD);
+            comp_int.addInputDeclaration(function_name, msg);
+        } else if (const CallExpr *CE = Result.Nodes.getNodeAs<CallExpr>("messageCall")) {
+            if (function_name.empty()) {
+                std::cerr << "expression that sends a message is used in unknown context" << std::endl;
                 return;
-            if (!RD->getParent()->isRecord() && RD->isClass() && RD->isExternallyVisible() && !RD->isAbstract()) {
-                TC.addClass(TC.parseRecord(RD));
             }
+            std::pair<std::string, interface::message> volley = component_analysis::getVolleyFromCallExpr(CE);
+            comp_int.addOutputVolley(function_name, volley);
         }
     }
 };
@@ -50,11 +59,15 @@ int main(int argc, const char **argv) {
     ClangTool Tool(OptionsParser.getCompilations(),
                    OptionsParser.getSourcePathList());
 
-    ClassPrinter Printer;
+    ComponentAnalyser analyser;
     MatchFinder Finder;
-    Finder.addMatcher(ClassMatcher, &Printer);
+    Finder.addMatcher(ComponentMatcher, &analyser);
+    Finder.addMatcher(MessageCallMatcher, &analyser);
 
-    if(!Tool.run(newFrontendActionFactory(&Finder).get()))
-        TC.printClassTerms();
+    Tool.run(newFrontendActionFactory(&Finder).get());
+    std::cout << "Input interface: ";
+    analyser.printInputInterface();
+    std::cout << "Output interface: ";
+    analyser.printOutputInterface();
     return 0;
 }
