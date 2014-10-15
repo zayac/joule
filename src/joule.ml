@@ -4,13 +4,20 @@ open Network
 (* module for creating dot-files *)
 module Dot = Graph.Graphviz.Dot(struct
   include G (* use the graph module from above *)
+  let escape_quotes s =
+    String.concat
+      (List.map ~f:(fun x -> if x = '"' then "\\\"" else String.of_char x)
+         (String.to_list s))
   let edge_attributes (_, e, _) =
-    [`Label (Constr.to_string e); `Color 4711]
+    [`Label (escape_quotes (Constr.to_string e)); `Color 4711]
   let default_edge_attributes _ = []
   let get_subgraph _ = None
   let vertex_attributes _ = [`Shape `Circle]
   let vertex_name v =
-    String.concat ["\""; Network.Node.to_string v; "\""]
+    String.concat
+      ["\"";
+       escape_quotes (Network.Node.to_string v);
+       "\""]
   let default_vertex_attributes _ = [ `Style `Filled; `Color 0x6495ED;
     `Fontcolor 0xFFFFFF;
     `Fontsize 10;
