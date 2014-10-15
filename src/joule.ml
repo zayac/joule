@@ -25,7 +25,7 @@ let create_dot_output g dot_output =
   Out_channel.with_file dot_output
     ~f:(fun oc -> Dot.output_graph oc g)
 
-let loop dot_output debug verbose limit filename =
+let loop dot_output debug verbose format_output limit filename =
   try
     Location.filename := filename;
     if debug then Log.set_output stdout;
@@ -62,10 +62,16 @@ let loop dot_output debug verbose limit filename =
               printf "%s = %s\n" key (if data then "true" else "false")
           );
         let f ~key ~data =
+          let to_string =
+            if format_output then
+              Term.to_formatted_string ~id:0
+            else
+              Term.to_string
+          in
           if verbose then
-            printf "  $%s = %s\n" key (Term.to_string data)
+            printf "  $%s = %s\n" key (to_string data)
           else if String.Set.mem !Transform.initial_term_variables key then
-            printf "$%s = %s\n" key (Term.to_string data) in
+            printf "$%s = %s\n" key (to_string data) in
         if (not verbose && not (String.Set.is_empty !Transform.initial_bool_variables)) ||
           (verbose && not (String.Map.is_empty bools)) then
           print_newline ();
@@ -101,12 +107,13 @@ let command =
         graph in .dot format and store in a file provided as an argument"
       +> flag "-debug" no_arg ~doc:" print debug information"
       +> flag "-verbose" no_arg ~doc:" print auxiliary computation results"
+      +> flag "-format-output" no_arg ~doc:" turn on indentation for result terms"
       +> flag "-iterations"(optional int) ~doc:"integer maximum number of \
            iterations for the solver"
       +> anon ("filename" %:string)
     )
-    (fun dot_output debug verbose iterations filename () ->
-      loop dot_output debug verbose iterations filename)
+    (fun dot_output debug verbose format_output iterations filename () ->
+      loop dot_output debug verbose format_output iterations filename)
 
 let () =
   let picosat_version = Picosat.version () in

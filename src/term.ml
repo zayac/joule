@@ -22,6 +22,10 @@ exception Incomparable_Terms of t * t with sexp
 
 let hash = Hashtbl.hash
 
+let tail_to_string = function
+  | None -> ""
+  | Some v -> " | $" ^ v
+
 let rec to_string t =
   let module L = List in
   let module S = String in
@@ -31,9 +35,10 @@ let rec to_string t =
   | Some v -> " | $" ^ v in
   let dict_el_to_string (l, (g, t)) =
     (* remove quotation marks if label consists of a single word *)
+    let l_without_quotes = S.strip ~drop:(Char.(=) '"') l in
     let l =
-      if not (String.contains l ' ') && Int.(String.length l > 2) then
-        String.strip ~drop:(Char.(=) '"') l
+      if S.for_all ~f:(fun x -> Char.is_alpha x) l_without_quotes then
+        l_without_quotes
       else l
     in
     if Cnf.is_true g then
@@ -41,7 +46,7 @@ let rec to_string t =
     else
       sprintf "%s(%s): %s" l (Cnf.to_string g) (to_string t) in
   let print_dict x tail lsep rsep =
-    let lst = List.filter ~f:(fun (l, (g, t)) -> not (Cnf.is_false g)) (SM.to_alist x) in
+    let lst = L.filter ~f:(fun (l, (g, t)) -> not (Cnf.is_false g)) (SM.to_alist x) in
     let element_strs = L.map ~f:dict_el_to_string lst in
     S.concat [lsep; S.concat ~sep:", " element_strs; tail_to_string tail; rsep] in
   match t with
@@ -50,25 +55,95 @@ let rec to_string t =
   | NominalInt x -> "~" ^ (string_of_int x)
   | OrdinalInt x -> string_of_int x
   | Symbol x ->
-    if not (String.contains x ' ') && Int.(String.length x > 2) then
-      String.strip ~drop:(Char.(=) '"') x
+    let s_without_quotes = S.strip ~drop:(Char.(=) '"') x in
+    if S.for_all ~f:(fun x -> Char.is_alpha x) s_without_quotes then
+      s_without_quotes
     else x
   | Tuple x -> S.concat ["("; S.concat ~sep:" " (L.map ~f:to_string x); ")"]
   | List (x, tail) ->
     S.concat ["["; S.concat ~sep:", " (L.map ~f:to_string x);
       tail_to_string tail; "]"]
   | Record (x, None)
-      when String.Map.for_all x ~f:(fun (l, _) -> Cnf.is_false l) -> "nil"
+      when SM.for_all x ~f:(fun (l, _) -> Cnf.is_false l) -> "nil"
   | Record (x, tail) -> print_dict x tail "{" "}"
-  | Choice (x, None) when String.Map.is_empty x -> "none"
+  | Choice (x, None) when SM.is_empty x -> "none"
   | Choice (x, tail) -> print_dict x  tail "(:" ":)"
   | Var x -> "$" ^ x
   | Switch x ->
     let alist = Cnf.Map.to_alist x in
-    let sl = List.map
+    let sl = L.map
       ~f:(fun (l, t) -> Printf.sprintf "%s: %s" (Cnf.to_string l)
       (to_string t)) alist in
-    Printf.sprintf "<%s>" (String.concat ~sep:", " sl)
+    Printf.sprintf "<%s>" (S.concat ~sep:", " sl)
+
+let rec to_formatted_string ?(id=0) t =
+  let module L = List in
+  let module S = String in
+  let module SM = String.Map in
+  let indent depth = String.make (2 * depth) ' ' in
+  let dict_el_to_string (l, (g, t)) =
+    (* remove quotation marks if label consists of a single word *)
+    let l_without_quotes = S.strip ~drop:(Char.(=) '"') l in
+    let l =
+      if S.for_all ~f:(fun x -> Char.is_alpha x) l_without_quotes then
+        l_without_quotes
+      else l
+    in
+    if Cnf.is_true g then
+      sprintf "%s: %s" l (to_formatted_string ~id:(id+2) t)
+    else
+      sprintf "%s(%s): %s" l (Cnf.to_string g) (to_formatted_string ~id:(id+2) t) in
+  let print_dict x tail lsep rsep =
+    let lst = L.filter ~f:(fun (l, (g, t)) -> not (Cnf.is_false g)) (SM.to_alist x) in
+    let element_strs = L.map ~f:dict_el_to_string lst in
+    S.concat
+      [
+       "\n";
+       indent id;
+       lsep;
+       "\n";
+       indent (id + 1);
+       S.concat ~sep:(",\n" ^ (indent (id + 1))) element_strs;
+       tail_to_string tail;
+       "\n";
+       indent id;
+       rsep]
+  in
+  match t with
+  (* basic cases *)
+  | List ([], None) | Nil | NominalInt _ | OrdinalInt _ | Symbol _ | Tuple _
+  | Var _ -> to_string t
+  | Record (x, None)
+      when SM.for_all x ~f:(fun (l, _) -> Cnf.is_false l) -> to_string t
+  | Choice (x, None) when SM.is_empty x -> to_string t
+  (* cases that need formatting *)
+  | List (x, tail) ->
+    S.concat
+      ["\n";
+       indent id;
+      "[\n";
+       indent (id + 1);
+       S.concat ~sep:(",\n" ^ (indent (id + 2))) (L.map ~f:(to_formatted_string ~id:(id + 1)) x);
+       tail_to_string tail;
+       "\n";
+       indent id;
+       "]"]
+  | Record (x, tail) -> print_dict x tail "{" "}"
+  | Choice (x, tail) -> print_dict x  tail "(:" ":)"
+  | Switch x ->
+    let alist = Cnf.Map.to_alist x in
+    let sl = L.map
+      ~f:(fun (l, t) -> Printf.sprintf "%s: %s" (Cnf.to_string l) (to_formatted_string ~id:(id + 1) t)) alist in
+    let to_print = S.concat
+      ["\n";
+       indent id;
+       "<\n";
+       indent (id + 1);
+       S.concat ~sep:(",\n" ^ (indent (id + 2))) sl;
+       "\n";
+       indent id;
+       ">"] in
+    Printf.sprintf "%s" to_print
 
 let rec get_vars t =
   let module SS = String.Set in

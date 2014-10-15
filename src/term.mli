@@ -31,6 +31,8 @@ val hash : t -> int
 (** Convert term to syntaxical representation *)
 val to_string : t -> string
 
+val to_formatted_string : ?id:int -> t -> string
+
 (** This exception must be raised when non-ground term is provided as an
     argument for [is_nil_exn] function. *)
 exception Non_Ground of t with sexp
