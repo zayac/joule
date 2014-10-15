@@ -21,7 +21,7 @@ let convert_constrs l r =
 %token NONE
 %token NIL TRUE FALSE NOT OR AND
 %token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET LANGULAR RANGULAR LSMILE RSMILE
-%token SCOLON COLON COMMA BAR LEQ EQ EOF
+%token SCOLON COLON COMMA BAR LEQ EQ NOMINAL EOF
 
 %start <Constr.t list * Cnf.t> parse
 %%
@@ -43,7 +43,8 @@ constrs:
 
 term:
   | NIL { Term.Nil }
-  | INT { Term.Int $1 }
+  | NOMINAL INT { Term.NominalInt $2 }
+  | INT { Term.OrdinalInt $1 }
   | ID { Term.Symbol (Core.Std.String.concat ["\""; $1; "\""]) }
   | STRING { Term.Symbol $1 }
   | VAR

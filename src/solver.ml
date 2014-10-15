@@ -217,7 +217,7 @@ let rec bound_terms_exn depth constrs logic term =
   let open Term in
   let module CM = Cnf.Map in
   match term with
-  | Nil | Int _ | Symbol _ -> CM.singleton logic term
+  | Nil | NominalInt _ | OrdinalInt _ | Symbol _ -> CM.singleton logic term
   | Switch x ->
     CM.fold x ~init:CM.empty
       ~f:(fun ~key ~data acc ->
@@ -534,11 +534,11 @@ let rec solve_senior depth constrs left right =
         let leftm = bound_terms_exn depth constrs logic_combined term_left in
         let rightm = bound_terms_exn depth constrs logic_combined term_right in
         solve_senior_multi_exn (depth + 1) constrs leftm rightm
-    | (Int _ | Symbol _), Var s ->
+    | (OrdinalInt _ | NominalInt _ | Symbol _), Var s ->
       let leftm = bound_terms_exn depth constrs logic_combined term_left in
       let rightm = bound_terms_exn depth constrs logic_combined term_right in
       solve_senior_multi_exn (depth + 1) constrs leftm rightm
-    | Var s, (Int _ | Symbol _) ->
+    | Var s, (OrdinalInt _ | NominalInt _ | Symbol _) ->
       let rightm = bound_terms_exn depth constrs logic_combined term_right in
       let constrs = set_bound_exn (depth + 1) constrs s rightm in
       constrs

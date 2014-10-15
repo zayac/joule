@@ -3,7 +3,8 @@ open Core.Std
 module T = struct
   type t =
     | Nil
-    | Int of int
+    | OrdinalInt of int
+    | NominalInt of int
     | Symbol of string
     | Tuple of t list
     | List of t list * string option
@@ -46,7 +47,8 @@ let rec to_string t =
   match t with
   | List ([], None)
   | Nil -> "nil"
-  | Int x -> string_of_int x
+  | NominalInt x -> "~" ^ (string_of_int x)
+  | OrdinalInt x -> string_of_int x
   | Symbol x ->
     if not (String.contains x ' ') && Int.(String.length x > 2) then
       String.strip ~drop:(Char.(=) '"') x
@@ -74,7 +76,7 @@ let rec get_vars t =
   let module L = List in
   match t with
   | Var v -> String.Set.singleton v
-  | Nil | Int _ | Symbol _ -> SS.empty
+  | Nil | NominalInt _ | OrdinalInt _ | Symbol _ -> SS.empty
   | Tuple x -> L.fold_left ~init:SS.empty ~f:SS.union (L.map ~f:get_vars x)
   | List (x, tail) ->
     let tl = Option.value_map ~default:SS.empty ~f:SS.singleton tail in
@@ -104,7 +106,8 @@ let rec is_nil = function
   | Var _
   | List (_, Some _)
   | Record (_, Some _) -> None
-  | Int _ | Symbol _ | Tuple _ | Choice (_, _) -> Some false
+  | OrdinalInt _ | NominalInt _ | Symbol _ | Tuple _ | Choice (_, _) ->
+    Some false
   | Switch x ->
     let is_nil_flag = ref true in
     let _ = Cnf.Map.iter
@@ -126,7 +129,8 @@ let rec is_nil_exn t =
     | Var _
     | List (_, Some _)
     | Record (_, Some _) -> raise (Non_Ground t)
-    | Int _ | Symbol _ | Tuple _ | Choice (_, _)  -> false
+    | OrdinalInt _ | NominalInt _ | Symbol _ | Tuple _ | Choice (_, _) ->
+      false
     | Switch x ->
       let _ = Cnf.Map.iter
         ~f:(fun ~key ~data ->
@@ -147,7 +151,8 @@ let canonize t =
   | x -> x
 
 let rec is_ground = function
-  | Nil | Int _ | Symbol _ -> true
+  | Nil | OrdinalInt _ | NominalInt _ | Symbol _ ->
+    true
   | List (x, None)
   | Tuple x -> List.for_all ~f:is_ground x
   | Record (x, None)
@@ -177,7 +182,7 @@ let rec seniority_exn t1 t2 =
     | x, Nil when is_nil_exn x -> 0
     | _, Nil -> 1
     | Nil, _ -> -1
-    | Int i, Int i' -> Int.compare i' i
+    | OrdinalInt i, OrdinalInt i' -> Int.compare i' i
     | Tuple x, Tuple x' ->
       if not (Int.equal (List.length x) (List.length x')) then
         raise (Incomparable_Terms (t1, t2))
@@ -279,7 +284,10 @@ let rec join t t' =
   | t, Nil
   | Nil, t -> Some (t, Cnf.Set.empty)
   | Symbol s, Symbol s' when Poly.(s = s') -> Some (Symbol s, Cnf.Set.empty)
-  | Int i, Int i' when Poly.(i = i') -> Some (Int i, Cnf.Set.empty)
+  | OrdinalInt i, OrdinalInt i' ->
+    Some (OrdinalInt (Pervasives.min i i'), Cnf.Set.empty)
+  | NominalInt i, NominalInt i' when Poly.(i = i') ->
+    Some (NominalInt i, Cnf.Set.empty)
   | Tuple l, Tuple l' when Poly.(List.length l = List.length l') ->
     begin
       try

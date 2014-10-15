@@ -54,6 +54,7 @@ rule read = parse
   | '|'      { BAR }
   | "<="     { LEQ }
   | '='      { EQ }
+  | '~'      { NOMINAL }
   | id as i  { ID i }
   | str as s { STRING s }
   | var as i {

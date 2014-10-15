@@ -4,7 +4,8 @@ open Logic
 (** A generic non-ground term in Message Description Language *)
 type t =
   | Nil
-  | Int of int
+  | OrdinalInt of int
+  | NominalInt of int
   | Symbol of string
   | Tuple of t list
   | List of t list * string option
