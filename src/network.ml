@@ -67,15 +67,6 @@ let merge_vertices g =
   G.iter_vertex merge !g';
   !g'
 
-(* checks for the presence of cycles that cause infinite list traversals *)
-(*let infinite_lists_cycles g =*)
-  (*let module C = Graph.Components.Make(G) in*)
-  (*let lst = C.scc_list g in*)
-  (*List.iter lst*)
-    (*~f:(fun c ->*)
-      (*if List.length c = 1 then ()*)
-      (*else*)
-
 let constraint_missing bound set =
   let set_string s =
     String.concat ~sep:", "
@@ -154,10 +145,15 @@ let order g =
       traversed := Node.Set.add !traversed v
       end
   done;
+  (*!lst*)
   List.rev !lst
 
 let traversal_order g =
   let lst = order g in
+  if (List.length lst < G.nb_edges g) then
+    print_endline "Warning: some edges (that represent constraints) are not \
+                   connected to the input/output, and, therefore, are not \
+                   considered by the solver";
   let counter = ref 1 in
   List.iter
     ~f:(fun x ->
