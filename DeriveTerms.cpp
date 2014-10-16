@@ -30,11 +30,11 @@ class ComponentAnalyser : public MatchFinder::MatchCallback {
 public:
 
     virtual void printInputInterface() {
-        comp_int.printInputInterface();
+        comp_int.printInputInterface(0);
     }
 
     virtual void printOutputInterface() {
-        comp_int.printOutputInterface();
+        comp_int.printOutputInterface(0);
     }
 
     virtual void run(const MatchFinder::MatchResult &Result) {
@@ -65,9 +65,9 @@ int main(int argc, const char **argv) {
     Finder.addMatcher(MessageCallMatcher, &analyser);
 
     Tool.run(newFrontendActionFactory(&Finder).get());
-    std::cout << "Input interface: ";
+    std::cout << "Input interface: " << std::endl;
     analyser.printInputInterface();
-    std::cout << "Output interface: ";
+    std::cout << std::endl << "Output interface: " << std::endl;
     analyser.printOutputInterface();
     return 0;
 }

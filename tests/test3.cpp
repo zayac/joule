@@ -10,7 +10,7 @@ public:
   };
   unsigned long foo(void * const, int, double);
   void bar() const;
-  X() : ap(0) {}
+  X();
 };
 
 class Y {

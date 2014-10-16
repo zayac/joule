@@ -12,9 +12,6 @@ using namespace clang;
 
 namespace interface {
 
-typedef std::map<std::string, std::string> message;
-typedef std::map<std::string, message> volleys;
-
 namespace class_repr {
 	enum Access {Public_Access, Private_Access};
 	struct MethodDecl {
@@ -40,13 +37,16 @@ namespace class_repr {
 	};
 }
 
+typedef std::map<std::string, std::string> message;
+typedef std::map<std::string, message> volleys;
+
 class_repr::ClassDecl getClassDecl(const CXXRecordDecl *RD);
 
-void printMessage(const message &msg);
-std::string classDeclToString(const class_repr::ClassDecl& cl);
+void printMessage(const message &msg, unsigned depth);
+std::string classDeclToString(const class_repr::ClassDecl& cl, unsigned depth);
 
 bool isValidType(const QualType& ty);
-std::string getTypeAsString(const QualType& ty, bool quotation_marks = true);
+std::string getTypeAsString(const QualType& ty, bool quotation_marks, unsigned depth);
 
 class Interface {
 
@@ -56,8 +56,8 @@ public:
 	void addInputDeclaration(std::string variant_name, const message &msg);
 	void addOutputVolley(std::string variant_name, const std::pair<std::string, message> &v);
 
-	void printInputInterface() const;
-	void printOutputInterface() const;
+	void printInputInterface(unsigned) const;
+	void printOutputInterface(unsigned) const;
 };
 
 }

@@ -26,7 +26,10 @@ interface::message getMessageFromFunctionDecl(const FunctionDecl* FD) {
 
 	    	clang::ASTContext &context = param->getASTContext();
 	    	
-	    	msg[namedDecl->getNameAsString()] = interface::getTypeAsString(declQT);
+	    	if (declQT->isClassType() || declQT->isStructureType())
+	    		msg[namedDecl->getNameAsString()] = interface::getTypeAsString(declQT, false, 0);
+	    	else
+	    		msg[namedDecl->getNameAsString()] = interface::getTypeAsString(declQT, true, 0);
 	    } else {
 	    	std::cerr << "wrong declaration of function " << FD->getNameAsString() << std::endl;
 	    }
