@@ -1,14 +1,14 @@
 #include "cal.h"
 
 class X {
-	const int ap;
+  const int ap;
 	void baz() const;
 public:
   volatile int a;
   class Y {
   	int a;
   };
-  unsigned long foo(void * const, int, double);
+  unsigned long foo(void* const, int, double);
   void bar() const;
   X();
 };

@@ -2,87 +2,6 @@
 
 namespace interface {
 
-void Interface::addInputDeclaration(std::string variant_name, const message &msg) {
-	if (input_variants.find(variant_name) == input_variants.end()) {
-		input_variants[variant_name] = msg;
-	} else {
-		std::cerr << "conflict of input message types for variant " << variant_name << std::endl;
-	}
-}
-
-void Interface::addOutputVolley(std::string variant_name, const std::pair<std::string, message> &v) {
-	if (output_variants.find(variant_name) == output_variants.end()) {
-		output_variants[variant_name] = volleys();
-		output_variants[variant_name][v.first] = v.second;
-		return;
-	}
-
-	volleys::const_iterator it = output_variants[variant_name].find(v.first);
-	if (it != output_variants[variant_name].end() && it->second != v.second) {
-		std::cerr << "conflict of message types for volley " << v.first <<" (functions that return 'message' cannot be overloaded)" << std::endl;
-		return;
-	}
-
-	output_variants[variant_name][v.first] = v.second;
-}
-
-std::string indent(unsigned depth) {
-    return std::string(depth * 2, ' ');
-}
-
-void Interface::printInputInterface(unsigned depth) const {
-	// iterate over input declarations
-	std::cout << indent(depth) << "(: " << std::endl;
-	for (std::map<std::string, message>::const_iterator vit = input_variants.begin(); vit != input_variants.end(); vit++) {
-		if (vit != input_variants.begin())
-			std::cout << ", " << std::endl;
-		std::cout << indent(depth + 1) << vit->first << ": " << std::endl;
-		printMessage(vit->second, depth + 1);
-	}
-	std::cout << std::endl << indent(depth) << ":)" << std::endl;
-}
-
-void Interface::printOutputInterface(unsigned depth) const {
-	// iterate over output declarations
-	std::cout << indent(depth) << "(:" << std::endl;
-	for (std::map<std::string, volleys>::const_iterator vit = output_variants.begin(); vit != output_variants.end(); vit++) {
-		if (vit != output_variants.begin())
-			std::cout << ", " << std::endl;
-		std::cout << indent(depth + 1) << vit->first << ":" << std::endl << indent(depth + 2) << "{" << std::endl;
-		for (volleys::const_iterator it = vit->second.begin(); it != vit->second.end(); it++) {
-			if (it != vit->second.begin())
-				std::cout << ", " << std::endl;
-			std::cout << indent(depth + 3) << it->first << ": " << std::endl; 
-			printMessage(it->second, depth + 4);
-		}
-		std::cout << std::endl << indent(depth + 2) << "}" << std::endl;
-	}
-	std::cout << indent(depth) << ":)" << std::endl;
-}
-
-std::string replaceAll(std::string s, const std::string &search, const std::string &replace) {
-    for(size_t pos = 0; ; pos += replace.length()) {
-        // Locate the substring to replace
-        pos = s.find(search, pos);
-        if( pos == std::string::npos ) break;
-        // Replace by erasing and inserting
-        s.erase(pos, search.length());
-        s.insert(pos, replace);
-    }
-    return s;
-}
-
-void printMessage(const message &msg, unsigned depth) {
-	std::cout << indent(depth) << "{ " << std::endl;
-	for (message::const_iterator mit = msg.begin(); mit != msg.end(); mit++) {
-		if (mit != msg.begin())
-			std::cout << ", " << std::endl;
-        std::string modified_s = replaceAll(mit->second, "\n", "\n" + indent(depth + 2));
-		std::cout << indent(depth + 1) << mit->first << ": " << modified_s;
-	}
-	std::cout << std::endl << indent(depth) << "}";
-}
-
 bool isValidType(const QualType& ty) {
     const QualType cty = ty.getCanonicalType();
     if ((cty->isPointerType() && cty.isConstQualified()) || cty->isReferenceType())
@@ -97,165 +16,222 @@ bool isValidType(const QualType& ty) {
     return false;
 }
 
-std::string getTypeAsString(const QualType& ty, bool quotation_marks, unsigned depth) {
-    std::string result = "";
+std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it) {
     QualType cty(ty.getCanonicalType());
-    /* remove volatile qualifier */
-    if (cty.isLocalVolatileQualified())
-        cty.removeLocalVolatile();
+    using namespace term;
     if (cty->isPointerType() && cty.isConstQualified()) {
         QualType deref = cty->getPointeeType();
         std::string s = ty.getAsString();
-        if (s.substr(0, s.size() - 2) == deref.getAsString())
-            result += "self* const";
-        else
-            result += getTypeAsString(cty->getPointeeType(), false, depth) +  "* const";
+        if (s.substr(0, s.size() - 2) == deref.getAsString()) {
+            std::vector<std::unique_ptr<Term>> tup;
+            tup.push_back(make_symbol("self"));
+            tup.push_back(make_symbol("*const"));
+            return std::unique_ptr<Term>(new Tuple(tup));
+        } else {
+            std::unique_ptr<Term> t = typeToTerm(cty->getPointeeType(), it);
+            if (t) {
+                std::vector<std::unique_ptr<Term>> tup;
+                tup.push_back(std::move(t));
+                tup.push_back(make_symbol("*const"));
+                return std::unique_ptr<Term>(new Tuple(tup));
+            } else {
+                return nullptr;
+            }
+        }
     } else if (cty->isReferenceType()) {
         QualType deref = cty->getPointeeType();
         std::string s = ty.getAsString();
-        if (s.substr(0, s.size() - 2) == deref.getAsString())
-            result += "self&";
-        else
-            result += getTypeAsString(cty->getPointeeType(), false, depth) +  "&";
-    } else if (cty->isBuiltinType()) { /* builtin types are always canonical */
-        result += std::string(cty.getCanonicalType().getAsString());
+        if (s.substr(0, s.size() - 2) == deref.getAsString()) {
+            std::vector<std::unique_ptr<Term>> tup;
+            tup.push_back(make_symbol("self"));
+            tup.push_back(make_symbol("&"));
+            return std::unique_ptr<Term>(new Tuple(tup));
+        } else {
+            std::unique_ptr<Term> t = typeToTerm(cty->getPointeeType(), it);
+            if (t) {
+                std::vector<std::unique_ptr<Term>> tup;
+                tup.push_back(std::move(t));
+                tup.push_back(make_symbol("&"));
+                return std::unique_ptr<Term>(new Tuple(tup));
+            } else
+                return nullptr;
+        }
+    } else if (cty->isBuiltinType()) { // builtin types are always canonical
+        return std::unique_ptr<Term>(new Symbol(cty.getCanonicalType().getAsString()));
     } else if (cty->isClassType()) {
-    	const CXXRecordDecl *record = cty->getAsCXXRecordDecl();
-    	result += classDeclToString(getClassDecl(record), depth);
-    } else if (cty->isStructureType()) {
-        std::string s = cty.getCanonicalType().getAsString();
-        result += s.substr(std::string("struct ").size());
+        const CXXRecordDecl *record = cty->getAsCXXRecordDecl();
+        return classDeclToTerm(record, it);
+    } else {
+        std::cerr << "unsupported type" << std::endl;
+        exit(1);
     }
-    /* Invalid term. Need to call `isValidTerm' first. */
-    if (result.empty())
-        assert(0);
-    if (quotation_marks)
-        result = "\"" + result + "\"";
-    return result;
 }
 
-class_repr::ClassDecl getClassDecl(const CXXRecordDecl *RD) {
-	using namespace class_repr;
-    std::vector<FieldDecl> field_decls;
-    for (CXXRecordDecl::field_iterator fit = RD->field_begin(); fit != RD->field_end(); fit++) {
-        FieldDecl field;
-        if (fit->getAccess() == AS_public)
-            field.access = Public_Access;
-        else
-            field.access = Private_Access;
-        if (fit->getType().getCanonicalType().isVolatileQualified())
-            field.is_volatile = true;
-        field.name = fit->getDeclName().getAsString();
-        if (isValidType(fit->getType())) {
-            field.type = getTypeAsString(fit->getType(), true, 0);
-        } else {
-            std::cerr << "Type of field '" << field.name << "' that is a member of class '" << RD->getNameAsString() << "' does not have a valid term representation" << std::endl;
-            exit(1);
+inline std::string indent(unsigned depth) {
+    return std::string(depth * 2, ' ');
+}
+
+std::string toString(const std::unique_ptr<term::Term> &t) {
+    using namespace term;
+    switch (t->ttType) {
+        case TTNil:
+            return "nil";
+            break;
+        case TTOrdinalInt: {
+            const OrdinalInt* casted = static_cast<OrdinalInt*>(t.get());
+            return "~" + std::to_string(casted->value);
+            break;
         }
-        field_decls.push_back(field);
+        case TTNominalInt: {
+            const NominalInt* casted = static_cast<NominalInt*>(t.get());
+            return std::to_string(casted->value);
+            break;
+        }
+        case TTSymbol: {
+            const Symbol* casted = static_cast<Symbol*>(t.get());
+            return "\"" + casted->value + "\"";
+            break;
+        }
+        case TTTuple: {
+            const Tuple* casted = static_cast<Tuple*>(t.get());
+            std::string ret = "(";
+            for (auto it = casted->value.begin(); it != casted->value.end(); ++it) {
+                if (it != casted->value.begin())
+                    ret += ", ";
+                ret += toString(*it);
+            }
+            ret += ")";
+            return ret;
+            break;
+        }
+        case TTList: {
+            const List* casted = static_cast<List*>(t.get());
+            std::string ret = "[";
+            for (auto it = casted->head.begin(); it != casted->head.end(); ++it) {
+                if (it != casted->head.begin())
+                    ret += ", ";
+                ret += toString(*it);
+            }
+            if (!casted->tail.empty())
+                ret += "| $" + casted->tail;
+            ret += "]";
+            return ret;
+            break;
+        }
+        case TTRecord: {
+            const Record* casted = static_cast<Record*>(t.get());
+            std::string ret = "{";
+            for (auto it = casted->head.begin(); it != casted->head.end(); ++it) {
+                if (it != casted->head.begin())
+                    ret += ", ";
+                ret += it->first + ": " + toString(it->second);
+            }
+            if (!casted->tail.empty())
+                ret += "| $" + casted->tail;
+            ret += "}";
+            return ret;
+            break;
+        }
+        case TTChoice: {
+            const Choice* casted = static_cast<Choice*>(t.get());
+            std::string ret = "(:";
+            for (auto it = casted->head.begin(); it != casted->head.end(); ++it) {
+                if (it != casted->head.begin())
+                    ret += ", ";
+                ret += it->first + ": " + toString(it->second);
+            }
+            if (!casted->tail.empty())
+                ret += "| $" + casted->tail;
+            ret += ":)";
+            return ret;
+            break;
+        }
+        case TTVar: {
+            const Var* casted = static_cast<Var*>(t.get());
+            return "$" + casted->value;
+        }
+        case TTEof: {
+            return "???";
+        }
     }
-    std::vector<ClassDecl> class_decls;
+}
+
+std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum InterfaceType it) {
+    std::map<std::string, std::unique_ptr<term::Term>> class_repr;
+    for (CXXRecordDecl::field_iterator fit = RD->field_begin(); fit != RD->field_end(); fit++) {
+        if (!fit->getType().getCanonicalType().isVolatileQualified() || it == TOutputInterface) {
+            std::vector<std::unique_ptr<term::Term>> field_decl;
+            if (fit->getAccess() == AS_public)
+                field_decl.push_back(term::make_symbol("public"));
+            else
+                field_decl.push_back(term::make_symbol("private"));
+
+            QualType q = fit->getType().getCanonicalType();
+            if (q.isVolatileQualified()) {
+                q.removeLocalVolatile();
+            }
+            if (isValidType(q)) {
+                field_decl.push_back(typeToTerm(q, it));
+            } else {
+                std::cerr << "Type of field '"
+                          << fit->getDeclName().getAsString()
+                          << "' that is a member of class '"
+                          << RD->getNameAsString()
+                          << "' does not have a valid term representation"
+                          << std::endl;
+                exit(1);
+            }
+            class_repr[fit->getDeclName().getAsString()] = std::unique_ptr<term::Term>(new term::Tuple(field_decl));
+        }
+    }
+
     for (CXXRecordDecl::decl_iterator dit = RD->decls_begin(); dit != RD->decls_end(); dit++) {
         if (isa<CXXRecordDecl>(*dit)) {
             const CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(*dit);
             if (record->isExternallyVisible() && !RD->isAbstract() && !record->isInjectedClassName()) {
-                class_decls.push_back(getClassDecl(record));
+                class_repr[record->getNameAsString()] = classDeclToTerm(record, it);
             }
         }
     }
-    std::vector<MethodDecl> method_decls;
+    
     for(CXXRecordDecl::method_iterator mit = RD->method_begin(); mit != RD->method_end(); mit++) {
-        MethodDecl method;
+        std::vector<std::unique_ptr<term::Term>> method_decl;
         if (mit->getAccess() == AS_public)
-            method.access = Public_Access;
+            method_decl.push_back(term::make_symbol("public"));
         else
-            method.access = Private_Access;
-        method.name = mit->getDeclName().getAsString();
-        // we don't want to add destructor to a term description
-        if (method.name == "~" + RD->getNameAsString())
-            continue;
-        method.is_const = mit->isConst();
-        if (isValidType(mit->getReturnType())) {
-            method.return_term = getTypeAsString(mit->getReturnType(), true, 0);
-        } else {
-            std::cerr << "Return type of method '" << method.name << "' that is a member of class '" << RD->getNameAsString() << "' does not have a valid term representation" << std::endl;
-            exit(1);
-        }
-
+            method_decl.push_back(term::make_symbol("private"));
+        std::string method_name = mit->getDeclName().getAsString();
         bool all_parameters_valid = true;
-        std::vector<std::string> params_terms;
+        method_name += "(";
+
         for (FunctionDecl::param_const_iterator pit = mit->param_begin(); pit != mit->param_end(); pit++) {
+            if (pit != mit->param_begin())
+                method_name += ", "; 
             const ParmVarDecl par = **pit;
             if (isValidType(par.getOriginalType())) {
-                params_terms.push_back(getTypeAsString(par.getOriginalType(), false, 0));
+                method_name += toString(typeToTerm(par.getOriginalType(), it));
             } else {
                 all_parameters_valid = false;
                 break;
             }
         }
-        if (all_parameters_valid) {
-            method.params_terms = params_terms;
-        } else {
-            std::cerr << "Some parameters of method '" << method.name << "' that is a member of class '" << RD->getNameAsString() << "' does not have a valid term representation" << std::endl;
+        method_name += ")";
+        if (!all_parameters_valid) {
+            std::cerr << "Some parameters of method '" << method_name << "' that is a member of class '" << RD->getNameAsString() << "' does not have a valid term representation" << std::endl;
             exit(1);
         }
-        method_decls.push_back(method);
-    }
-   	ClassDecl c;
-    c.name = RD->getNameAsString();
-    c.classes = class_decls;
-    c.methods = method_decls;
-    c.fields = field_decls;
-    return c;
-}
+        if (mit->isConst())
+            method_name += " const";
+        if (!isValidType(mit->getReturnType())) {
+            std::cerr << "Return type of method '" << method_name << "' that is a member of class '" << RD->getNameAsString() << "' does not have a valid term representation" << std::endl;
+            exit(1);
+        }
 
-std::string classDeclToString(const class_repr::ClassDecl& c, unsigned depth) {
-	using namespace class_repr;
-
-	std::string result = "";
-    if (c.methods.empty() && c.fields.empty()) {
-        result += "nil";
-    } else {
-        result += "\n" + indent(depth) + "{\n";
-        for (unsigned i = 0; i < c.classes.size(); i++) {
-            ClassDecl cl = c.classes[i];
-            result += indent(depth+1) + cl.name + ": " + classDeclToString(cl, depth + 2) + ",\n";
-        }
-        for (unsigned i = 0; i < c.fields.size(); i++) {
-            FieldDecl field = c.fields[i];
-            result += indent(depth+1) + field.name + ": (";
-            if (field.access == Public_Access)
-                result += "public ";
-            else
-                result += "private ";
-            if (field.is_volatile)
-                result += "volatile ";
-            result += field.type + ")";
-            if (i != c.fields.size() - 1 || !c.methods.empty()) {
-                result += ",\n";
-            }
-        }
-        for (unsigned i = 0; i < c.methods.size(); i++) {
-            MethodDecl method = c.methods[i];
-            result += indent(depth+1) + "\"" + method.name + "(";
-            for (unsigned j = 0; j < method.params_terms.size(); j++) {
-                result += method.params_terms[j];
-                if (j < method.params_terms.size() - 1)
-                    result += ", ";
-            }
-            result += ")";
-            if (method.is_const) {
-                result += " const";
-            }
-            result += "\": (";
-            result += ((method.access == Public_Access) ? "public " : "private ") + method.return_term + ")";
-            if (i != c.methods.size() - 1) {
-                result += ",\n";
-            }
-        }
-        result += "\n" + indent(depth) + "}";
+        method_decl.push_back(typeToTerm(mit->getReturnType(), it));
+        class_repr[method_name] = std::unique_ptr<term::Term>(new term::Tuple(method_decl));
     }
-    return result;
+
+    return std::unique_ptr<term::Term>(new term::Record(class_repr));
 }
 
 }
