@@ -1,15 +1,21 @@
 #include "cal.h"
 
 class X {
+private:
   const int ap;
+  int ad;
 	void baz() const;
 public:
   volatile int a;
   class Y {
+    private:
   	int a;
   };
   unsigned long foo(void* const, int, double);
-  void bar() const;
+  void bar() {
+    baz();
+    ad += ap + 5;
+  }
   X();
 };
 
@@ -30,6 +36,7 @@ message message_foo(X c, int d, int e);
 
 variant variant_foo (int a, const int b, int c) {
   X cl;
+  int t = a + b + c;
   message_foo(cl, b, c);
 }
 
