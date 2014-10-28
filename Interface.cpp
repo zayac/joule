@@ -16,6 +16,13 @@ bool isValidType(const QualType& ty) {
     return false;
 }
 
+bool isGlobalContext(const DeclContext *context) {
+    if (isa<NamespaceDecl>(*context)) {
+        const NamespaceDecl *ns = static_cast<const NamespaceDecl*>(context);
+        return ns->getNameAsString() == "global";
+    }
+    return false;
+}
 std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it) {
     QualType cty(ty.getCanonicalType());
     using namespace term;
@@ -157,21 +164,25 @@ std::string toString(const std::unique_ptr<term::Term> &t) {
 }
 
 std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum InterfaceType it) {
+    if (isGlobalContext(RD->getDeclContext())) {
+        return term::make_symbol("global::" + RD->getNameAsString());
+    }
+
     std::map<std::string, std::unique_ptr<term::Term>> class_repr;
     for (CXXRecordDecl::field_iterator fit = RD->field_begin(); fit != RD->field_end(); fit++) {
         if (!fit->getType().getCanonicalType().isVolatileQualified() || it == TOutputInterface) {
-            std::vector<std::unique_ptr<term::Term>> field_decl;
+            /*std::unique_ptr<term::Term> field_decl;
             if (fit->getAccess() == AS_public)
                 field_decl.push_back(term::make_symbol("public"));
             else
-                field_decl.push_back(term::make_symbol("private"));
+                field_decl.push_back(term::make_symbol("private"));*/
 
             QualType q = fit->getType().getCanonicalType();
             if (q.isVolatileQualified()) {
                 q.removeLocalVolatile();
             }
             if (isValidType(q)) {
-                field_decl.push_back(typeToTerm(q, it));
+                class_repr[fit->getDeclName().getAsString()] = typeToTerm(q, it);
             } else {
                 std::cerr << "Type of field '"
                           << fit->getDeclName().getAsString()
@@ -181,7 +192,6 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
                           << std::endl;
                 exit(1);
             }
-            class_repr[fit->getDeclName().getAsString()] = std::unique_ptr<term::Term>(new term::Tuple(field_decl));
         }
     }
 
@@ -195,11 +205,11 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
     }
     
     for(CXXRecordDecl::method_iterator mit = RD->method_begin(); mit != RD->method_end(); mit++) {
-        std::vector<std::unique_ptr<term::Term>> method_decl;
+        /*std::vector<std::unique_ptr<term::Term>> method_decl;
         if (mit->getAccess() == AS_public)
             method_decl.push_back(term::make_symbol("public"));
         else
-            method_decl.push_back(term::make_symbol("private"));
+            method_decl.push_back(term::make_symbol("private"));*/
         std::string method_name = mit->getDeclName().getAsString();
         bool all_parameters_valid = true;
         method_name += "(";
@@ -227,8 +237,8 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
             exit(1);
         }
 
-        method_decl.push_back(typeToTerm(mit->getReturnType(), it));
-        class_repr[method_name] = std::unique_ptr<term::Term>(new term::Tuple(method_decl));
+        //method_decl.push_back(typeToTerm(mit->getReturnType(), it));
+        class_repr[method_name] = typeToTerm(mit->getReturnType(), it);
     }
 
     return std::unique_ptr<term::Term>(new term::Record(class_repr));

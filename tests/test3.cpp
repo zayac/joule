@@ -32,10 +32,10 @@ union Z {
 
 class Nil {};
 
-message message_foo(X c, int d, int e);
+message message_foo(global::GlobalObject c, int d, int e);
 
 variant variant_foo (int a, const int b, int c) {
-  X cl;
+  global::GlobalObject cl;
   int t = a + b + c;
   message_foo(cl, b, c);
 }
