@@ -117,8 +117,16 @@ label:
 guard:
   | LPAREN logical_term RPAREN { $2 }
   | LPAREN NOT logical_term RPAREN { Logic.(~-$3) }
-  | LPAREN OR logical_term logical_term RPAREN { Logic.($3 + $4) }
-  | LPAREN AND logical_term logical_term RPAREN { Logic.($3 * $4) }
+  | LPAREN OR logical_term logical_term+ RPAREN
+    {
+      let open Core.Std in
+      List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a + b))
+    }
+  | LPAREN AND logical_term logical_term+ RPAREN
+    {
+      let open Core.Std in
+      List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a * b))
+    }
 
 logical_term:
   | TRUE { Logic.True }
@@ -129,8 +137,16 @@ logical_term:
       T.initial_bool_variables := Core.Std.String.Set.add !T.initial_bool_variables $1;
       Logic.Var $1
     }
-  | LPAREN OR logical_term logical_term RPAREN { Logic.($3 + $4) }
-  | LPAREN AND logical_term logical_term RPAREN { Logic.($3 * $4) }
+  | LPAREN OR logical_term logical_term+ RPAREN
+    {
+      let open Core.Std in
+      List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a + b))
+    }
+  | LPAREN AND logical_term logical_term+ RPAREN
+    {
+      let open Core.Std in
+      List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a * b))
+    }
   | LPAREN NOT logical_term RPAREN { Logic.(~-$3) }
   | VAR
     {

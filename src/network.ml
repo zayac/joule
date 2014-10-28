@@ -145,7 +145,6 @@ let order g =
       traversed := Node.Set.add !traversed v
       end
   done;
-  (*!lst*)
   List.rev !lst
 
 let traversal_order g =
