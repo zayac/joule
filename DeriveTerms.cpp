@@ -123,14 +123,14 @@ int main(int argc, const char **argv) {
         std::cout << it->first << "(";
         std::set<std::string> s = analyser.output_interface_flags[it->first];
         if (s.size() > 1)
-            std::cout << "(or ";
+            std::cout << "or ";
         for (auto sit = s.begin(); sit != s.end(); ++sit) {
             if (sit != s.begin())
                 std::cout << " ";
             std::cout << *sit;
         }
-        if (s.size() > 1)
-            std::cout << ")";
+        /*if (s.size() > 1)
+            std::cout << ")";*/
         std::cout << "): " << interface::toString(it->second);
     }
     std::cout << ":)";

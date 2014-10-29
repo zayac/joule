@@ -23,8 +23,10 @@ bool isGlobalContext(const DeclContext *context) {
     }
     return false;
 }
+
 std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it) {
     QualType cty(ty.getCanonicalType());
+    static bool global_object_allowed = false;
     using namespace term;
     if (cty->isPointerType() && cty.isConstQualified()) {
         QualType deref = cty->getPointeeType();
@@ -35,7 +37,9 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
             tup.push_back(make_symbol("*const"));
             return std::unique_ptr<Term>(new Tuple(tup));
         } else {
+            global_object_allowed = true;
             std::unique_ptr<Term> t = typeToTerm(cty->getPointeeType(), it);
+            global_object_allowed = false;
             if (t) {
                 std::vector<std::unique_ptr<Term>> tup;
                 tup.push_back(std::move(t));
@@ -54,7 +58,9 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
             tup.push_back(make_symbol("&"));
             return std::unique_ptr<Term>(new Tuple(tup));
         } else {
+            global_object_allowed = true;
             std::unique_ptr<Term> t = typeToTerm(cty->getPointeeType(), it);
+            global_object_allowed = false;
             if (t) {
                 std::vector<std::unique_ptr<Term>> tup;
                 tup.push_back(std::move(t));
@@ -67,6 +73,11 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
         return std::unique_ptr<Term>(new Symbol(cty.getCanonicalType().getAsString()));
     } else if (cty->isClassType()) {
         const CXXRecordDecl *record = cty->getAsCXXRecordDecl();
+        if (isGlobalContext(record->getDeclContext()) && !global_object_allowed) {
+            std::cerr << "global object must be used only as references or const pointers" << std::endl;
+            exit(1);
+        }
+        global_object_allowed = false;
         return classDeclToTerm(record, it);
     } else {
         std::cerr << "unsupported type" << std::endl;
@@ -169,6 +180,7 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
     }
 
     std::map<std::string, std::unique_ptr<term::Term>> class_repr;
+    // fields
     for (CXXRecordDecl::field_iterator fit = RD->field_begin(); fit != RD->field_end(); fit++) {
         if (!fit->getType().getCanonicalType().isVolatileQualified() || it == TOutputInterface) {
             /*std::unique_ptr<term::Term> field_decl;
@@ -195,6 +207,7 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
         }
     }
 
+    // classes
     for (CXXRecordDecl::decl_iterator dit = RD->decls_begin(); dit != RD->decls_end(); dit++) {
         if (isa<CXXRecordDecl>(*dit)) {
             const CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(*dit);
@@ -204,6 +217,7 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
         }
     }
     
+    //methods
     for(CXXRecordDecl::method_iterator mit = RD->method_begin(); mit != RD->method_end(); mit++) {
         /*std::vector<std::unique_ptr<term::Term>> method_decl;
         if (mit->getAccess() == AS_public)
@@ -211,6 +225,10 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
         else
             method_decl.push_back(term::make_symbol("private"));*/
         std::string method_name = mit->getDeclName().getAsString();
+        if (method_name == RD->getNameAsString())
+            method_name = "constructor";
+        else if (method_name[0] == '~')
+            method_name = "destructor";
         bool all_parameters_valid = true;
         method_name += "(";
 
