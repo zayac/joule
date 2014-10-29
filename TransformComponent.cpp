@@ -96,7 +96,8 @@ public:
     CalInitialTransformation() {}
     
     void EndSourceFileAction() override {
-        std::string path = file_name + ".tmp";
+        size_t pos = file_name.find_last_of('.');
+        std::string path = file_name.substr(0, pos) + ".transformed" + file_name.substr(pos);
         std::error_code ec;
         llvm::raw_fd_ostream out_file(path.c_str(), ec, llvm::sys::fs::F_None);
         TheRewriter.getEditBuffer(TheRewriter.getSourceMgr().getMainFileID())
