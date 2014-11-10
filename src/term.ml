@@ -404,8 +404,8 @@ let rec join t t' =
               | None -> raise (Incomparable_Terms (t, t'))
               | Some (jt, c) ->
                 s := Cnf.Set.union !s c;
-                let _ = if not (Cnf.equal l l') then
-                  s := Cnf.Set.add !s Cnf.(l <=> l') in
+                (*let _ = if not (Cnf.equal l l') then*)
+                  (*s := Cnf.Set.add !s Cnf.(l <=> l') in*)
                 Some (Cnf.(l + l'), jt)
             end) in
         Some (Record (join_map, None), !s)
@@ -427,8 +427,8 @@ let rec join t t' =
               | None -> raise (Incomparable_Terms (t, t'))
               | Some (jt, c) ->
                 s := Cnf.Set.union !s c;
-                if not (Cnf.equal l l') then
-                  s := Cnf.Set.add !s Cnf.(l <=> l');
+                (*if not (Cnf.equal l l') then*)
+                  (*s := Cnf.Set.add !s Cnf.(l <=> l');*)
                 Some (Cnf.(l * l'), jt)
             end) in
         Some (Choice (join_map, None), !s)

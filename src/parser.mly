@@ -119,13 +119,11 @@ guard:
   | LPAREN NOT logical_term RPAREN { Logic.(~-$3) }
   | LPAREN OR logical_term logical_term+ RPAREN
     {
-      let open Core.Std in
-      List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a + b))
+      Core.Std.List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a + b))
     }
   | LPAREN AND logical_term logical_term+ RPAREN
     {
-      let open Core.Std in
-      List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a * b))
+      Core.Std.List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a * b))
     }
 
 logical_term:
@@ -139,13 +137,11 @@ logical_term:
     }
   | LPAREN OR logical_term logical_term+ RPAREN
     {
-      let open Core.Std in
-      List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a + b))
+      Core.Std.List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a + b))
     }
   | LPAREN AND logical_term logical_term+ RPAREN
     {
-      let open Core.Std in
-      List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a * b))
+      Core.Std.List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a * b))
     }
   | LPAREN NOT logical_term RPAREN { Logic.(~-$3) }
   | VAR
