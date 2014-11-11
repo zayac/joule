@@ -2,5 +2,5 @@ a = false
 b = true
 c = true
 
-$x = {e: nil, f: nil, q: nil}
+$x = {e: nil, f: nil, q: 5}
 $y = {q: nil}

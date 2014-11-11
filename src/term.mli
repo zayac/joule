@@ -72,6 +72,11 @@ val to_wff : bool String.Map.t -> t -> t
 (** Finds a join term for two terms *)
 val join : t -> t -> (t * Cnf.Set.t) option
 
+(** [cnf_map_of_alist lst] is used to construct a map of Cnf->Term key-value
+    pairs in a secure manner: it resolves label conflicts by generating
+    corresponding boolean constraints. *)
+val cnf_map_of_alist : (Cnf.t * t) list -> t Cnf.Map.t * Cnf.t
+
 (** [none] is a bottom choice term equivalent to empty choice [(: :)] *)
 val none : t
 

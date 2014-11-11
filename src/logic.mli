@@ -17,6 +17,8 @@ val sexp_of_t : t -> Sexplib.Sexp.t
 
 include Comparable.S with type t := t
 
+val to_string : t -> string
+
 (** Converts a Boolean expression to string.  Auxiliary optional arguments specify
     - [sand] -- string representation of the conjunction symbol;
     - [sor] -- string representation of the disjunction symbol;
@@ -24,7 +26,7 @@ include Comparable.S with type t := t
     - [vprefix] -- a prefix string that is inserted before every Boolean variable.
 
 *)
-val to_string : ?sand:string -> ?sor:string -> ?snot:string -> ?vprefix:string -> t -> string
+val to_friendly_string : ?sand:string -> ?sor:string -> ?snot:string -> ?vprefix:string -> t -> string
 (** Checks whether a Boolean expression does not contain variables *)
 val is_ground : t -> bool
 (** Replaces variables in a Boolean expression [t] with the ones provided in

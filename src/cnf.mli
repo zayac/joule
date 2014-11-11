@@ -25,6 +25,8 @@ val is_false : t -> bool
 (** Checks whether a Boolean expression is {e syntactically} identical to [true] *)
 val is_true : t -> bool
 
+val to_string : t -> string
+
 (** Convert a Boolean expression to string.  Auxiliary optional arguments specify
     - [sand] -- string representation of the conjunction symbol;
     - [sor] -- string representation of the disjunction symbol;
@@ -32,7 +34,7 @@ val is_true : t -> bool
     - [vprefix] -- a prefix string that is inserted before every Boolean variable.
 
 *)
-val to_string : ?sand:string -> ?sor:string -> ?snot:string -> ?vprefix:string -> t -> string
+val to_friendly_string : ?sand:string -> ?sor:string -> ?snot:string -> ?vprefix:string -> t -> string
 (** Checks whether a Boolean expression does not contain variables *)
 val is_ground : t -> bool
 (** Constructs a Boolean expression in CNF form from a logical formula *)

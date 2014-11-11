@@ -13,7 +13,15 @@ end
 include T
 include Comparable.Make(T)
 
-let rec to_string ?(sand=" ∧ ") ?(sor=" ∨ ") ?(snot="¬") ?vprefix = function
+let rec to_string = function
+  | False -> "false"
+  | True -> "true"
+  | Not t -> Printf.sprintf "(not %s)" (to_string t)
+  | And (t, t') -> Printf.sprintf "(and %s %s)" (to_string t) (to_string t')
+  | Or (t, t') -> Printf.sprintf "(or %s %s)" (to_string t) (to_string t')
+  | Var v -> v
+
+let rec to_friendly_string ?(sand=" ∧ ") ?(sor=" ∨ ") ?(snot="¬") ?vprefix = function
   | False -> "false"
   | True -> "true"
   | Not t -> Printf.sprintf "%s%s" snot (to_string t)

@@ -438,6 +438,44 @@ let rec join t t' =
   | _, Choice (_, Some _) -> raise (Non_Ground t)
   | _, _ -> None
 
+let cnf_map_of_alist lst =
+  let multi_result = Cnf.Map.of_alist_multi lst in
+  let cnf_constrs = ref Cnf.make_true in
+  let reduced =
+    Cnf.Map.fold ~init:Cnf.Map.empty
+      ~f:(fun ~key ~data acc ->
+        match data with
+        | [] -> failwith "unreachable"
+        | hd :: [] -> Cnf.Map.add acc ~key ~data:hd
+        | hd :: tl ->
+          let jn =
+            List.fold ~init:(Some hd)
+              ~f:(fun acc t ->
+                match acc with
+                | None -> None
+                | Some acc ->
+                  try
+                    match join acc t with
+                    | None -> None
+                    | Some (term, logic) ->
+                      Cnf.Set.iter ~f:(fun x ->
+                        cnf_constrs := Cnf.(!cnf_constrs * (key ==> x))
+                      ) logic;
+                      Some term
+                  with _ -> None
+              ) tl
+          in
+          match jn with
+          | None ->
+            cnf_constrs := Cnf.(!cnf_constrs * ~-key);
+            acc
+          | Some value ->
+            Cnf.Map.add acc ~key ~data:value
+      ) multi_result in
+  reduced, !cnf_constrs
+
+
+
 let none = Choice (String.Map.empty, None)
 
 let is_choice = function

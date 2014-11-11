@@ -835,7 +835,9 @@ let rec solve_senior depth constrs left right =
                                       !result
                                     ) in
                       let value = List.map value ~f:(fun (l, m) -> l, Record (m, None)) in
-                      result := Cnf.Map.of_alist_exn value
+                      let map, logic = Term.cnf_map_of_alist value in
+                      add_bool_constr depth logic;
+                      result := map
                   end
                 | Choice _ ->
                   cstrs := set_bound_exn (depth + 1) constrs s Cnf.(Map.singleton (logic * logic_combined) Nil)
@@ -847,7 +849,7 @@ let rec solve_senior depth constrs left right =
         let _ = match v' with
           | None -> ()
           | Some s' ->
-            (* possible values of the left tail variable *)
+            (* possible values of the right tail variable *)
             let bounds = bound_terms_exn depth !cstrs logic_combined (Var s') in
             Cnf.Map.iter bounds
               ~f:(fun ~key ~data ->
@@ -875,6 +877,20 @@ let rec solve_senior depth constrs left right =
                               add_bool_constr depth Cnf.(logic_combined * (logic ==> (g' ==> g)))
                             with Errors.Unsatisfiability_Error _ ->
                               add_bool_constr depth Cnf.(~-(logic_combined * logic * g'))
+                          end
+                        | `Right (g, t) ->
+                          begin
+                            (* [key] label is in the right tail variable of the
+                               right record.  If there is a tail of the left
+                               term, we have to make [key] is included to the
+                               corresponding record.  *)
+                            match v with
+                            | None ->
+                              add_bool_constr depth Cnf.(~-(logic_combined * logic * g))
+                            | Some tv ->
+                              let tvalue = String.Map.singleton key (g, t) in
+                              let singleton = Cnf.(Map.singleton (logic_combined * logic) (Record(tvalue, None))) in
+                              cstrs := set_bound_exn (depth + 1) !cstrs tv singleton
                           end
                         | _ -> ()
                       )
@@ -1011,7 +1027,9 @@ let rec solve_senior depth constrs left right =
                                       !result
                                     ) in
                       let value = List.map value ~f:(fun (l, m) -> l, Choice (m, None)) in
-                      result := Cnf.Map.of_alist_exn value
+                      let map, logic = Term.cnf_map_of_alist value in
+                      add_bool_constr depth logic;
+                      result := map
                   end
                 | Nil ->
                   if may_be_choice s' Cnf.(logic * logic_combined) then
@@ -1059,6 +1077,20 @@ let rec solve_senior depth constrs left right =
                               add_bool_constr depth Cnf.(logic_combined * (logic ==> (g ==> g')))
                             with Errors.Unsatisfiability_Error _ ->
                               add_bool_constr depth Cnf.(~-(logic_combined * logic * g))
+                          end
+                        | `Left (g, t) ->
+                          begin
+                            (* [key] label is in the tail variable of the
+                               left choice.  If there is a tail of the right
+                               term, we have to make [key] is included to the
+                               corresponding choice.  *)
+                            match v' with
+                            | None ->
+                              add_bool_constr depth Cnf.(~-(logic_combined * logic * g))
+                            | Some tv ->
+                              let tvalue = String.Map.singleton key (g, t) in
+                              let singleton = Cnf.(Map.singleton (logic_combined * logic) (Choice(tvalue, None))) in
+                              cstrs := set_bound_exn (depth + 1) !cstrs tv singleton
                           end
                         | _ -> ()
                       )

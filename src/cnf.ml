@@ -15,7 +15,31 @@ let make_true = CSet.empty
 let is_false t = CSet.mem t Logic.(Set.singleton False)
 let is_true = CSet.is_empty
 
-let to_string ?(sand=" ∧ ") ?(sor=" ∨ ") ?(snot="¬") ?vprefix t =
+let to_string t =
+  if is_false t then "false"
+  else if is_true t then "true"
+  else
+    let lst = CSet.to_list t in
+    let lst = List.map ~f:(fun x -> Logic.Set.to_list x) lst in
+    let l = 
+      List.map lst
+        ~f:(fun x ->
+          match x with
+          | hd :: [] ->
+            Logic.to_string hd
+          | lst ->
+            String.concat ["(or ";
+                           String.concat ~sep:" " (List.map lst ~f:(fun y -> Logic.to_string y));
+                          ")"
+                          ]
+        )
+    in
+    match l with
+    | hd :: [] -> hd
+    | lst -> sprintf "(and %s)" (String.concat ~sep:" " lst)
+
+
+let to_friendly_string ?(sand=" ∧ ") ?(sor=" ∨ ") ?(snot="¬") ?vprefix t =
   if is_false t then "false"
   else if is_true t then "true"
   else
@@ -28,8 +52,8 @@ let to_string ?(sand=" ∧ ") ?(sor=" ∨ ") ?(snot="¬") ?vprefix t =
            String.concat ~sep:sor (List.map x
              ~f:(fun y ->
                match vprefix with
-               | None -> Logic.to_string ~sand ~sor ~snot y
-               | Some vp -> Logic.to_string ~sand ~sor ~vprefix:vp y
+               | None -> Logic.to_friendly_string ~sand ~sor ~snot y
+               | Some vp -> Logic.to_friendly_string ~sand ~sor ~vprefix:vp y
              ));
            ")"
           ]
