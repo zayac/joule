@@ -212,7 +212,8 @@ let map_of_alist_safe l =
         match result with
         | None -> acc
         | Some data -> Cnf.Map.add acc ~key ~data)
-  
+
+
 let rec bound_terms_exn depth constrs logic term =
   let open Term in
   let module CM = Cnf.Map in
@@ -888,9 +889,10 @@ let rec solve_senior depth constrs left right =
                             | None ->
                               add_bool_constr depth Cnf.(~-(logic_combined * logic * g))
                             | Some tv ->
-                              let tvalue = String.Map.singleton key (g, t) in
-                              let singleton = Cnf.(Map.singleton (logic_combined * logic) (Record(tvalue, None))) in
-                              cstrs := set_bound_exn (depth + 1) !cstrs tv singleton
+                              let bounds = bound_terms_exn depth !cstrs g t in
+                              let bounds = Cnf.Map.map bounds
+                                ~f:(fun t -> Record(String.Map.singleton key (g, t), None)) in
+                              cstrs := set_bound_exn (depth + 1) !cstrs tv bounds
                           end
                         | _ -> ()
                       )
@@ -934,7 +936,7 @@ let rec solve_senior depth constrs left right =
                   add_bool_constr depth Cnf.(logic_combined ==> ~-g)
                 )
           | Some s' ->
-            (* possible values of the left tail variable *)
+            (* possible values of the right tail variable *)
             (* if [s'] is not a choice, then we need to drop all the current
                values to [none] and to start computations again from the bottom
                of the semilattice *)
@@ -961,8 +963,8 @@ let rec solve_senior depth constrs left right =
                     String.Map.iter2 !left_values tail_map
                       ~f:(fun ~key ~data ->
                         match data with
-                        | `Left _ -> ()
-                        | `Right data ->
+                        | `Right _ -> ()
+                        | `Left data ->
                           missing_elements := String.Map.add !missing_elements ~key ~data
                         | `Both ((g, t), (g', t')) ->
                           begin
@@ -1066,8 +1068,8 @@ let rec solve_senior depth constrs left right =
                           add_bool_constr depth Cnf.(~-(logic * logic_combined * g * g'))
                         | _ -> ()
                       );
-                    (* seniority relation with terms to the left *)
-                    String.Map.iter2 r tail_map
+                    (* seniority relation with terms to the right *)
+                    String.Map.iter2 tail_map r'
                       ~f:(fun ~key ~data ->
                         match data with
                         | `Both ((g, t), (g', t')) ->
@@ -1088,9 +1090,10 @@ let rec solve_senior depth constrs left right =
                             | None ->
                               add_bool_constr depth Cnf.(~-(logic_combined * logic * g))
                             | Some tv ->
-                              let tvalue = String.Map.singleton key (g, t) in
-                              let singleton = Cnf.(Map.singleton (logic_combined * logic) (Choice(tvalue, None))) in
-                              cstrs := set_bound_exn (depth + 1) !cstrs tv singleton
+                              let bounds = bound_terms_exn depth !cstrs g t in
+                              let bounds = Cnf.Map.map bounds
+                                             ~f:(fun t -> Choice(String.Map.singleton key (g, t), None)) in
+                              cstrs := set_bound_exn (depth + 1) !cstrs tv bounds
                           end
                         | _ -> ()
                       )
