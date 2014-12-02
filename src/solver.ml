@@ -94,7 +94,6 @@ let merge_bounds depth old_terms new_terms =
                 | None -> add_bool_constr depth Cnf.(~-(logic * logic'))
                 | Some (join_term, log) ->
                   (*Cnf.Set.iter log ~f:(fun el -> add_bool_constr depth Cnf.((logic * logic') ==> el));*)
-                  new_map := add_to_map depth !new_map Cnf.(logic * logic') join_term;
                   new_map := add_to_map depth !new_map Cnf.(logic * logic') join_term
               end
             );
@@ -535,21 +534,16 @@ let rec solve_senior depth constrs left right =
         let leftm = bound_terms_exn depth constrs logic_combined term_left in
         let rightm = bound_terms_exn depth constrs logic_combined term_right in
         solve_senior_multi_exn (depth + 1) constrs leftm rightm
-    | (OrdinalInt _ | NominalInt _ | Symbol _), Var s ->
+    (* TODO add "| List _" below *)
+    | (OrdinalInt _ | NominalInt _ | Symbol _ | Tuple _ | Record _), Var s ->
       let leftm = bound_terms_exn depth constrs logic_combined term_left in
       let rightm = bound_terms_exn depth constrs logic_combined term_right in
       solve_senior_multi_exn (depth + 1) constrs leftm rightm
-    | Var s, (OrdinalInt _ | NominalInt _ | Symbol _) ->
+    | Var s, (OrdinalInt _ | NominalInt _ | Symbol _ | Tuple _ | List _ | Record _) ->
       let rightm = bound_terms_exn depth constrs logic_combined term_right in
       let constrs = set_bound_exn (depth + 1) constrs s rightm in
       constrs
     (* tuple processing *)
-    | Nil, Tuple t ->
-      List.fold t ~init:constrs
-        ~f:(fun acc el ->
-          let right = logic_right, el in
-          solve_senior (depth + 1) acc left right
-        )
     | Tuple t, Tuple t' when Int.(List.length t = List.length t') ->
       if Int.(List.length t = List.length t') then
         List.fold2_exn t t' ~init:constrs
@@ -559,39 +553,14 @@ let rec solve_senior depth constrs left right =
           )
       else
         raise (Incomparable_Terms (term_left, term_right))
-    | Tuple t, Var s ->
-      if may_be_choice s logic_combined then
-        raise (Term.Incomparable_Terms (term_left, term_right))
-      else
-        let solve ~key ~data acc =
-          let right = key, data in
-          solve_senior (depth + 1) constrs left right in
-        let rightm = bound_terms_exn depth constrs logic_combined term_right in
-        Cnf.Map.fold rightm ~init:constrs ~f:solve
-    | Var s, Tuple t ->
-      if may_be_choice s logic_combined then
-        raise (Term.Incomparable_Terms (term_left, term_right))
-      else
-        let bounds = bound_terms_exn depth constrs logic_combined term_right in
-        let constrs = set_bound_exn (depth + 1) constrs s bounds in
-        constrs
     (* list processing *)
+    (* TODO remove this case. See above *)
     | List _, Var s ->
-      if may_be_choice s logic_combined then
-        raise (Term.Incomparable_Terms (term_left, term_right))
-      else
-        let bounds = bound_terms_exn depth constrs logic_combined term_right in
-        Cnf.Map.fold bounds ~init:constrs
-          ~f:(fun ~key ~data acc ->
-            solve_senior (depth + 1) acc left (key, data)
-          )
-    | Var s, List _ ->
-      if may_be_choice s logic_combined then
-        raise (Term.Incomparable_Terms (term_left, term_right))
-      else
-        let bounds = bound_terms_exn depth constrs logic_combined term_right in
-        let constrs = set_bound_exn (depth + 1) constrs s bounds in
-        constrs
+      let bounds = bound_terms_exn depth constrs logic_combined term_right in
+      Cnf.Map.fold bounds ~init:constrs
+        ~f:(fun ~key ~data acc ->
+          solve_senior (depth + 1) acc left (key, data)
+        )
     | Nil, List (t, var) ->
       begin
         let constrs = List.fold t ~init:constrs
@@ -694,19 +663,11 @@ let rec solve_senior depth constrs left right =
       let bounds = bound_terms_exn depth constrs logic_combined term_left in
       let constrs = set_bound_exn (depth + 1) constrs s bounds in
       constrs
-    | Record _, Var s ->
-      let bounds = bound_terms_exn depth constrs logic_combined term_right in
-      Cnf.Map.fold bounds ~init:constrs ~f:(fun ~key ~data acc ->
-        solve_senior (depth + 1) acc left (key, data))
     | Var s, Choice _ ->
       let constrs = assert_choice depth constrs s logic_combined in
       let bounds = bound_terms_exn depth constrs logic_combined term_left in
       Cnf.Map.fold bounds ~init:constrs ~f:(fun ~key ~data acc ->
         solve_senior (depth + 1) acc (key, data) right)
-    | Var s, Record _ ->
-      let bounds = bound_terms_exn depth constrs logic_combined term_right in
-      let constrs = set_bound_exn (depth + 1) constrs s bounds in
-      constrs
     | Nil, Choice (map, var)
     | Nil, Record (map, var) ->
       begin
@@ -1203,11 +1164,10 @@ let resolve_bound_constraints topo =
     List.iter ~f:(apply constrs) topo;
     (* The solver terminates when either the bounds stop to change or the
        number of iterations exceeds the iteration limit. *)
-    if ctx_equal (!constrs, !bools) (!constrs', !bools')
-    || !iter_counter > !iteration_limit then
+    if ctx_equal (!constrs, !bools) (!constrs', !bools') || !iter_counter > !iteration_limit then
       fixed_point := true
     else
-      iter_counter := !iter_counter + 1;
+      iter_counter := !iter_counter + 1
   done;
   !constrs
 
@@ -1224,8 +1184,9 @@ let add_union_boolean_constraints constrs =
   String.Map.iter !Transform.union_variables
     ~f:(fun ~key ~data ->
       let var, var' = data in
-      let map = String.Map.find_exn constrs var in
-      let map' = String.Map.find_exn constrs var' in
+      let default_map = Cnf.Map.singleton Cnf.make_true Term.Nil in
+      let map = Option.value ~default:default_map (String.Map.find constrs var) in
+      let map' = Option.value ~default:default_map (String.Map.find constrs var') in
       Cnf.Map.iter map
         ~f:(fun ~key ~data ->
           let condition, term = key, data in
