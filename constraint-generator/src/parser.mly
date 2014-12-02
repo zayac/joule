@@ -7,7 +7,8 @@
 %token NONE
 %token NIL TRUE FALSE NOT OR AND
 %token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET LANGULAR RANGULAR LSMILE RSMILE
-%token SCOLON COLON COMMA BAR LEQ EQ NOMINAL EOF
+%token COLON COMMA BAR NOMINAL EOF
+(*%token SCOLON LEQ EQ *)
 
 %start <(Term.t * Term.t) * (Term.t * Term.t) list> term_parse
 %start <(string * string) list> netlist_parse

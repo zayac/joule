@@ -28,11 +28,12 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
 
 std::string toString(const std::unique_ptr<term::Term> &term);
 
+/*
 class Interface {
 	std::unique_ptr<term::Term> output_interface;
 	std::unique_ptr<term::Term> input_interface;
 public:
 	void addInputVariant(std::string variant_name, std::unique_ptr<term::Term>);
 };
-
+*/
 }

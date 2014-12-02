@@ -1,10 +1,10 @@
 #!/bin/bash
 
-BIN_DIR=./bin
-DERIVE_BIN=derive-terms
-TRANSFORM_COMP_BIN=transform-component
-CONSTRAINT_GEN_BIN=constraint-gen
-SOLVER=joule.native
+BIN_DIR=.
+DERIVE_BIN=derive-terms/derive-terms
+TRANSFORM_COMP_BIN=transform-component/transform-component
+CONSTRAINT_GEN_BIN=constraint-generator/main.native
+SOLVER=joule/joule.native
 
 dir=""
 filename=""
@@ -44,7 +44,7 @@ clean_tool() {
     mv $dir/environment.terms $dir/environment.terms.keep
     rm -f $dir/*.transformed.cpp $dir/*.terms
     mv $dir/environment.terms.keep $dir/environment.terms
-    rm -f $dir/*.constraint
+    rm -f $dir/*.constraints
     exit 0
 }
 

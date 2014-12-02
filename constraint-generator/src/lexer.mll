@@ -49,11 +49,11 @@ rule read = parse
   | '<'      { LANGULAR }
   | '>'      { RANGULAR }
   | ':'      { COLON }
-  | ';'      { SCOLON }
+  (*| ';'      { SCOLON }*)
   | ','      { COMMA }
   | '|'      { BAR }
-  | "<="     { LEQ }
-  | '='      { EQ }
+  (*| "<="     { LEQ }*)
+  (*| '='      { EQ }*)
   | '~'      { NOMINAL }
   | id as i  { ID i }
   | str as s { STRING s }

@@ -74,7 +74,8 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
     } else if (cty->isClassType()) {
         const CXXRecordDecl *record = cty->getAsCXXRecordDecl();
         if (isGlobalContext(record->getDeclContext()) && !global_object_allowed) {
-            std::cerr << "global object must be used only as references or const pointers" << std::endl;
+            std::cerr << "global object '" << record->getNameAsString()
+                      << "' must be used only as a reference or a const pointer" << std::endl;
             exit(1);
         }
         global_object_allowed = false;
