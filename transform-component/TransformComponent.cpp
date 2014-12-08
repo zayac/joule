@@ -1,120 +1,140 @@
-#include "clang/Tooling/CommonOptionsParser.h"
-#include "clang/Tooling/Tooling.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Lex/Lexer.h"
-#include <unordered_map>
+#include "TransformComponent.h"
+#include <iostream>
 
-using namespace clang::tooling;
-using namespace llvm;
-using namespace clang;
-using namespace clang::ast_matchers;
+void FlowInheritanceHandler::addHeader(FileID fid) {
+    SourceLocation sl = Rewrite.getSourceMgr().getLocForStartOfFile(fid);
+    Rewrite.InsertText(sl, "#include \"" + macro_prefix + "variables.h\"\n");
+    header_file.open(directory_path + "/" + macro_prefix + "variables.h", std::fstream::out);
+}
 
-// Apply a custom category to all command-line options so that they are the
-// only ones displayed.
-static llvm::cl::OptionCategory MyToolCategory("my-tool options");
+inline std::string getCallExprName(const CallExpr* CE) {
+    const FunctionDecl* FD = CE->getDirectCallee();
+    return FD->getNameAsString();
+}
 
-// CommonOptionsParser declares HelpMessage with a description of the common
-// command-line options related to the compilation database and input files.
-// It's nice to have this help message in all tools.
-static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 
-// A help message for this specific tool can be added afterwards.
-static cl::extrahelp MoreHelp("\nMore help text...");
-
-class PrivateDeclsHandler : public MatchFinder::MatchCallback {
-public:
-    PrivateDeclsHandler(Rewriter &Rewrite,
-                        std::unordered_map<std::string, std::string> &cache)
-                            : Rewrite(Rewrite), privateVariables(cache) {}
-
-    virtual void run(const MatchFinder::MatchResult &Result) {
-        ASTContext *Context = Result.Context;
-        if (const NamedDecl *decl = Result.Nodes.getNodeAs<NamedDecl>("privateDecl")) {
-            std::string oldName = decl->getNameAsString();
-            std::string newName;
-            if (privateVariables.find(oldName) == privateVariables.end()) {
-                newName = oldName + "_" + gen_random(10);
-                privateVariables[oldName] = newName;
-            } else
-                newName = privateVariables[oldName];
-            Rewrite.ReplaceText(decl->getLocation(), oldName.size(), newName);
-        } else if (const MemberExpr *expr = Result.Nodes.getNodeAs<MemberExpr>("privateDeclUse")) {
-            std::string oldName = expr->getMemberNameInfo().getName().getAsString();
-            if (privateVariables.find(oldName) != privateVariables.end()) {
-                std::string newName = privateVariables[oldName];
-                if (expr->isArrow())
-                    Rewrite.ReplaceText(expr->getMemberLoc(), oldName.size(), newName);
-            }
-        } else if (const AccessSpecDecl *accessDecl = Result.Nodes.getNodeAs<AccessSpecDecl>("accessSpecDecl")) {
-            Rewrite.ReplaceText(accessDecl->getSourceRange(), "public:");
+void genDeclsForCallExprs(Rewriter &Rewrite) {
+    for (const auto& el : output_interfaces_names) {
+        std::string tail_name = accumulate(el.second.begin(), el.second.end(), std::string("_"));
+        for (const CallExpr* exp : output_interfaces_calls[el.first]) {
+            const Expr *e = exp->getArg(exp->getNumArgs() - 1);
+            Rewrite.InsertTextAfterToken(e->getLocEnd(), " " + macro_prefix + tail_name);
         }
+        header_file << "#define " << macro_prefix << tail_name << std::endl;
     }
+}
 
-private:
-    Rewriter &Rewrite;
-    std::unordered_map<std::string, std::string> &privateVariables;
-
-    std::string gen_random(const int len) const {
-        static const char alphanum[] =
-            "0123456789"
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            "abcdefghijklmnopqrstuvwxyz";
-
-        std::string s(len, 0);
-        for (int i = 0; i < len; ++i) {
-            s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
+void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
+    ASTContext *Context = Result.Context;
+    if (const FunctionDecl *FD = Result.Nodes.getNodeAs<FunctionDecl>("componentVariantDecl")) {
+        function_name = FD->getNameAsString();
+        if (!header_added) {
+                addHeader(Rewrite.getSourceMgr().getFileID(FD->getLocation()));
+                header_added = true;
         }
-        return s;
+        FunctionDecl::param_const_iterator pit = FD->param_end();
+        --pit;
+        Rewrite.InsertTextAfterToken((*pit)->getLocation(), " " + macro_prefix + FD->getNameAsString());
+        header_file << "#define " << macro_prefix << FD->getNameAsString() << std::endl;
+    } else if (const CallExpr *CE = Result.Nodes.getNodeAs<CallExpr>("messageCall")) {
+        if (function_name.empty()) {
+            std::cerr << "expression that sends a message is used in the unknown context" << std::endl;
+            return;
+        }
+        std::string call_name = getCallExprName(CE);
+        if (output_interfaces_names.find(call_name) == output_interfaces_names.end()) {
+            output_interfaces_names[call_name] = {function_name};
+            output_interfaces_calls[call_name] = {CE};
+        } else {
+            output_interfaces_names[call_name].push_back(function_name);
+            output_interfaces_calls[call_name].insert(CE);
+        }
+       //// output_interface.insert(getDeclFromCallExpr(Context, CE, interface::TOutputInterface));
+        
+       //std::pair<std::string, std::unique_ptr<term::Term>> p = getDeclFromCallExpr(Context, CE, interface::TOutputInterface);
+        //if (output_interface.find(p.first) != output_interface.end()) {
+            //output_interface[p.first] = merge_records(output_interface[p.first], p.second);
+        //} else {
+            //output_interface.insert(getDeclFromCallExpr(Context, CE, interface::TOutputInterface));
+        //}
     }
-};
+}
 
-class MyASTConsumer : public ASTConsumer {
-public:
-    MyASTConsumer(Rewriter &R) : HandlerForPrivateDecls(R, privateVariables) {
-        Matcher.addMatcher(namedDecl(isPrivate()).bind("privateDecl"),
-            &HandlerForPrivateDecls);
-        Matcher.addMatcher(memberExpr(hasDeclaration(namedDecl(isPrivate()))).bind("privateDeclUse"),
-            &HandlerForPrivateDecls);
-        Matcher.addMatcher(accessSpecDecl().bind("accessSpecDecl"),
-            &HandlerForPrivateDecls);
+void PrivateDeclsHandler::run(const MatchFinder::MatchResult &Result) {
+    ASTContext *Context = Result.Context;
+    if (const NamedDecl *decl = Result.Nodes.getNodeAs<NamedDecl>("privateDecl")) {
+        std::string oldName = decl->getNameAsString();
+        std::string newName;
+        if (privateVariables.find(oldName) == privateVariables.end()) {
+            newName = oldName + "_" + gen_random(10);
+            privateVariables[oldName] = newName;
+        } else
+            newName = privateVariables[oldName];
+        Rewrite.ReplaceText(decl->getLocation(), oldName.size(), newName);
+    } else if (const MemberExpr *expr = Result.Nodes.getNodeAs<MemberExpr>("privateDeclUse")) {
+        std::string oldName = expr->getMemberNameInfo().getName().getAsString();
+        if (privateVariables.find(oldName) != privateVariables.end()) {
+            std::string newName = privateVariables[oldName];
+            if (expr->isArrow())
+                Rewrite.ReplaceText(expr->getMemberLoc(), oldName.size(), newName);
+        }
+    } else if (const AccessSpecDecl *accessDecl = Result.Nodes.getNodeAs<AccessSpecDecl>("accessSpecDecl")) {
+        Rewrite.ReplaceText(accessDecl->getSourceRange(), "public:");
     }
+}
 
-    void HandleTranslationUnit(ASTContext &Context) override {
-        Matcher.matchAST(Context);
+std::string PrivateDeclsHandler::gen_random(const int len) const {
+    static const char alphanum[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+
+    std::string s(len, 0);
+    for (int i = 0; i < len; ++i) {
+        s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
     }
+    return s;
+}
 
-private:
-    PrivateDeclsHandler HandlerForPrivateDecls;
-    MatchFinder Matcher;
-    std::unordered_map<std::string, std::string> privateVariables;
-};
+MyASTConsumer::MyASTConsumer(Rewriter &R) : HandlerForPrivateDecls(R, privateVariables),
+                                HandlerForFlowInheritance(R) {
+    /* Parsing class definition */
+    Matcher.addMatcher(namedDecl(isPrivate()).bind("privateDecl"),
+        &HandlerForPrivateDecls);
+    Matcher.addMatcher(memberExpr(hasDeclaration(namedDecl(isPrivate()))).bind("privateDeclUse"),
+        &HandlerForPrivateDecls);
+    Matcher.addMatcher(accessSpecDecl().bind("accessSpecDecl"),
+        &HandlerForPrivateDecls);
 
-class CalInitialTransformation : public ASTFrontendAction {
-public:
-    CalInitialTransformation() {}
-    
-    void EndSourceFileAction() override {
-        size_t pos = file_name.find_last_of('.');
-        std::string path = file_name.substr(0, pos) + ".transformed" + file_name.substr(pos);
-        std::error_code ec;
-        llvm::raw_fd_ostream out_file(path.c_str(), ec, llvm::sys::fs::F_None);
-        TheRewriter.getEditBuffer(TheRewriter.getSourceMgr().getMainFileID())
-            .write(out_file);
-    }
+    /* Function declarations/calls */
+    Matcher.addMatcher(functionDecl(isDefinition(), returns(asString("variant"))).bind("componentVariantDecl"),
+        &HandlerForFlowInheritance);
+    Matcher.addMatcher(callExpr(hasDeclaration(functionDecl(returns(asString("message"))))).bind("messageCall"),
+        &HandlerForFlowInheritance);
+}
 
-    std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                   StringRef file) override {
-        file_name = file.data();
-        TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
-        return llvm::make_unique<MyASTConsumer>(TheRewriter);
-    }
+void MyASTConsumer::HandleTranslationUnit(ASTContext &Context) {
+    Matcher.matchAST(Context);
+}
 
-private:
-    std::string file_name;
-    Rewriter TheRewriter;
-};
+void CalInitialTransformation::EndSourceFileAction() {
+    genDeclsForCallExprs(TheRewriter);
+
+    size_t pos = file_name.find_last_of('.');
+    std::string path = file_name.substr(0, pos) + ".transformed" + file_name.substr(pos);
+    std::error_code ec;
+    llvm::raw_fd_ostream out_file(path.c_str(), ec, llvm::sys::fs::F_None);
+    TheRewriter.getEditBuffer(TheRewriter.getSourceMgr().getMainFileID())
+        .write(out_file);
+}
+
+std::unique_ptr<ASTConsumer> CalInitialTransformation::CreateASTConsumer(CompilerInstance &CI,
+                                                StringRef file) {
+    file_name = file.data();
+    directory_path = file_name.substr(0, file_name.find_last_of('/'));
+    TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
+    return llvm::make_unique<MyASTConsumer>(TheRewriter);
+}
 
 int main(int argc, const char **argv) {
     CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
