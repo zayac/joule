@@ -1,5 +1,6 @@
 typedef void variant;
 typedef void message;
+typedef void variant_message;
 
 namespace global {
 

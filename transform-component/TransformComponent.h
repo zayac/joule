@@ -34,6 +34,7 @@ std::string function_name;
 std::fstream header_file;
 std::map<std::string, std::vector<std::string>> output_interfaces_names;
 std::map<std::string, std::unordered_set<const CallExpr*>> output_interfaces_calls;
+std::map<std::string, std::unordered_set<const FunctionDecl*>> output_interfaces_decls;
 
 inline std::string getFileName(const ASTContext *Context, const SourceLocation &SpellingLoc) {
     return Context->getSourceManager().getFilename(SpellingLoc);
@@ -71,7 +72,7 @@ private:
     bool header_added;
     Rewriter &Rewrite;
 
-    void addHeader(FileID fid);
+    void addHeader(SourceLocation sl);
 };
 
 class PrivateDeclsHandler : public MatchFinder::MatchCallback {

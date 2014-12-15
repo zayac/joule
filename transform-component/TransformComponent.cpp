@@ -1,9 +1,9 @@
 #include "TransformComponent.h"
 #include <iostream>
 
-void FlowInheritanceHandler::addHeader(FileID fid) {
-    SourceLocation sl = Rewrite.getSourceMgr().getLocForStartOfFile(fid);
-    Rewrite.InsertText(sl, "#include \"" + macro_prefix + "variables.h\"\n");
+void FlowInheritanceHandler::addHeader(SourceLocation sl) {
+    //SourceLocation sl = Rewrite.getSourceMgr().getLocForStartOfFile(fid);
+    Rewrite.InsertTextBefore(sl, "#include \"" + macro_prefix + "variables.h\"\n");
     header_file.open(directory_path + "/" + macro_prefix + "variables.h", std::fstream::out);
 }
 
@@ -15,23 +15,36 @@ inline std::string getCallExprName(const CallExpr* CE) {
 
 void genDeclsForCallExprs(Rewriter &Rewrite) {
     for (const auto& el : output_interfaces_names) {
-        std::string tail_name = accumulate(el.second.begin(), el.second.end(), std::string("_"));
+        std::string tail_name = macro_prefix;
+        // string concatenation
+        for (auto &s : el.second) {
+            if (s != el.second[0])
+                tail_name += '_';
+            tail_name += s;
+        }
         for (const CallExpr* exp : output_interfaces_calls[el.first]) {
             const Expr *e = exp->getArg(exp->getNumArgs() - 1);
-            Rewrite.InsertTextAfterToken(e->getLocEnd(), " " + macro_prefix + tail_name);
+            Rewrite.InsertTextAfterToken(e->getLocEnd(), " " + tail_name);
         }
-        header_file << "#define " << macro_prefix << tail_name << std::endl;
+        for (const FunctionDecl* decl : output_interfaces_decls[el.first]) {
+            const ParmVarDecl *p = decl->getParamDecl(decl->getNumParams() - 1);
+            Rewrite.InsertTextAfterToken(p->getLocEnd(), " " + tail_name);
+        }
+
+        header_file << "#define " << tail_name << std::endl;
     }
 }
 
 void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
     ASTContext *Context = Result.Context;
     if (const FunctionDecl *FD = Result.Nodes.getNodeAs<FunctionDecl>("componentVariantDecl")) {
-        function_name = FD->getNameAsString();
         if (!header_added) {
-                addHeader(Rewrite.getSourceMgr().getFileID(FD->getLocation()));
+                //addHeader(Rewrite.getSourceMgr().getFileID(FD->getLocation()));
+                addHeader(FD->getLocStart());
                 header_added = true;
         }
+
+        function_name = FD->getNameAsString();
         FunctionDecl::param_const_iterator pit = FD->param_end();
         --pit;
         Rewrite.InsertTextAfterToken((*pit)->getLocation(), " " + macro_prefix + FD->getNameAsString());
@@ -49,6 +62,19 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
             output_interfaces_names[call_name].push_back(function_name);
             output_interfaces_calls[call_name].insert(CE);
         }
+    } else if (const FunctionDecl *FD = Result.Nodes.getNodeAs<FunctionDecl>("messageDecl")) {
+        if (!header_added) {
+                addHeader(FD->getLocStart());
+                header_added = true;
+        }
+
+        function_name = FD->getNameAsString();
+        if (output_interfaces_decls.find(function_name) == output_interfaces_decls.end()) {
+            output_interfaces_decls[function_name] = {FD};
+        } else {
+            output_interfaces_decls[function_name].insert(FD);
+        }
+
        //// output_interface.insert(getDeclFromCallExpr(Context, CE, interface::TOutputInterface));
         
        //std::pair<std::string, std::unique_ptr<term::Term>> p = getDeclFromCallExpr(Context, CE, interface::TOutputInterface);
@@ -111,6 +137,9 @@ MyASTConsumer::MyASTConsumer(Rewriter &R) : HandlerForPrivateDecls(R, privateVar
         &HandlerForFlowInheritance);
     Matcher.addMatcher(callExpr(hasDeclaration(functionDecl(returns(asString("message"))))).bind("messageCall"),
         &HandlerForFlowInheritance);
+    Matcher.addMatcher(functionDecl( returns(asString("message"))).bind("messageDecl"),
+        &HandlerForFlowInheritance);
+
 }
 
 void MyASTConsumer::HandleTranslationUnit(ASTContext &Context) {
