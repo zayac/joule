@@ -24,14 +24,15 @@ void genDeclsForCallExprs(Rewriter &Rewrite) {
         }
         for (const CallExpr* exp : output_interfaces_calls[el.first]) {
             const Expr *e = exp->getArg(exp->getNumArgs() - 1);
-            Rewrite.InsertTextAfterToken(e->getLocEnd(), " " + tail_name);
+            Rewrite.InsertTextAfterToken(e->getLocEnd(), " " + tail_name + "_use");
         }
         for (const FunctionDecl* decl : output_interfaces_decls[el.first]) {
             const ParmVarDecl *p = decl->getParamDecl(decl->getNumParams() - 1);
-            Rewrite.InsertTextAfterToken(p->getLocEnd(), " " + tail_name);
+            Rewrite.InsertTextAfterToken(p->getLocEnd(), " " + tail_name + "_decl");
         }
 
-        header_file << "#define " << tail_name << std::endl;
+        header_file << "#define " << tail_name << "_decl" << std::endl;
+        header_file << "#define " << tail_name << "_use" << std::endl;
     }
 }
 
@@ -47,8 +48,8 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
         function_name = FD->getNameAsString();
         FunctionDecl::param_const_iterator pit = FD->param_end();
         --pit;
-        Rewrite.InsertTextAfterToken((*pit)->getLocation(), " " + macro_prefix + FD->getNameAsString());
-        header_file << "#define " << macro_prefix << FD->getNameAsString() << std::endl;
+        Rewrite.InsertTextAfterToken((*pit)->getLocation(), " " + macro_prefix + FD->getNameAsString() + "_decl");
+        header_file << "#define " << macro_prefix << FD->getNameAsString() << "_decl" << std::endl;
     } else if (const CallExpr *CE = Result.Nodes.getNodeAs<CallExpr>("messageCall")) {
         if (function_name.empty()) {
             std::cerr << "expression that sends a message is used in the unknown context" << std::endl;

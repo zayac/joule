@@ -87,7 +87,8 @@ int main(int argc, const char **argv) {
         std::string flag = analyser.input_interface_flags[it->first];
         ofile << it->first << "(" << flag << "): " << interface::toString(it->second);
     }
-    ofile << "| $choice_" << analyser.file_name;
+    /* choice */
+    ofile << "| $" << analyser.file_name;
     ofile << " :)" << std::endl << std::endl;
 
     ofile << "(:";
@@ -105,7 +106,8 @@ int main(int argc, const char **argv) {
         }
         ofile << "): " << interface::toString(it->second);
     }
-    ofile << "| $choice_" << analyser.file_name;
+    /* choice */
+    ofile << "| $" << analyser.file_name;
     ofile << " :)";
     return 0;
 }

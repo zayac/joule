@@ -5,6 +5,7 @@ DERIVE_BIN=derive-terms/derive-terms
 TRANSFORM_COMP_BIN=transform-component/transform-component
 CONSTRAINT_GEN_BIN=constraint-generator/main.native
 SOLVER=joule/joule.native
+CODE_GENERATOR=code-generator/main.native
 
 dir=""
 filename=""
@@ -37,14 +38,16 @@ build_tool () {
     echo "Deriving constraints..."
     $BIN_DIR/$CONSTRAINT_GEN_BIN $filename
     echo "Solving constraints in \"${filename%.*}.constraints\"..."
-    $BIN_DIR/$SOLVER ${filename%.*}.constraints
+    $BIN_DIR/$SOLVER ${filename%.*}.constraints | tee ${filename%.*}.solution
+    echo "Generating code for the solution \"${filename%.*}.solution\"..."
+    $BIN_DIR/$CODE_GENERATOR ${filename%.*}.solution
 }
 
 clean_tool() {
     mv $dir/environment.terms $dir/environment.terms.keep
     rm -f $dir/*.transformed.cpp $dir/*.terms
     mv $dir/environment.terms.keep $dir/environment.terms
-    rm -f $dir/*.constraints
+    rm -f $dir/*.constraints $dir/*.solution
     exit 0
 }
 
