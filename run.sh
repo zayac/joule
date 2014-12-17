@@ -11,6 +11,15 @@ dir=""
 filename=""
 usage=$"Usage: $0 {clean|build} [filename]"
 
+function test {
+    "$@"
+    local status=$?
+    if [ $status -ne 0 ]; then
+        echo "error with $1" >&2
+    fi
+    return $status
+}
+
 build_tool () {
     echo "Reading net list file \"$filename\"..."
     files=()
@@ -31,16 +40,16 @@ build_tool () {
     for file in ${unique_files[@]}
     do
         echo "Transforming source file \"$file.cpp\"..."
-        $BIN_DIR/$TRANSFORM_COMP_BIN $dir/$file.cpp --
+        test $BIN_DIR/$TRANSFORM_COMP_BIN $dir/$file.cpp --
         echo "Deriving interface from transformed source file \"$file.transformed.cpp\"..."
-        $BIN_DIR/$DERIVE_BIN $dir/$file.transformed.cpp --
+        test $BIN_DIR/$DERIVE_BIN $dir/$file.transformed.cpp --
     done
     echo "Deriving constraints..."
-    $BIN_DIR/$CONSTRAINT_GEN_BIN $filename
+    test $BIN_DIR/$CONSTRAINT_GEN_BIN $filename
     echo "Solving constraints in \"${filename%.*}.constraints\"..."
-    $BIN_DIR/$SOLVER ${filename%.*}.constraints | tee ${filename%.*}.solution
+    test $BIN_DIR/$SOLVER ${filename%.*}.constraints | tee ${filename%.*}.solution
     echo "Generating code for the solution \"${filename%.*}.solution\"..."
-    $BIN_DIR/$CODE_GENERATOR ${filename%.*}.solution
+    test $BIN_DIR/$CODE_GENERATOR ${filename%.*}.solution
 }
 
 clean_tool() {
@@ -48,6 +57,7 @@ clean_tool() {
     rm -f $dir/*.transformed.cpp $dir/*.terms
     mv $dir/environment.terms.keep $dir/environment.terms
     rm -f $dir/*.constraints $dir/*.solution
+    rm -f $dir/CAL_FI_variables.h
     exit 0
 }
 

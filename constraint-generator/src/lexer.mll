@@ -55,8 +55,8 @@ rule read = parse
   (*| "<="     { LEQ }*)
   (*| '='      { EQ }*)
   | '~'      { NOMINAL }
-  | id as i  { ID i }
   | str as s { STRING s }
+  | id as i  { ID i }
   | var as i {
                let open Core.Std in
                VAR (String.suffix i (String.length i - 1)) 

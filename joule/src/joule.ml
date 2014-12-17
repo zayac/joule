@@ -102,7 +102,7 @@ let loop dot_output debug verbose format_output limit filename =
      | Network.Topology_Error msg
      | Errors.Unsatisfiability_Error msg
      | Sys_error msg ->
-  Printf.eprintf "%s\n" msg
+    Printf.eprintf "%s\n" msg
 
 let command =
   Command.basic
@@ -120,7 +120,7 @@ let command =
       +> anon ("filename" %:string)
     )
     (fun dot_output debug verbose format_output iterations filename () ->
-      loop dot_output debug verbose format_output iterations filename)
+       loop dot_output debug verbose format_output iterations filename)
 
 let () =
   let picosat_version = Picosat.version () in

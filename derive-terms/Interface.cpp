@@ -116,7 +116,7 @@ std::string toString(const std::unique_ptr<term::Term> &t) {
             std::string ret = "(";
             for (auto it = casted->value.begin(); it != casted->value.end(); ++it) {
                 if (it != casted->value.begin())
-                    ret += ", ";
+                    ret += " ";
                 ret += toString(*it);
             }
             ret += ")";
