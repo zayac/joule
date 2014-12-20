@@ -110,14 +110,14 @@ let solve_max set =
   | Any -> Some String.Map.empty
   | Solutions [] -> None
   | Solutions (hd :: tl) ->
-    let trues x =
+    let falses x =
       String.Map.fold x ~init:0
         ~f:(fun ~key ~data acc ->
-          if data then acc + 1 else acc
+          if not data then acc + 1 else acc
         ) in
-    let count, result = List.fold tl ~init:((trues hd), hd)
+    let count, result = List.fold tl ~init:((falses hd), hd)
       ~f:(fun (count, bools) el ->
-        let count' = trues el in
+        let count' = falses el in
         if count' > count then count', el
         else count, bools
       ) in

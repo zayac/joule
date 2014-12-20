@@ -12,7 +12,6 @@ inline std::string getCallExprName(const CallExpr* CE) {
     return FD->getNameAsString();
 }
 
-
 void genDeclsForCallExprs(Rewriter &Rewrite) {
     for (const auto& el : output_interfaces_names) {
         std::string tail_name = macro_prefix;
@@ -27,12 +26,38 @@ void genDeclsForCallExprs(Rewriter &Rewrite) {
             Rewrite.InsertTextAfterToken(e->getLocEnd(), " " + tail_name + "_use");
         }
         for (const FunctionDecl* decl : output_interfaces_decls[el.first]) {
+            // tail variables
             const ParmVarDecl *p = decl->getParamDecl(decl->getNumParams() - 1);
             Rewrite.InsertTextAfterToken(p->getLocEnd(), " " + tail_name + "_decl");
         }
 
         header_file << "#define " << tail_name << "_decl" << std::endl;
         header_file << "#define " << tail_name << "_use" << std::endl;
+    }
+}
+
+void genVolleysPredicates(Rewriter &Rewrite) {
+    for (const auto& el : output_interfaces_decls) {
+        for (const FunctionDecl* decl : el.second) {
+            std::string cond = "";
+            bool is_first = true;
+            for (const auto& name : output_interfaces_names[el.first]) {
+                if (!is_first) {
+                    cond += " || ";
+                } else
+                    is_first = false;
+                cond += "!defined(f_" + name + ")";
+            }
+            if (!is_first) {
+                Rewrite.InsertTextBefore(decl->getLocStart(), "\n#if " + cond + "\n");
+                Rewrite.InsertText(decl->getLocEnd().getLocWithOffset(2), "\n#endif\n");
+                //Rewrite.ReplaceText(decl->getLocEnd(), ")\n#endif\n");
+            } else {
+                Rewrite.InsertTextBefore(decl->getLocStart(), "\n#if 0\n");
+                Rewrite.InsertText(decl->getLocEnd().getLocWithOffset(2), "\n#endif\n");
+                //Rewrite.ReplaceText(decl->getLocEnd(), ")\n#endif\n");
+            }
+        }
     }
 }
 
@@ -48,8 +73,17 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
         function_name = FD->getNameAsString();
         FunctionDecl::param_const_iterator pit = FD->param_end();
         --pit;
+
+        // tail variable
         Rewrite.InsertTextAfterToken((*pit)->getLocation(), " " + macro_prefix + FD->getNameAsString() + "_decl");
         header_file << "#define " << macro_prefix << FD->getNameAsString() << "_decl" << std::endl;
+
+        Rewrite.InsertTextBefore(FD->getLocStart(),
+                  "#if !defined f_"
+                + getFileNamePrefix(Context, FD->getLocStart()) + "_"
+                + function_name
+                + "\n");
+        Rewrite.ReplaceText(FD->getLocEnd(), "}\n#endif\n");
     } else if (const CallExpr *CE = Result.Nodes.getNodeAs<CallExpr>("messageCall")) {
         if (function_name.empty()) {
             std::cerr << "expression that sends a message is used in the unknown context" << std::endl;
@@ -76,14 +110,6 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
             output_interfaces_decls[function_name].insert(FD);
         }
 
-       //// output_interface.insert(getDeclFromCallExpr(Context, CE, interface::TOutputInterface));
-        
-       //std::pair<std::string, std::unique_ptr<term::Term>> p = getDeclFromCallExpr(Context, CE, interface::TOutputInterface);
-        //if (output_interface.find(p.first) != output_interface.end()) {
-            //output_interface[p.first] = merge_records(output_interface[p.first], p.second);
-        //} else {
-            //output_interface.insert(getDeclFromCallExpr(Context, CE, interface::TOutputInterface));
-        //}
     }
 }
 
@@ -149,6 +175,7 @@ void MyASTConsumer::HandleTranslationUnit(ASTContext &Context) {
 
 void CalInitialTransformation::EndSourceFileAction() {
     genDeclsForCallExprs(TheRewriter);
+    genVolleysPredicates(TheRewriter);
 
     size_t pos = file_name.find_last_of('.');
     std::string path = file_name.substr(0, pos) + ".transformed" + file_name.substr(pos);
