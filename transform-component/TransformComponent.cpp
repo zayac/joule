@@ -1,9 +1,9 @@
 #include "TransformComponent.h"
 #include <iostream>
 
-void FlowInheritanceHandler::addHeader(SourceLocation sl) {
-    //SourceLocation sl = Rewrite.getSourceMgr().getLocForStartOfFile(fid);
-    Rewrite.InsertTextBefore(sl, "#include \"" + macro_prefix + "variables.h\"\n");
+void FlowInheritanceHandler::enableCalVariables(FileID fid) {
+    SourceLocation sl = Rewrite.getSourceMgr().getLocForStartOfFile(fid);
+    Rewrite.InsertTextBefore(sl, "#define CAL_FI_VARIABLES_ENABLED 1\n");
     header_file.open(directory_path + "/" + macro_prefix + "variables.h", std::fstream::out);
 }
 
@@ -66,7 +66,7 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
     if (const FunctionDecl *FD = Result.Nodes.getNodeAs<FunctionDecl>("componentVariantDecl")) {
         if (!header_added) {
                 //addHeader(Rewrite.getSourceMgr().getFileID(FD->getLocation()));
-                addHeader(FD->getLocStart());
+                enableCalVariables(Rewrite.getSourceMgr().getFileID(FD->getLocation()));
                 header_added = true;
         }
 
@@ -79,7 +79,7 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
         header_file << "#define " << macro_prefix << FD->getNameAsString() << "_decl" << std::endl;
 
         Rewrite.InsertTextBefore(FD->getLocStart(),
-                  "#if !defined f_"
+                  "#ifndef f_"
                 + getFileNamePrefix(Context, FD->getLocStart()) + "_"
                 + function_name
                 + "\n");
@@ -99,8 +99,9 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
         }
     } else if (const FunctionDecl *FD = Result.Nodes.getNodeAs<FunctionDecl>("messageDecl")) {
         if (!header_added) {
-                addHeader(FD->getLocStart());
-                header_added = true;
+            enableCalVariables(Rewrite.getSourceMgr().getFileID(FD->getLocation()));
+            //addHeader(FD->getLocStart());
+            header_added = true;
         }
 
         function_name = FD->getNameAsString();

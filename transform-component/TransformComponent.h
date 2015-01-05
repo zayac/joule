@@ -72,7 +72,7 @@ private:
     bool header_added;
     Rewriter &Rewrite;
 
-    void addHeader(SourceLocation sl);
+    void enableCalVariables(FileID fid);
 };
 
 class PrivateDeclsHandler : public MatchFinder::MatchCallback {

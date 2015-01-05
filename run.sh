@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 BIN_DIR=.
 DERIVE_BIN=derive-terms/derive-terms
@@ -10,6 +10,7 @@ CODE_GENERATOR=code-generator/main.native
 dir=""
 filename=""
 usage=$"Usage: $0 {clean|build} [filename]"
+no_solution_string="No solution is found"
 
 function test {
     "$@"
@@ -48,8 +49,13 @@ build_tool () {
     test $BIN_DIR/$CONSTRAINT_GEN_BIN $filename
     echo "Solving constraints in \"${filename%.*}.constraints\"..."
     test $BIN_DIR/$SOLVER ${filename%.*}.constraints | tee ${filename%.*}.solution
-    echo "Generating code for the solution \"${filename%.*}.solution\"..."
-    test $BIN_DIR/$CODE_GENERATOR ${filename%.*}.solution
+    if grep -q "$no_solution_string" "${filename%.*}.solution"; then
+        echo "Error: constraint resolution failed. Cannot generate code"
+        exit 1
+    else
+        echo "Generating code for the solution \"${filename%.*}.solution\"..."
+        $BIN_DIR/$CODE_GENERATOR ${filename%.*}.solution
+    fi
 }
 
 clean_tool() {

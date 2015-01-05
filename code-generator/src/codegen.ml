@@ -23,7 +23,7 @@ let term_to_cpp_macro is_decl = function
           acc ^ (dequotize key)
       )
 
-let generate outc name t =
+let generate_from_terms outc name t =
   match t with
   | Nil
   | Record _ ->
@@ -41,3 +41,9 @@ let generate outc name t =
           String.concat [acc; term_to_type t; " "; dequotize key]
       ) in
     fprintf outc "variant_message %s(%s);\n" name args
+
+let generate_from_bools outc name value =
+  match value with
+  | false ->
+    fprintf outc "#define f_%s\n" name
+  | true -> ()
