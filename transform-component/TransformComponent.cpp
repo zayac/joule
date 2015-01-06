@@ -134,6 +134,18 @@ void PrivateDeclsHandler::run(const MatchFinder::MatchResult &Result) {
         }
     } else if (const AccessSpecDecl *accessDecl = Result.Nodes.getNodeAs<AccessSpecDecl>("accessSpecDecl")) {
         Rewrite.ReplaceText(accessDecl->getSourceRange(), "public:");
+    } else if (const CXXCtorInitializer *ctor = Result.Nodes.getNodeAs<CXXCtorInitializer>("ctorInitializer")) {
+        FieldDecl* decl = ctor->getMember();
+        if (decl->getAccess() == AS_private) {
+            std::string oldName = decl->getDeclName().getAsString();
+            std::string newName;
+            if (privateVariables.find(oldName) == privateVariables.end()) {
+                newName = oldName + "_" + gen_random(10);
+                privateVariables[oldName] = newName;
+            } else
+                newName = privateVariables[oldName];
+            Rewrite.ReplaceText(ctor->getSourceLocation(), oldName.size(), newName);
+        }
     }
 }
 
@@ -158,6 +170,9 @@ MyASTConsumer::MyASTConsumer(Rewriter &R) : HandlerForPrivateDecls(R, privateVar
     Matcher.addMatcher(memberExpr(hasDeclaration(namedDecl(isPrivate()))).bind("privateDeclUse"),
         &HandlerForPrivateDecls);
     Matcher.addMatcher(accessSpecDecl().bind("accessSpecDecl"),
+        &HandlerForPrivateDecls);
+    /* private fields in constructor initializer list */
+    Matcher.addMatcher(constructorDecl(forEachConstructorInitializer(ctorInitializer(isWritten()).bind("ctorInitializer"))),
         &HandlerForPrivateDecls);
 
     /* Function declarations/calls */
