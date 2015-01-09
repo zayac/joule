@@ -1,6 +1,6 @@
 a = false
-b = true
-c = true
+b = false
+c = false
 
 $x = {e: nil, f: nil, q: nil}
 $y = {q: nil}

@@ -1,7 +1,7 @@
 a = true
-b = true
+b = false
 c = true
 d = false
 
-$v = {l: int}
-$w = {l: nil}
+$v = nil
+$w = nil

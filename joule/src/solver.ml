@@ -510,7 +510,10 @@ let rec solve_senior depth constrs left right =
     (Constr.to_string (term_left, term_right));
   try
     match term_left, term_right with
-    | _, Nil -> constrs
+    | _, Nil
+    (* extra rule for overriding class member functions *)
+    | _, Tuple [Symbol "\"override\""; _] ->
+      constrs
     | Var s, Var s' ->
       let left_choice = may_be_choice s logic_combined in
       let right_choice = may_be_choice s' logic_combined in

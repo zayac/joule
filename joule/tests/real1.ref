@@ -1,11 +1,11 @@
-ppd = true
+ppd = false
 ppi = true
-ssd = true
+ssd = false
 ssi = true
 
 $power = none
 $power_double = nil
 $sum = none
-$sum_double = {base: double}
+$sum_double = nil
 $sum_int = {base: int}
 $power_int = nil
