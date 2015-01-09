@@ -143,7 +143,7 @@ std::string toString(const std::unique_ptr<term::Term> &t) {
             for (auto it = casted->head.begin(); it != casted->head.end(); ++it) {
                 if (it != casted->head.begin())
                     ret += ", ";
-                ret += it->first + ": " + toString(it->second);
+                ret += "'" + it->first + "': " + toString(it->second);
             }
             if (!casted->tail.empty())
                 ret += "| $" + casted->tail;

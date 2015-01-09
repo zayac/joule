@@ -68,6 +68,7 @@ term:
     }
   | LBRACKET separated_nonempty_list(COMMA, term) rec_list_tail? RBRACKET
     { Term.List ($2, $3) }
+  
 
 switch_entry:
   | logical_term COLON term
@@ -130,6 +131,7 @@ logical_term:
     {
       Errors.parse_error "invalid Boolean expression" $startpos $endpos
     }
+  | error { Errors.parse_error "wrong format of a flag" $startpos $endpos }
 
 rec_list_tail:
   | BAR VAR

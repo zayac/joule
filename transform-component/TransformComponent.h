@@ -9,6 +9,7 @@
 #include <vector>
 #include <fstream>
 #include <numeric>
+#include <time.h>
 
 using namespace clang::tooling;
 using namespace llvm;
@@ -79,7 +80,9 @@ class PrivateDeclsHandler : public MatchFinder::MatchCallback {
 public:
     PrivateDeclsHandler(Rewriter &Rewrite,
                         std::unordered_map<std::string, std::string> &cache)
-                            : Rewrite(Rewrite), privateVariables(cache) {}
+                            : Rewrite(Rewrite), privateVariables(cache) {
+        srand (time(NULL));
+    }
 
     virtual void run(const MatchFinder::MatchResult &Result);
 

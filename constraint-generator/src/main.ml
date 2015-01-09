@@ -14,9 +14,9 @@ let loop filename =
           let file_name = String.concat [dirname; "/"; fn; ".terms"] in
           let _ = Location.filename := file_name in
           let data = In_channel.with_file file_name
-                      ~f:(fun inx ->
-                        let terms, cstrs = Parser.term_parse Lexer.read (Lexing.from_channel inx) in
-                        List.iter cstrs
+                       ~f:(fun inx ->
+                         let terms, cstrs = Parser.term_parse Lexer.read (Lexing.from_channel inx) in
+                         List.iter cstrs
                           ~f:(fun (l, r) ->
                             fprintf outc "%s <= %s;\n" (Term.to_string l) (Term.to_string r)
                           );

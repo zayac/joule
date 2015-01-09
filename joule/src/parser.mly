@@ -108,8 +108,12 @@ label:
     }
   | STRING
     {
-      if String.length $1 <= 2 then
+      let module S = Core.Std.String in
+      if S.length $1 <= 2 then
         Errors.parse_error "Empty string as a label is not allowed" $startpos $endpos
+      (* strings in single quotation marks *)
+      else if S.get $1 0 == '\'' && S.get $1 (S.length $1 - 1) == '\'' then
+        S.concat ["\""; S.slice $1 1 (S.length $1 - 1); "\""]
       else
         $1
     }
