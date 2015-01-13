@@ -36,10 +36,28 @@ std::pair<std::string, std::unique_ptr<term::Term>> ComponentAnalyser::getDeclFr
     return make_pair(message_name, getDeclFromFunctionDecl(FD, it));
 }
 
+static std::map<std::string, std::vector<std::string>> merged_vars;
+
 std::unique_ptr<term::Term> merge_records(const std::unique_ptr<term::Term> &acc, const std::unique_ptr<term::Term> &rec) {
     term::Record* casted_acc = static_cast<term::Record*>(acc.get());
     term::Record* casted_rec = static_cast<term::Record*>(rec.get());
-    return std::unique_ptr<term::Term>(new term::Record(casted_acc->head, casted_acc->tail + "+" + casted_rec->tail));
+    if (merged_vars.find(casted_acc->tail) != merged_vars.end()) {
+        merged_vars[casted_acc->tail + "_" + casted_rec->tail] = merged_vars[casted_acc->tail];
+        merged_vars[casted_acc->tail + "_" + casted_rec->tail].push_back(casted_rec->tail);
+        merged_vars.erase(casted_acc->tail);
+    } else {
+        merged_vars[casted_acc->tail + "_" + casted_rec->tail] = std::vector<std::string>({casted_acc->tail, casted_rec->tail});
+    }
+    return std::unique_ptr<term::Term>(new term::Record(casted_acc->head, casted_acc->tail + "_" + casted_rec->tail));
+}
+
+static void genConstraintsFromVars() {
+    for(auto &p : merged_vars) {
+        for (auto &v_el : p.second) {
+            using namespace term;
+            constraints.insert(make_pair(std::unique_ptr<Term>(new Var(p.first)), std::unique_ptr<Term>(new Var(v_el))));
+        }
+    }
 }
 
 void ComponentAnalyser::run(const MatchFinder::MatchResult &Result) {
@@ -80,12 +98,22 @@ int main(int argc, const char **argv) {
     std::ofstream ofile;
     ofile.open(analyser.file_name_with_path + ".terms");
 
+    /* generate auxiliary constraints first */
+    genConstraintsFromVars();
+    if (!constraints.empty()) {
+        ofile << "/*" << std::endl;
+        for (auto it = constraints.begin(); it != constraints.end(); ++it) {
+            ofile << term::toString(it->first) << " <= " << term::toString(it->second) << ";" << std::endl;
+        }
+        ofile << "*/" << std::endl;
+    }
+
     ofile << "(:";
     for (auto it = analyser.input_interface.begin(); it != analyser.input_interface.end(); ++it) {
         if (it != analyser.input_interface.begin())
             ofile << ", ";
         std::string flag = analyser.input_interface_flags[it->first];
-        ofile << it->first << "(" << flag << "): " << interface::toString(it->second);
+        ofile << it->first << "(" << flag << "): " << term::toString(it->second);
     }
     /* choice */
     ofile << "| $" << analyser.file_name;
@@ -104,7 +132,7 @@ int main(int argc, const char **argv) {
                 ofile << " ";
             ofile << *sit;
         }
-        ofile << "): " << interface::toString(it->second);
+        ofile << "): " << term::toString(it->second);
     }
     /* choice */
     ofile << "| $" << analyser.file_name;

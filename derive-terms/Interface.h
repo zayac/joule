@@ -13,7 +13,11 @@
 using namespace llvm;
 using namespace clang;
 
+//extern std::map<std::string, std::unique_ptr<term::Term>> class_declarations;
+extern std::set<std::pair<std::unique_ptr<term::Term>, std::unique_ptr<term::Term>>, term::TermComparator> constraints;
+
 namespace interface {
+
 
 enum InterfaceType {
 	TInputInterface,
@@ -25,8 +29,6 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
 bool isValidType(const QualType& ty);
 
 std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it);
-
-std::string toString(const std::unique_ptr<term::Term> &term);
 
 /*
 class Interface {

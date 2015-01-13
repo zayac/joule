@@ -71,6 +71,7 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
         }
     } else if (cty->isBuiltinType()) { // builtin types are always canonical
         return std::unique_ptr<Term>(new Symbol(cty.getCanonicalType().getAsString()));
+    /* Class declarations */
     } else if (cty->isClassType()) {
         const CXXRecordDecl *record = cty->getAsCXXRecordDecl();
         if (isGlobalContext(record->getDeclContext()) && !global_object_allowed) {
@@ -79,7 +80,10 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
             exit(1);
         }
         global_object_allowed = false;
-        return classDeclToTerm(record, it);
+        /* Instead of returning class representation as a term, we return
+         * a term variable and generate auxiliary constraint */
+        constraints.insert(make_pair(std::unique_ptr<term::Term>(new Var(record->getNameAsString())), classDeclToTerm(record, it)));
+        return std::unique_ptr<term::Term>(new Var(record->getNameAsString()));
     } else {
         std::cerr << "unsupported type" << std::endl;
         exit(1);
@@ -90,90 +94,6 @@ inline std::string indent(unsigned depth) {
     return std::string(depth * 2, ' ');
 }
 
-std::string toString(const std::unique_ptr<term::Term> &t) {
-    using namespace term;
-    switch (t->ttType) {
-        case TTNil:
-            return "nil";
-            break;
-        case TTOrdinalInt: {
-            const OrdinalInt* casted = static_cast<OrdinalInt*>(t.get());
-            return "~" + std::to_string(casted->value);
-            break;
-        }
-        case TTNominalInt: {
-            const NominalInt* casted = static_cast<NominalInt*>(t.get());
-            return std::to_string(casted->value);
-            break;
-        }
-        case TTSymbol: {
-            const Symbol* casted = static_cast<Symbol*>(t.get());
-            return "\"" + casted->value + "\"";
-            break;
-        }
-        case TTTuple: {
-            const Tuple* casted = static_cast<Tuple*>(t.get());
-            std::string ret = "(";
-            for (auto it = casted->value.begin(); it != casted->value.end(); ++it) {
-                if (it != casted->value.begin())
-                    ret += " ";
-                ret += toString(*it);
-            }
-            ret += ")";
-            return ret;
-            break;
-        }
-        case TTList: {
-            const List* casted = static_cast<List*>(t.get());
-            std::string ret = "[";
-            for (auto it = casted->head.begin(); it != casted->head.end(); ++it) {
-                if (it != casted->head.begin())
-                    ret += ", ";
-                ret += toString(*it);
-            }
-            if (!casted->tail.empty())
-                ret += "| $" + casted->tail;
-            ret += "]";
-            return ret;
-            break;
-        }
-        case TTRecord: {
-            const Record* casted = static_cast<Record*>(t.get());
-            std::string ret = "{";
-            for (auto it = casted->head.begin(); it != casted->head.end(); ++it) {
-                if (it != casted->head.begin())
-                    ret += ", ";
-                ret += "'" + it->first + "': " + toString(it->second);
-            }
-            if (!casted->tail.empty())
-                ret += "| $" + casted->tail;
-            ret += "}";
-            return ret;
-            break;
-        }
-        case TTChoice: {
-            const Choice* casted = static_cast<Choice*>(t.get());
-            std::string ret = "(:";
-            for (auto it = casted->head.begin(); it != casted->head.end(); ++it) {
-                if (it != casted->head.begin())
-                    ret += ", ";
-                ret += it->first + ": " + toString(it->second);
-            }
-            if (!casted->tail.empty())
-                ret += "| $" + casted->tail;
-            ret += ":)";
-            return ret;
-            break;
-        }
-        case TTVar: {
-            const Var* casted = static_cast<Var*>(t.get());
-            return "$" + casted->value;
-        }
-        case TTEof: {
-            return "???";
-        }
-    }
-}
 
 std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum InterfaceType it) {
     if (isGlobalContext(RD->getDeclContext())) {
@@ -238,7 +158,7 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
                 method_name += ", "; 
             const ParmVarDecl par = **pit;
             if (isValidType(par.getOriginalType())) {
-                method_name += toString(typeToTerm(par.getOriginalType(), it));
+                method_name += term::toString(typeToTerm(par.getOriginalType(), it));
             } else {
                 all_parameters_valid = false;
                 break;

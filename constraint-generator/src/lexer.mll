@@ -49,12 +49,14 @@ rule read = parse
   | ']'      { RBRACKET }
   | '<'      { LANGULAR }
   | '>'      { RANGULAR }
+  | "/*"     { LAUX }
+  | "*/"     { RAUX }
   | ':'      { COLON }
-  (*| ';'      { SCOLON }*)
+  | ';'      { SCOLON }
   | ','      { COMMA }
   | '|'      { BAR }
-  (*| "<="     { LEQ }*)
-  (*| '='      { EQ }*)
+  | "<="     { LEQ }
+  | '='      { EQ }
   | '~'      { NOMINAL }
   | str as s { STRING s }
   | id as i  { ID i }

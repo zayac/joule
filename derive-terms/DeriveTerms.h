@@ -23,8 +23,13 @@ static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 // A help message for this specific tool can be added afterwards.
 static cl::extrahelp MoreHelp("\nMore help text...");
 
-DeclarationMatcher ComponentMatcher = functionDecl(isDefinition(), returns(asString("variant"))).bind("componentVariantDecl");
-StatementMatcher MessageCallMatcher = callExpr(hasDeclaration(functionDecl(returns(asString("message"))))).bind("messageCall");
+//std::map<std::string, std::unique_ptr<term::Term>> class_declarations;
+std::set<std::pair<std::unique_ptr<term::Term>, std::unique_ptr<term::Term>>, term::TermComparator> constraints;
+
+DeclarationMatcher ComponentMatcher =
+    functionDecl(isDefinition(), returns(asString("variant"))).bind("componentVariantDecl");
+StatementMatcher MessageCallMatcher =
+    callExpr(hasDeclaration(functionDecl(returns(asString("message"))))).bind("messageCall");
 
 inline std::string getFileName(const ASTContext *Context, const SourceLocation &SpellingLoc) {
     return Context->getSourceManager().getFilename(SpellingLoc);
@@ -32,7 +37,7 @@ inline std::string getFileName(const ASTContext *Context, const SourceLocation &
 
 inline std::string getFileNamePrefixWithPath(const ASTContext *Context, const SourceLocation &SpellingLoc) {
     std::string full_path = getFileName(Context, SpellingLoc);
-    full_path = full_path.substr(0, full_path.find('.'));
+    full_path = full_path.substr(0, full_path.find('.', full_path.find_last_of('/')));
     return full_path;
 }
 

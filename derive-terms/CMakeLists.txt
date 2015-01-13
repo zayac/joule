@@ -6,6 +6,7 @@ set(CMAKE_EXE_LINKER_FLAGS "-stdlib=libc++ -std=c++11")
 add_clang_executable(derive-terms
   DeriveTerms.cpp
   Interface.cpp
+  CalTerm.cpp
   )
 target_link_libraries(derive-terms
   clangTooling

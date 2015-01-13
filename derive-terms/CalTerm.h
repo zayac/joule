@@ -6,6 +6,7 @@
 
 namespace term {
 
+
 enum TermType {
 	TTNil,
 	TTOrdinalInt,
@@ -23,6 +24,13 @@ struct Term {
 	enum TermType ttType;
 	Term(enum TermType tt) : ttType(tt) {}
 	Term() : ttType(TTEof) {}
+};
+
+std::string toString(const std::unique_ptr<Term> &term);
+
+struct TermComparator {
+    bool operator() (const std::pair<std::unique_ptr<term::Term>, std::unique_ptr<term::Term>>&,
+                     const std::pair<std::unique_ptr<term::Term>, std::unique_ptr<term::Term>>&) const;
 };
 
 struct Nil : Term {};

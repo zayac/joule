@@ -6,9 +6,9 @@
 %token <string> VAR ID STRING
 %token NONE
 %token NIL TRUE FALSE NOT OR AND
-%token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET LANGULAR RANGULAR LSMILE RSMILE
+%token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET LANGULAR RANGULAR LSMILE RSMILE LAUX RAUX
 %token COLON COMMA BAR NOMINAL EOF
-(*%token SCOLON LEQ EQ *)
+%token SCOLON LEQ EQ
 
 %start <(Term.t * Term.t) * (Term.t * Term.t) list> term_parse
 %start <(string * string) list> netlist_parse
@@ -22,12 +22,26 @@ channel:
   | error
     { Errors.parse_error "invalid connection" $startpos $endpos }
 
+
 term_parse:
-  | term term EOF
-      {
+  | constrs? term term EOF
+    {
       let lst = !additional_constraints in
-      let terms = $1, $2 in
+      let terms = $2, $3 in
       terms, lst
+    }
+
+constrs:
+  | LAUX constr* RAUX {}
+
+constr:
+  | term LEQ term SCOLON
+    {
+      additional_constraints := !additional_constraints @ [($1, $3)]
+    }
+  | term EQ term SCOLON
+    {
+      additional_constraints := !additional_constraints @ [($1, $3); ($3, $1)]
     }
 
 term:
