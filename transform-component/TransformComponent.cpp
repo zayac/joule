@@ -210,12 +210,12 @@ std::unique_ptr<ASTConsumer> CalInitialTransformation::CreateASTConsumer(Compile
 }
 
 int main(int argc, const char **argv) {
+    srand(time(NULL));
     CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
 
     MatchFinder Finder;
 
     ClangTool Tool(OptionsParser.getCompilations(),
                    OptionsParser.getSourcePathList());
-    Tool.run(newFrontendActionFactory<CalInitialTransformation>().get());
-    return 0;
+    return Tool.run(newFrontendActionFactory<CalInitialTransformation>().get());
 }

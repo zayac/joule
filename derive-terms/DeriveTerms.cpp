@@ -93,7 +93,8 @@ int main(int argc, const char **argv) {
 
     ClangTool Tool(OptionsParser.getCompilations(),
                    OptionsParser.getSourcePathList());
-    Tool.run(newFrontendActionFactory(&Finder).get());
+    if (Tool.run(newFrontendActionFactory(&Finder).get()))
+        return 1;
 
     std::ofstream ofile;
     ofile.open(analyser.file_name_with_path + ".terms");

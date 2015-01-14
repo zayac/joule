@@ -1,5 +1,7 @@
 open Core.Std
 
+let return_value = ref 0
+
 let loop filename =
   try
     let dirname = Filename.dirname filename in
@@ -39,7 +41,8 @@ let loop filename =
   with Lexer.Syntax_Error msg
      | Errors.Parsing_Error msg
      | Sys_error msg ->
-  Printf.eprintf "%s\n" msg
+    let _ = return_value := 1 in
+    Printf.eprintf "%s\n" msg
 
 let command =
   Command.basic
@@ -51,5 +54,6 @@ let command =
     (fun filename () ->
       loop filename)
 
-let () =
-  Command.run command
+let _ =
+  let _ = Command.run command in
+  !return_value

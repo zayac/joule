@@ -1,6 +1,8 @@
 open Core.Std
 open Network
 
+let return_value = ref 0
+
 (* module for creating dot-files *)
 module Dot = Graph.Graphviz.Dot(struct
   include G (* use the graph module from above *)
@@ -56,7 +58,9 @@ let loop dot_output debug verbose format_output limit filename =
     let traversal_list = Network.traversal_order g in
     Log.output_header "Solving constraints";
     match Solver.solve_exn traversal_list logic verbose limit with
-    | None -> print_endline "No solution is found"
+    | None ->
+      let _ = return_value := 1 in
+      print_endline "No solution is found"
     | Some (bools, terms) ->
       begin
         if verbose then
@@ -102,6 +106,7 @@ let loop dot_output debug verbose format_output limit filename =
      | Network.Topology_Error msg
      | Errors.Unsatisfiability_Error msg
      | Sys_error msg ->
+    let _ = return_value := 1 in
     Printf.eprintf "%s\n" msg
 
 let command =
@@ -122,12 +127,12 @@ let command =
     (fun dot_output debug verbose format_output iterations filename () ->
        loop dot_output debug verbose format_output iterations filename)
 
-let () =
+let _ =
   let picosat_version = Picosat.version () in
   let build_info = Printf.sprintf
     "Version: %s\nOCaml version: %s\nPicoSAT version: %s\nBuild platform: %s\n\
      Build date: %s"
     (Build.version) (Build.ocaml_version) picosat_version (Build.platform)
       (Build.compile_time) in
-  Command.run ~version:(Build.version) ~build_info
-    command
+  let _ = Command.run ~version:(Build.version) ~build_info command in
+  !return_value

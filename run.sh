@@ -21,7 +21,16 @@ function test {
     return $status
 }
 
+clean_tool() {
+    mv $dir/environment.terms $dir/environment.terms.keep
+    rm -f $dir/*.transformed.cpp $dir/*.terms
+    mv $dir/environment.terms.keep $dir/environment.terms
+    rm -f $dir/*.constraints $dir/*.solution
+    rm -f $dir/CAL_FI_variables.h
+}
+
 build_tool () {
+    clean_tool
     echo "Reading net list file \"$filename\"..."
     files=()
     while read line; do
@@ -56,15 +65,6 @@ build_tool () {
         echo "Generating code for the solution \"${filename%.*}.solution\"..."
         $BIN_DIR/$CODE_GENERATOR ${filename%.*}.solution
     fi
-}
-
-clean_tool() {
-    mv $dir/environment.terms $dir/environment.terms.keep
-    rm -f $dir/*.transformed.cpp $dir/*.terms
-    mv $dir/environment.terms.keep $dir/environment.terms
-    rm -f $dir/*.constraints $dir/*.solution
-    rm -f $dir/CAL_FI_variables.h
-    exit 0
 }
 
 if [ -z "$2" ]

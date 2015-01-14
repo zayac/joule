@@ -80,9 +80,7 @@ class PrivateDeclsHandler : public MatchFinder::MatchCallback {
 public:
     PrivateDeclsHandler(Rewriter &Rewrite,
                         std::unordered_map<std::string, std::string> &cache)
-                            : Rewrite(Rewrite), privateVariables(cache) {
-        srand (time(NULL));
-    }
+                            : Rewrite(Rewrite), privateVariables(cache) {}
 
     virtual void run(const MatchFinder::MatchResult &Result);
 
