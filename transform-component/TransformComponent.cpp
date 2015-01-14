@@ -1,5 +1,8 @@
 #include "TransformComponent.h"
 #include <iostream>
+#include <random>
+
+static std::default_random_engine random_engine;
 
 void FlowInheritanceHandler::enableCalVariables(FileID fid) {
     SourceLocation sl = Rewrite.getSourceMgr().getLocForStartOfFile(fid);
@@ -154,10 +157,11 @@ std::string PrivateDeclsHandler::gen_random(const int len) const {
         "0123456789"
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz";
+    static std::uniform_int_distribution<int> uniform_dist(0, sizeof(alphanum)-1);
 
     std::string s(len, 0);
     for (int i = 0; i < len; ++i) {
-        s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
+        s[i] = alphanum[uniform_dist(random_engine)];
     }
     return s;
 }
@@ -210,7 +214,8 @@ std::unique_ptr<ASTConsumer> CalInitialTransformation::CreateASTConsumer(Compile
 }
 
 int main(int argc, const char **argv) {
-    srand(time(NULL));
+    random_engine = std::default_random_engine(std::random_device{}());
+
     CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
 
     MatchFinder Finder;

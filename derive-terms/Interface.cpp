@@ -145,6 +145,9 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
             method_decl.push_back(term::make_symbol("public"));
         else
             method_decl.push_back(term::make_symbol("private"));*/
+        if (mit->isImplicit())
+            continue;
+
         std::string method_name = mit->getDeclName().getAsString();
         if (method_name == RD->getNameAsString())
             method_name = "constructor";

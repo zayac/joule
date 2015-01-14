@@ -9,7 +9,6 @@
 #include <vector>
 #include <fstream>
 #include <numeric>
-#include <time.h>
 
 using namespace clang::tooling;
 using namespace llvm;
