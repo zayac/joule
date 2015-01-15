@@ -25,11 +25,14 @@ static cl::extrahelp MoreHelp("\nMore help text...");
 
 //std::map<std::string, std::unique_ptr<term::Term>> class_declarations;
 std::set<std::pair<std::unique_ptr<term::Term>, std::unique_ptr<term::Term>>, term::TermComparator> constraints;
-
-DeclarationMatcher ComponentMatcher =
-    functionDecl(isDefinition(), returns(asString("variant"))).bind("componentVariantDecl");
-StatementMatcher MessageCallMatcher =
-    callExpr(hasDeclaration(functionDecl(returns(asString("message"))))).bind("messageCall");
+std::string file_name;
+std::string file_name_with_path;
+std::map<std::string, std::unique_ptr<term::Term>> output_interface;
+std::map<std::string, std::unique_ptr<term::Term>> input_interface;
+std::map<std::string, std::string> input_interface_flags;
+std::map<std::string, std::set<std::string>> output_interface_flags;
+Rewriter TheRewriter;
+SourceManager* TheSourceMgr;
 
 inline std::string getFileName(const ASTContext *Context, const SourceLocation &SpellingLoc) {
     return Context->getSourceManager().getFilename(SpellingLoc);
@@ -49,18 +52,41 @@ inline std::string getFileNamePrefix(const ASTContext *Context, const SourceLoca
 }
 
 class ComponentAnalyser : public MatchFinder::MatchCallback {
+
     std::string function_name;
 
     std::unique_ptr<term::Term> getDeclFromFunctionDecl(const FunctionDecl* FD, enum interface::InterfaceType it);
     std::pair<std::string, std::unique_ptr<term::Term>> getDeclFromCallExpr(const ASTContext *Context, const CallExpr* CE, enum interface::InterfaceType it);
 public:
-    std::string file_name;
-    std::string file_name_with_path;
-
-    std::map<std::string, std::unique_ptr<term::Term>> output_interface;
-    std::map<std::string, std::unique_ptr<term::Term>> input_interface;
-    std::map<std::string, std::string> input_interface_flags;
-    std::map<std::string, std::set<std::string>> output_interface_flags;
 
     virtual void run(const MatchFinder::MatchResult &Result);
+};
+
+class MyASTConsumer : public ASTConsumer {
+public:
+  MyASTConsumer() {
+    Matcher.addMatcher(functionDecl(isDefinition(), returns(asString("variant"))).bind("componentVariantDecl"), &HandlerForTerms);
+    Matcher.addMatcher(callExpr(hasDeclaration(functionDecl(returns(asString("message"))))).bind("messageCall"), &HandlerForTerms);
+  }
+
+  void HandleTranslationUnit(ASTContext &Context) override {
+    // Run the matchers when we have the whole TU parsed.
+    Matcher.matchAST(Context);
+  }
+
+private:
+    ComponentAnalyser HandlerForTerms;
+    MatchFinder Matcher;
+};
+
+class MyFrontendAction : public ASTFrontendAction {
+public:
+    MyFrontendAction() {}
+
+    std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef file) override {
+        TheSourceMgr = &CI.getSourceManager();
+        TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
+        return llvm::make_unique<MyASTConsumer>();
+    }
 };

@@ -86,18 +86,21 @@ void ComponentAnalyser::run(const MatchFinder::MatchResult &Result) {
 
 int main(int argc, const char **argv) {
     CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
-    ComponentAnalyser analyser;
-    MatchFinder Finder;
+    //ComponentAnalyser analyser;
+    /*MatchFinder Finder;
     Finder.addMatcher(ComponentMatcher, &analyser);
-    Finder.addMatcher(MessageCallMatcher, &analyser);
+    Finder.addMatcher(MessageCallMatcher, &analyser);*/
 
     ClangTool Tool(OptionsParser.getCompilations(),
                    OptionsParser.getSourcePathList());
-    if (Tool.run(newFrontendActionFactory(&Finder).get()))
+
+    if (Tool.run(newFrontendActionFactory<MyFrontendAction>().get()))
         return 1;
+    /*if (Tool.run(newFrontendActionFactory(&Finder).get()))
+        return 1;*/
 
     std::ofstream ofile;
-    ofile.open(analyser.file_name_with_path + ".terms");
+    ofile.open(file_name_with_path + ".terms");
 
     /* generate auxiliary constraints first */
     genConstraintsFromVars();
@@ -110,22 +113,22 @@ int main(int argc, const char **argv) {
     }
 
     ofile << "(:";
-    for (auto it = analyser.input_interface.begin(); it != analyser.input_interface.end(); ++it) {
-        if (it != analyser.input_interface.begin())
+    for (auto it = input_interface.begin(); it != input_interface.end(); ++it) {
+        if (it != input_interface.begin())
             ofile << ", ";
-        std::string flag = analyser.input_interface_flags[it->first];
+        std::string flag = input_interface_flags[it->first];
         ofile << it->first << "(" << flag << "): " << term::toString(it->second);
     }
     /* choice */
-    ofile << "| $" << analyser.file_name;
+    ofile << "| $" << file_name;
     ofile << " :)" << std::endl << std::endl;
 
     ofile << "(:";
-    for (auto it = analyser.output_interface.begin(); it != analyser.output_interface.end(); ++it) {
-        if (it != analyser.output_interface.begin())
+    for (auto it = output_interface.begin(); it != output_interface.end(); ++it) {
+        if (it != output_interface.begin())
             ofile << ", ";
         ofile << it->first << "(";
-        std::set<std::string> s = analyser.output_interface_flags[it->first];
+        std::set<std::string> s = output_interface_flags[it->first];
         if (s.size() > 1)
             ofile << "or ";
         for (auto sit = s.begin(); sit != s.end(); ++sit) {
@@ -136,7 +139,7 @@ int main(int argc, const char **argv) {
         ofile << "): " << term::toString(it->second);
     }
     /* choice */
-    ofile << "| $" << analyser.file_name;
+    ofile << "| $" << file_name;
     ofile << " :)";
     return 0;
 }

@@ -1,4 +1,6 @@
 #include "Interface.h"
+#include <functional>
+#include <sstream>
 
 namespace interface {
 
@@ -94,6 +96,24 @@ inline std::string indent(unsigned depth) {
     return std::string(depth * 2, ' ');
 }
 
+std::string getStmtAsString(Stmt *stmt)
+{
+    // Might return until the beginning of the last token though
+    SourceRange stmtRange = stmt->getSourceRange();
+    std::string stmtString;
+
+    int rangeSize = TheRewriter.getRangeSize(stmtRange);
+    if (rangeSize == -1) {
+        return "";
+    }
+
+    SourceLocation startLoc = stmtRange.getBegin();
+    const char *strStart = TheSourceMgr->getCharacterData(startLoc);
+
+    stmtString.assign(strStart, rangeSize);
+
+    return stmtString;      
+}
 
 std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum InterfaceType it) {
     if (isGlobalContext(RD->getDeclContext())) {
@@ -140,11 +160,6 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
     
     //methods
     for(CXXRecordDecl::method_iterator mit = RD->method_begin(); mit != RD->method_end(); mit++) {
-        /*std::vector<std::unique_ptr<term::Term>> method_decl;
-        if (mit->getAccess() == AS_public)
-            method_decl.push_back(term::make_symbol("public"));
-        else
-            method_decl.push_back(term::make_symbol("private"));*/
         if (mit->isImplicit())
             continue;
 
@@ -179,7 +194,26 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
             exit(1);
         }
 
-        //method_decl.push_back(typeToTerm(mit->getReturnType(), it));
+        //if (mit->doesThisDeclarationHaveABody()) {
+            //std::string body = getStmtAsString(mit->getBody());
+
+            //std::stringstream ss;
+            //ss << std::hash<std::string>()(body);
+            //std::string hash = ss.str();
+
+            //std::vector<std::unique_ptr<term::Term>> tup;
+            //tup.emplace_back(typeToTerm(mit->getReturnType(), it));
+            //tup.emplace_back(term::make_symbol(hash));
+
+            //class_repr[method_name] = std::unique_ptr<term::Term>(new term::Tuple(tup));
+        //} else {
+            //std::vector<std::unique_ptr<term::Term>> tup;
+            //tup.emplace_back(typeToTerm(mit->getReturnType(), it));
+            //tup.emplace_back(term::make_var(method_name + "_code"));
+
+            //class_repr[method_name] = std::unique_ptr<term::Term>(new term::Tuple(tup));
+        //}
+
         class_repr[method_name] = typeToTerm(mit->getReturnType(), it);
     }
 

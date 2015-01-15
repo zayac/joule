@@ -22,6 +22,7 @@ function test {
 }
 
 clean_tool() {
+    echo "Cleaning working directory..."
     mv $dir/environment.terms $dir/environment.terms.keep
     rm -f $dir/*.transformed.cpp $dir/*.terms
     mv $dir/environment.terms.keep $dir/environment.terms

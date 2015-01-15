@@ -157,7 +157,7 @@ std::string PrivateDeclsHandler::gen_random(const int len) const {
         "0123456789"
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz";
-    static std::uniform_int_distribution<int> uniform_dist(0, sizeof(alphanum)-1);
+    static std::uniform_int_distribution<int> uniform_dist(0, sizeof(alphanum)-2);
 
     std::string s(len, 0);
     for (int i = 0; i < len; ++i) {
@@ -217,8 +217,6 @@ int main(int argc, const char **argv) {
     random_engine = std::default_random_engine(std::random_device{}());
 
     CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
-
-    MatchFinder Finder;
 
     ClangTool Tool(OptionsParser.getCompilations(),
                    OptionsParser.getSourcePathList());

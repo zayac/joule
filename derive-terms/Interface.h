@@ -7,6 +7,8 @@
 #include <set>
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Frontend/CompilerInstance.h"
 
 #include "CalTerm.h"
 
@@ -15,9 +17,10 @@ using namespace clang;
 
 //extern std::map<std::string, std::unique_ptr<term::Term>> class_declarations;
 extern std::set<std::pair<std::unique_ptr<term::Term>, std::unique_ptr<term::Term>>, term::TermComparator> constraints;
+extern Rewriter TheRewriter;
+extern SourceManager* TheSourceMgr;
 
 namespace interface {
-
 
 enum InterfaceType {
 	TInputInterface,

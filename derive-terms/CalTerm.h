@@ -103,4 +103,9 @@ inline std::unique_ptr<Term> make_symbol(const std::string &s) {
 	return std::unique_ptr<Term>(new Symbol(s));
 }
 
+inline std::unique_ptr<Term> make_var(const std::string &s) {
+	return std::unique_ptr<Term>(new Var(s));
+}
+
+
 }
