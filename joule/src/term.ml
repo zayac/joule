@@ -34,13 +34,11 @@ let rec to_string t =
   | None -> ""
   | Some v -> " | $" ^ v in
   let dict_el_to_string (l, (g, t)) =
-    (* remove quotation marks if label consists of a single word *)
-    let l_without_quotes = S.strip ~drop:(Char.(=) '"') l in
-    let l =
-      if S.for_all ~f:(fun x -> Char.is_alpha x) l_without_quotes then
-        l_without_quotes
-      else l
-    in
+    let replace input output =
+      Str.global_replace (Str.regexp_string input) output in
+    let l = S.slice l 1 (S.length l - 1) in
+    let l = replace "\"" "\\\"" l in
+    let l = S.concat ["\""; l; "\""] in
     if Cnf.is_true g then
       sprintf "%s: %s" l (to_string t)
     else
@@ -82,17 +80,15 @@ let rec to_formatted_string ?(id=0) t =
   let module SM = String.Map in
   let indent depth = String.make (2 * depth) ' ' in
   let dict_el_to_string (l, (g, t)) =
-    (* remove quotation marks if label consists of a single word *)
-    let l_without_quotes = S.strip ~drop:(Char.(=) '"') l in
-    let l =
-      if S.for_all ~f:(fun x -> Char.is_alpha x) l_without_quotes then
-        l_without_quotes
-      else l
-    in
+    let replace input output =
+      Str.global_replace (Str.regexp_string input) output in
+    let l = S.slice l 1 (S.length l - 1) in
+    let l = replace "\"" "\\\"" l in
+    let l = S.concat ["\""; l; "\""] in
     if Cnf.is_true g then
-      sprintf "%s: %s" l (to_formatted_string ~id:(id+2) t)
+      sprintf "%s: %s" l (to_string t)
     else
-      sprintf "%s(%s): %s" l (Cnf.to_string g) (to_formatted_string ~id:(id+2) t) in
+      sprintf "%s(%s): %s" l (Cnf.to_string g) (to_string t) in
   let print_dict x tail lsep rsep =
     let lst = L.filter ~f:(fun (l, (g, t)) -> not (Cnf.is_false g)) (SM.to_alist x) in
     let element_strs = L.map ~f:dict_el_to_string lst in

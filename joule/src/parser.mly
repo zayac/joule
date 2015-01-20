@@ -104,7 +104,7 @@ rec_entry:
 label:
   | ID
     {
-      Core.Std.String.concat ["'"; $1; "'"]
+      Core.Std.String.concat ["\""; $1; "\""]
     }
   | STRING
     {
@@ -112,8 +112,8 @@ label:
       if S.length $1 <= 2 then
         Errors.parse_error "Empty string as a label is not allowed" $startpos $endpos
       (* strings in double quotation marks *)
-      else if S.get $1 0 == '"' && S.get $1 (S.length $1 - 1) == '"' then
-        S.concat ["'"; S.slice $1 1 (S.length $1 - 1); "'"]
+      else if S.get $1 0 == '\'' && S.get $1 (S.length $1 - 1) == '\'' then
+        S.concat ["\""; S.slice $1 1 (S.length $1 - 1); "\""]
       else
         $1
     }

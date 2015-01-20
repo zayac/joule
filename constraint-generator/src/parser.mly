@@ -148,19 +148,5 @@ logical_term:
   | error { Errors.parse_error "wrong format of a flag" $startpos $endpos }
 
 rec_list_tail:
-  | BAR VAR
-    {
-      let open Core.Std in
-      let lst = String.split $2 ~on:'+' in
-      match lst with
-      | hd :: [] -> $2
-      | hd :: tl ->
-        let str = String.tr $2 ~target:'+' ~replacement:'_' in
-        List.iter
-          ~f:(fun x ->
-            additional_constraints := (Term.Var x, Term.Var str) :: !additional_constraints
-          ) lst;
-        str
-      | [] -> $2
-    }
+  | BAR VAR { $2 }
 

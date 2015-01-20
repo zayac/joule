@@ -24,8 +24,8 @@ let newline = '\r' | '\n' | "\r\n"
 let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 let var = '$' id
 
-let str = ('"' [' ' '!' '#'-'~']* '"')
-        | ('\'' [' ' '!'-'&' '('-'~']* '\'')
+(*let str = ('"' [' ' '!' '#'-'~']* '"')
+        | ('\'' [' ' '!'-'&' '('-'~']* '\'')*)
 
 rule read = parse
   | white    { read lexbuf }
@@ -57,7 +57,12 @@ rule read = parse
   | '='      { EQ }
   | '~'      { NOMINAL }
   | id as i  { ID i }
-  | str as s { STRING s }
+  | '"'
+    {
+      let buffer = Buffer.create 1 in
+      let s = stringl buffer lexbuf in
+      STRING (String.concat "" ["\""; s; "\""])
+    }
   | var as i {
                let open Core.Std in
                VAR (String.suffix i (String.length i - 1)) 
@@ -70,3 +75,13 @@ rule read = parse
         raise (Syntax_Error (error ~loc:(Some (curr lexbuf))
         (Printf.sprintf "unexpected character: '%s'" (Lexing.lexeme lexbuf))))
       }
+
+and stringl buffer = parse
+ | '"' { Buffer.contents buffer }
+ | "\\t" { Buffer.add_char buffer '\t'; stringl buffer lexbuf }
+ | "\\n" { Buffer.add_char buffer '\n'; stringl buffer lexbuf }
+ | "\\n" { Buffer.add_char buffer '\n'; stringl buffer lexbuf }
+ | '\\' '"' { Buffer.add_char buffer '"'; stringl buffer lexbuf }
+ | '\\' '\\' { Buffer.add_char buffer '\\'; stringl buffer lexbuf }
+ | eof { raise End_of_file }
+ | _ as char { Buffer.add_char buffer char; stringl buffer lexbuf }

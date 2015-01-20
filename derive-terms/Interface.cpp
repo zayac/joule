@@ -84,7 +84,10 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
         global_object_allowed = false;
         /* Instead of returning class representation as a term, we return
          * a term variable and generate auxiliary constraint */
-        constraints.insert(make_pair(std::unique_ptr<term::Term>(new Var(record->getNameAsString())), classDeclToTerm(record, it)));
+        if (cached_classes.find(record->getNameAsString()) == cached_classes.end()) {
+            cached_classes.insert(record->getNameAsString());
+            constraints.insert(make_pair(std::unique_ptr<term::Term>(new Var(record->getNameAsString())), classDeclToTerm(record, it)));
+        }
         return std::unique_ptr<term::Term>(new Var(record->getNameAsString()));
     } else {
         std::cerr << "unsupported type" << std::endl;
@@ -112,7 +115,7 @@ std::string getStmtAsString(Stmt *stmt)
 
     stmtString.assign(strStart, rangeSize);
 
-    return stmtString;      
+    return stmtString;
 }
 
 std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum InterfaceType it) {
@@ -176,7 +179,7 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
                 method_name += ", "; 
             const ParmVarDecl par = **pit;
             if (isValidType(par.getOriginalType())) {
-                method_name += term::toString(typeToTerm(par.getOriginalType(), it));
+                method_name += term::toString(typeToTerm(par.getOriginalType(), it), true);
             } else {
                 all_parameters_valid = false;
                 break;
@@ -194,27 +197,27 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
             exit(1);
         }
 
-        //if (mit->doesThisDeclarationHaveABody()) {
-            //std::string body = getStmtAsString(mit->getBody());
+        if (mit->doesThisDeclarationHaveABody()) {
+            std::string body = getStmtAsString(mit->getBody());
 
-            //std::stringstream ss;
-            //ss << std::hash<std::string>()(body);
-            //std::string hash = ss.str();
+            std::stringstream ss;
+            ss << std::hash<std::string>()(body);
+            std::string hash = ss.str();
 
-            //std::vector<std::unique_ptr<term::Term>> tup;
-            //tup.emplace_back(typeToTerm(mit->getReturnType(), it));
-            //tup.emplace_back(term::make_symbol(hash));
+            std::vector<std::unique_ptr<term::Term>> tup;
+            tup.emplace_back(typeToTerm(mit->getReturnType(), it));
+            tup.emplace_back(term::make_symbol(hash));
 
-            //class_repr[method_name] = std::unique_ptr<term::Term>(new term::Tuple(tup));
-        //} else {
-            //std::vector<std::unique_ptr<term::Term>> tup;
-            //tup.emplace_back(typeToTerm(mit->getReturnType(), it));
-            //tup.emplace_back(term::make_var(method_name + "_code"));
+            class_repr[method_name] = std::unique_ptr<term::Term>(new term::Tuple(tup));
+        } else {
+            std::vector<std::unique_ptr<term::Term>> tup;
+            tup.emplace_back(typeToTerm(mit->getReturnType(), it));
+            tup.emplace_back(term::make_var("code_" + method_name));
 
-            //class_repr[method_name] = std::unique_ptr<term::Term>(new term::Tuple(tup));
-        //}
+            class_repr[method_name] = std::unique_ptr<term::Term>(new term::Tuple(tup));
+        }
 
-        class_repr[method_name] = typeToTerm(mit->getReturnType(), it);
+        //class_repr[method_name] = typeToTerm(mit->getReturnType(), it);
     }
 
     return std::unique_ptr<term::Term>(new term::Record(class_repr));

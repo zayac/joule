@@ -64,13 +64,38 @@ void genVolleysPredicates(Rewriter &Rewrite) {
     }
 }
 
+static std::set<const CXXRecordDecl*> interface_classes;
+
+static void genInterfaceClassMatchers(Rewriter &Rewrite) {
+    for (const CXXRecordDecl* crd : interface_classes) {
+        Rewrite.InsertTextBefore(crd->getLocStart(), "\n#if defined(CAL_FI_VARIABLES_ENABLED)\n");
+        Rewrite.InsertTextAfter(crd->getLocEnd().getLocWithOffset(2), "\n#endif\n");
+    }
+}
+
+static void cacheInterfaceClass(const QualType& ty) {
+    const QualType cty = ty.getCanonicalType();
+    if (cty->isPointerType() || cty->isReferenceType())
+        cacheInterfaceClass(cty->getPointeeType());
+    else if (cty->isClassType())
+        interface_classes.insert(cty->getAsCXXRecordDecl());
+}
+
+static void findInterfaceClasses(const FunctionDecl* fd) {
+    cacheInterfaceClass(fd->getReturnType());
+    for (FunctionDecl::param_const_iterator pit = fd->param_begin(); pit != fd->param_end(); ++pit) {
+        cacheInterfaceClass((*pit)->getOriginalType());
+    }
+}
+
 void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
     ASTContext *Context = Result.Context;
     if (const FunctionDecl *FD = Result.Nodes.getNodeAs<FunctionDecl>("componentVariantDecl")) {
+        findInterfaceClasses(FD);
+
         if (!header_added) {
-                //addHeader(Rewrite.getSourceMgr().getFileID(FD->getLocation()));
-                enableCalVariables(Rewrite.getSourceMgr().getFileID(FD->getLocation()));
-                header_added = true;
+            enableCalVariables(Rewrite.getSourceMgr().getFileID(FD->getLocation()));
+            header_added = true;
         }
 
         function_name = FD->getNameAsString();
@@ -101,6 +126,8 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
             output_interfaces_calls[call_name].insert(CE);
         }
     } else if (const FunctionDecl *FD = Result.Nodes.getNodeAs<FunctionDecl>("messageDecl")) {
+        findInterfaceClasses(FD);
+
         if (!header_added) {
             enableCalVariables(Rewrite.getSourceMgr().getFileID(FD->getLocation()));
             //addHeader(FD->getLocStart());
@@ -132,8 +159,8 @@ void PrivateDeclsHandler::run(const MatchFinder::MatchResult &Result) {
         std::string oldName = expr->getMemberNameInfo().getName().getAsString();
         if (privateVariables.find(oldName) != privateVariables.end()) {
             std::string newName = privateVariables[oldName];
-            if (expr->isArrow())
-                Rewrite.ReplaceText(expr->getMemberLoc(), oldName.size(), newName);
+            //if (expr->isArrow())
+                Rewrite.ReplaceText(expr->getExprLoc(), oldName.size(), newName);
         }
     } else if (const AccessSpecDecl *accessDecl = Result.Nodes.getNodeAs<AccessSpecDecl>("accessSpecDecl")) {
         Rewrite.ReplaceText(accessDecl->getSourceRange(), "public:");
@@ -196,6 +223,7 @@ void MyASTConsumer::HandleTranslationUnit(ASTContext &Context) {
 void CalInitialTransformation::EndSourceFileAction() {
     genDeclsForCallExprs(TheRewriter);
     genVolleysPredicates(TheRewriter);
+    genInterfaceClassMatchers(TheRewriter);
 
     size_t pos = file_name.find_last_of('.');
     std::string path = file_name.substr(0, pos) + ".transformed" + file_name.substr(pos);

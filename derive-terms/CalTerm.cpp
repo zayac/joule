@@ -2,8 +2,9 @@
 
 using namespace term;
 
-std::string term::toString(const std::unique_ptr<term::Term> &t) {
+std::string term::toString(const std::unique_ptr<term::Term> &t, bool escape_quotes) {
     using namespace term;
+    std::string double_quote = escape_quotes ? "\\\"" : "\"";
     switch (t->ttType) {
         case TTNil:
             return "nil";
@@ -20,7 +21,7 @@ std::string term::toString(const std::unique_ptr<term::Term> &t) {
         }
         case TTSymbol: {
             const Symbol* casted = static_cast<Symbol*>(t.get());
-            return "\"" + casted->value + "\"";
+            return double_quote + casted->value + double_quote;
             break;
         }
         case TTTuple: {
@@ -29,7 +30,7 @@ std::string term::toString(const std::unique_ptr<term::Term> &t) {
             for (auto it = casted->value.begin(); it != casted->value.end(); ++it) {
                 if (it != casted->value.begin())
                     ret += " ";
-                ret += toString(*it);
+                ret += toString(*it, escape_quotes);
             }
             ret += ")";
             return ret;
@@ -41,7 +42,7 @@ std::string term::toString(const std::unique_ptr<term::Term> &t) {
             for (auto it = casted->head.begin(); it != casted->head.end(); ++it) {
                 if (it != casted->head.begin())
                     ret += ", ";
-                ret += toString(*it);
+                ret += toString(*it, escape_quotes);
             }
             if (!casted->tail.empty())
                 ret += "| $" + casted->tail;
@@ -55,7 +56,7 @@ std::string term::toString(const std::unique_ptr<term::Term> &t) {
             for (auto it = casted->head.begin(); it != casted->head.end(); ++it) {
                 if (it != casted->head.begin())
                     ret += ", ";
-                ret += "'" + it->first + "': " + toString(it->second);
+                ret += double_quote + it->first + double_quote + ": " + toString(it->second, escape_quotes);
             }
             if (!casted->tail.empty())
                 ret += "| $" + casted->tail;
@@ -69,7 +70,7 @@ std::string term::toString(const std::unique_ptr<term::Term> &t) {
             for (auto it = casted->head.begin(); it != casted->head.end(); ++it) {
                 if (it != casted->head.begin())
                     ret += ", ";
-                ret += it->first + ": " + toString(it->second);
+                ret += double_quote + it->first + double_quote + ": " + toString(it->second, escape_quotes);
             }
             if (!casted->tail.empty())
                 ret += "| $" + casted->tail;

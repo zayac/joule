@@ -23,8 +23,11 @@ static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 // A help message for this specific tool can be added afterwards.
 static cl::extrahelp MoreHelp("\nMore help text...");
 
-//std::map<std::string, std::unique_ptr<term::Term>> class_declarations;
 std::set<std::pair<std::unique_ptr<term::Term>, std::unique_ptr<term::Term>>, term::TermComparator> constraints;
+
+std::set<std::string> cached_classes;
+//std::map<std::string, const QualType&> class_storage;
+
 std::string file_name;
 std::string file_name_with_path;
 std::map<std::string, std::unique_ptr<term::Term>> output_interface;

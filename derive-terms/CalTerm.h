@@ -26,7 +26,7 @@ struct Term {
 	Term() : ttType(TTEof) {}
 };
 
-std::string toString(const std::unique_ptr<Term> &term);
+std::string toString(const std::unique_ptr<Term> &term, bool escape_quotes = false);
 
 struct TermComparator {
     bool operator() (const std::pair<std::unique_ptr<term::Term>, std::unique_ptr<term::Term>>&,

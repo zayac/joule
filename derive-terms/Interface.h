@@ -17,6 +17,9 @@ using namespace clang;
 
 //extern std::map<std::string, std::unique_ptr<term::Term>> class_declarations;
 extern std::set<std::pair<std::unique_ptr<term::Term>, std::unique_ptr<term::Term>>, term::TermComparator> constraints;
+extern std::set<std::string> cached_classes;
+//extern std::map<std::string, const QualType&> class_storage;
+
 extern Rewriter TheRewriter;
 extern SourceManager* TheSourceMgr;
 
