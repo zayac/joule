@@ -45,7 +45,7 @@ term:
   | NIL { Term.Nil }
   | NOMINAL INT { Term.NominalInt $2 }
   | INT { Term.OrdinalInt $1 }
-  | ID { Term.Symbol (Core.Std.String.concat ["\""; $1; "\""]) }
+  | ID { Term.Symbol $1 }
   | STRING { Term.Symbol $1 }
   | VAR
   {
@@ -102,21 +102,8 @@ rec_entry:
     }
 
 label:
-  | ID
-    {
-      Core.Std.String.concat ["\""; $1; "\""]
-    }
-  | STRING
-    {
-      let module S = Core.Std.String in
-      if S.length $1 <= 2 then
-        Errors.parse_error "Empty string as a label is not allowed" $startpos $endpos
-      (* strings in double quotation marks *)
-      else if S.get $1 0 == '\'' && S.get $1 (S.length $1 - 1) == '\'' then
-        S.concat ["\""; S.slice $1 1 (S.length $1 - 1); "\""]
-      else
-        $1
-    }
+  | ID { $1 }
+  | STRING { $1 }
 
 guard:
   | LPAREN logical_term RPAREN { $2 }

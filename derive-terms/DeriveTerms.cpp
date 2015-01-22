@@ -60,11 +60,42 @@ static void genConstraintsFromVars() {
     }
 }
 
+void replaceAll(std::string &s, const std::string &search, const std::string &replace) {
+    for(size_t pos = 0; ; pos += replace.length()) {
+        // Locate the substring to replace
+        pos = s.find(search, pos);
+        if(pos == std::string::npos) break;
+        // Replace by erasing and inserting
+        s.erase(pos, search.length());
+        s.insert(pos, replace);
+    }
+}
+
+static void genCodeHashFile() {
+    std::ofstream ofile;
+    std::cout << path << std::endl;
+    ofile.open(path + "/code-hash");
+    for (auto &el : method_body) {
+        std::vector<std::string> params = el.second.first;
+        std::string body = el.second.second;
+        replaceAll(body, "\"", "\\\"");
+        replaceAll(body, "\n", "\\n");
+        ofile << "\"" << el.first << "\": (";
+        for (std::vector<std::string>::iterator it = params.begin(); it != params.end(); ++it) {
+            if (it != params.begin())
+                ofile << ", ";
+            ofile << "\"" << *it << "\"";
+        }
+        ofile << ") \"" << body << "\"" << std::endl;
+    }
+}
+
 void ComponentAnalyser::run(const MatchFinder::MatchResult &Result) {
     ASTContext *Context = Result.Context;
     if (const FunctionDecl *FD = Result.Nodes.getNodeAs<FunctionDecl>("componentVariantDecl")) {
         function_name = FD->getNameAsString();
         file_name = getFileNamePrefix(Context, FD->getLocStart());
+        path = getPath(Context, FD->getLocStart());
         file_name_with_path = getFileNamePrefixWithPath(Context, FD->getLocStart());
         input_interface_flags[function_name] = "f_" + file_name + "_" + function_name;
         input_interface[function_name] = getDeclFromFunctionDecl(FD, interface::TInputInterface);
@@ -98,6 +129,8 @@ int main(int argc, const char **argv) {
         return 1;
     /*if (Tool.run(newFrontendActionFactory(&Finder).get()))
         return 1;*/
+
+    genCodeHashFile();
 
     std::ofstream ofile;
     ofile.open(file_name_with_path + ".terms");

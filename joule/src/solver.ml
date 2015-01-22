@@ -91,7 +91,10 @@ let merge_bounds depth old_terms new_terms =
                 new_map := add_to_map depth !new_map Cnf.(logic * ~-logic') term;
                 new_map := add_to_map depth !new_map Cnf.(~-logic * logic') term';
                 match Term.join term term' with
-                | None -> add_bool_constr depth Cnf.(~-(logic * logic'))
+                | None ->
+                  begin
+                    add_bool_constr depth Cnf.(~-(logic * logic'))
+                  end
                 | Some (join_term, log) ->
                   (*Cnf.Set.iter log ~f:(fun el -> add_bool_constr depth Cnf.((logic * logic') ==> el));*)
                   new_map := add_to_map depth !new_map Cnf.(logic * logic') join_term
@@ -512,7 +515,7 @@ let rec solve_senior depth constrs left right =
     match term_left, term_right with
     | _, Nil
     (* extra rule for overriding class member functions *)
-    | _, Tuple [Symbol "\"override\""; _] ->
+    | _, Tuple [Symbol "override"; _] ->
       constrs
     | Var s, Var s' ->
       let left_choice = may_be_choice s logic_combined in

@@ -82,7 +82,7 @@ let to_union logic term =
   let rec transform term =
     let open Term in
     match term with
-    | Tuple [Symbol "\"union\""; t; t'] ->
+    | Tuple [Symbol "union"; t; t'] ->
       Log.logf "transforming a term %s" (to_string term);
       let t = transform t in
       let t' = transform t' in

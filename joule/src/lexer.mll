@@ -61,7 +61,7 @@ rule read = parse
     {
       let buffer = Buffer.create 1 in
       let s = stringl buffer lexbuf in
-      STRING (String.concat "" ["\""; s; "\""])
+      STRING s
     }
   | var as i {
                let open Core.Std in

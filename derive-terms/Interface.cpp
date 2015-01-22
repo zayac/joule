@@ -82,13 +82,18 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
             exit(1);
         }
         global_object_allowed = false;
-        /* Instead of returning class representation as a term, we return
-         * a term variable and generate auxiliary constraint */
-        if (cached_classes.find(record->getNameAsString()) == cached_classes.end()) {
-            cached_classes.insert(record->getNameAsString());
-            constraints.insert(make_pair(std::unique_ptr<term::Term>(new Var(record->getNameAsString())), classDeclToTerm(record, it)));
+
+        if (!isGlobalContext(record->getDeclContext())) {
+            /* Instead of returning class representation as a term, we return
+            * a term variable and generate auxiliary constraint */
+            if (cached_classes.find(record->getNameAsString()) == cached_classes.end()) {
+                cached_classes.insert(record->getNameAsString());
+                constraints.insert(make_pair(std::unique_ptr<term::Term>(new Var(record->getNameAsString())), classDeclToTerm(record, it)));
+            }
+            return std::unique_ptr<term::Term>(new Var(record->getNameAsString()));
+        } else {
+            return classDeclToTerm(record, it);
         }
-        return std::unique_ptr<term::Term>(new Var(record->getNameAsString()));
     } else {
         std::cerr << "unsupported type" << std::endl;
         exit(1);
@@ -174,10 +179,15 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
         bool all_parameters_valid = true;
         method_name += "(";
 
+        std::vector<std::string> param_names;
+
         for (FunctionDecl::param_const_iterator pit = mit->param_begin(); pit != mit->param_end(); pit++) {
             if (pit != mit->param_begin())
                 method_name += ", "; 
             const ParmVarDecl par = **pit;
+
+            param_names.emplace_back(par.getName());
+
             if (isValidType(par.getOriginalType())) {
                 method_name += term::toString(typeToTerm(par.getOriginalType(), it), true);
             } else {
@@ -203,10 +213,17 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
             std::stringstream ss;
             ss << std::hash<std::string>()(body);
             std::string hash = ss.str();
+            method_body[hash] = make_pair(param_names, body);
 
             std::vector<std::unique_ptr<term::Term>> tup;
             tup.emplace_back(typeToTerm(mit->getReturnType(), it));
-            tup.emplace_back(term::make_symbol(hash));
+            if (mit->isVolatile()) {
+                std::vector<std::unique_ptr<term::Term>> override_tuple;
+                override_tuple.emplace_back(term::make_symbol("override"));
+                override_tuple.emplace_back(term::make_symbol(hash));
+                tup.emplace_back(std::unique_ptr<term::Term>(new term::Tuple(override_tuple)));
+            } else
+                tup.emplace_back(term::make_symbol(hash));
 
             class_repr[method_name] = std::unique_ptr<term::Term>(new term::Tuple(tup));
         } else {

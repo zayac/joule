@@ -36,7 +36,6 @@ let rec to_string t =
   let dict_el_to_string (l, (g, t)) =
     let replace input output =
       Str.global_replace (Str.regexp_string input) output in
-    let l = S.slice l 1 (S.length l - 1) in
     let l = replace "\"" "\\\"" l in
     let l = S.concat ["\""; l; "\""] in
     if Cnf.is_true g then
@@ -82,7 +81,6 @@ let rec to_formatted_string ?(id=0) t =
   let dict_el_to_string (l, (g, t)) =
     let replace input output =
       Str.global_replace (Str.regexp_string input) output in
-    let l = S.slice l 1 (S.length l - 1) in
     let l = replace "\"" "\\\"" l in
     let l = S.concat ["\""; l; "\""] in
     if Cnf.is_true g then
@@ -350,6 +348,8 @@ let rec join t t' =
   match t, t' with
   | Var _, _ -> raise (Non_Ground t)
   | _, Var _ -> raise (Non_Ground t')
+  | Symbol _, Tuple [Symbol "override"; t]
+  | Tuple [Symbol "override"; t], Symbol _ -> Some (Tuple [Symbol "override"; t], Cnf.Set.empty)
   | Choice _, Nil
   | Nil, Choice _ -> Some (Nil, Cnf.Set.empty)
   | t, Nil

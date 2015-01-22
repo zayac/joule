@@ -26,10 +26,13 @@ static cl::extrahelp MoreHelp("\nMore help text...");
 std::set<std::pair<std::unique_ptr<term::Term>, std::unique_ptr<term::Term>>, term::TermComparator> constraints;
 
 std::set<std::string> cached_classes;
+std::map<std::string, std::pair<std::vector<std::string>, std::string>> method_body;
+
 //std::map<std::string, const QualType&> class_storage;
 
 std::string file_name;
 std::string file_name_with_path;
+std::string path;
 std::map<std::string, std::unique_ptr<term::Term>> output_interface;
 std::map<std::string, std::unique_ptr<term::Term>> input_interface;
 std::map<std::string, std::string> input_interface_flags;
@@ -45,6 +48,12 @@ inline std::string getFileNamePrefixWithPath(const ASTContext *Context, const So
     std::string full_path = getFileName(Context, SpellingLoc);
     full_path = full_path.substr(0, full_path.find('.', full_path.find_last_of('/')));
     return full_path;
+}
+
+inline std::string getPath(const ASTContext *Context, const SourceLocation &SpellingLoc) {
+    std::string path = getFileName(Context, SpellingLoc);
+    path = path.substr(0, path.find_last_of('/'));
+    return path;
 }
 
 inline std::string getFileNamePrefix(const ASTContext *Context, const SourceLocation &SpellingLoc) {

@@ -7,5 +7,5 @@ $power = none
 $power_double = nil
 $sum = none
 $sum_double = nil
-$sum_int = {base: int}
+$sum_int = {"base": int}
 $power_int = nil
