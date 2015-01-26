@@ -1,5 +1,16 @@
 %{
   let additional_constraints = ref []
+  let class_hash = ref Core.Std.String.Map.empty
+
+  let index_class lt rt =
+    let open Core.Std in
+    let open Term in
+    (* If left term is a variable, and the right one is a structure, we assume
+       that the constraint is the definition of an interface object. *)
+    match lt, rt with
+    | Var v, Record (r, None) ->
+      class_hash := String.Map.add !class_hash ~key:v ~data:r
+    | _ -> ()
 %}
 
 %token <int> INT
@@ -10,7 +21,9 @@
 %token COLON COMMA BAR NOMINAL EOF
 %token SCOLON LEQ EQ
 
-%start <(Term.t * Term.t) * (Term.t * Term.t) list> term_parse
+%start <(Term.t * Term.t) *
+        (Term.t * Term.t) list *
+        ((Cnf.t * Term.t) Core.Std.String.Map.t) Core.Std.String.Map.t> term_parse
 %start <(string * string) list> netlist_parse
 %%
 
@@ -26,9 +39,8 @@ channel:
 term_parse:
   | constrs? term term EOF
     {
-      let lst = !additional_constraints in
       let terms = $2, $3 in
-      terms, lst
+      terms, !additional_constraints, !class_hash
     }
 
 constrs:
@@ -37,7 +49,8 @@ constrs:
 constr:
   | term LEQ term SCOLON
     {
-      additional_constraints := !additional_constraints @ [($1, $3)]
+      additional_constraints := !additional_constraints @ [($1, $3)];
+      index_class $1 $3
     }
   | term EQ term SCOLON
     {
