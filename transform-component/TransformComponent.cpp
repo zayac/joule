@@ -67,8 +67,14 @@ void genVolleysPredicates(Rewriter &Rewrite) {
 static std::set<const CXXRecordDecl*> interface_classes;
 
 static void genInterfaceClassMatchers(Rewriter &Rewrite) {
+    size_t start = file_name.find_last_of("/") + 1;
+    size_t end = file_name.find_last_of(".");
+    std::string prefix = file_name.substr(start, end - start);
     for (const CXXRecordDecl* crd : interface_classes) {
         Rewrite.InsertTextBefore(crd->getLocStart(), "\n#if defined(CAL_FI_VARIABLES_ENABLED)\n");
+        Rewrite.InsertTextBefore(crd->getLocStart(),
+                "\n#define " + crd->getNameAsString() + " class_" + prefix + "_" + crd->getNameAsString() + "\n");
+
         Rewrite.InsertTextAfter(crd->getLocEnd().getLocWithOffset(2), "\n#endif\n");
     }
 }

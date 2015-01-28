@@ -45,7 +45,7 @@ term:
   | NOMINAL INT { Term.NominalInt $2 }
   | INT { Term.OrdinalInt $1 }
   | STRING { Term.Symbol $1 }
-  | ID { Term.Symbol (Core.Std.String.concat ["\""; $1; "\""]) }
+  | ID { Term.Symbol $1 }
   | LPAREN term+ RPAREN
     {
       let open Core.Std in
@@ -83,7 +83,7 @@ rec_entry:
 label:
   | ID
     {
-      Core.Std.String.concat ["\""; $1; "\""]
+      $1
     }
   | STRING
     {

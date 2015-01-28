@@ -55,7 +55,7 @@ static void genConstraintsFromVars() {
     for(auto &p : merged_vars) {
         for (auto &v_el : p.second) {
             using namespace term;
-            constraints.insert(make_pair(std::unique_ptr<Term>(new Var(p.first)), std::unique_ptr<Term>(new Var(v_el))));
+            constraints.insert(make_pair(std::unique_ptr<Term>(new Var(v_el)), std::unique_ptr<Term>(new Var(p.first))));
         }
     }
 }
@@ -73,7 +73,6 @@ void replaceAll(std::string &s, const std::string &search, const std::string &re
 
 static void genCodeHashFile() {
     std::ofstream ofile;
-    std::cout << path << std::endl;
     ofile.open(path + "/code-hash");
     for (auto &el : method_body) {
         std::vector<std::string> params = el.second.first;
@@ -84,7 +83,7 @@ static void genCodeHashFile() {
         for (std::vector<std::string>::iterator it = params.begin(); it != params.end(); ++it) {
             if (it != params.begin())
                 ofile << ", ";
-            ofile << "\"" << *it << "\"";
+            ofile << "\"" << *it;
         }
         ofile << ") \"" << body << "\"" << std::endl;
     }

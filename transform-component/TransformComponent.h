@@ -28,6 +28,8 @@ static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static cl::extrahelp MoreHelp("\nMore help text...");
 
 std::string directory_path;
+std::string file_name;
+
 const std::string macro_prefix = "CAL_FI_";
 /* FIXME poor style below */
 std::string function_name;
@@ -62,7 +64,6 @@ inline std::string getFileNamePrefix(const ASTContext *Context, const SourceLoca
 
 class FlowInheritanceHandler : public MatchFinder::MatchCallback {
 public:
-    std::string file_name;
     std::string file_name_with_path;
 
     FlowInheritanceHandler(Rewriter &Rewrite) : Rewrite(Rewrite), header_added(false) {}
@@ -111,7 +112,6 @@ public:
                                                    StringRef file) override;
 
 private:
-    std::string file_name;
     Rewriter TheRewriter;
 };
 

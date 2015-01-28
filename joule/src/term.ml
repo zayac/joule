@@ -36,6 +36,7 @@ let rec to_string t =
   let dict_el_to_string (l, (g, t)) =
     let replace input output =
       Str.global_replace (Str.regexp_string input) output in
+    let l = S.slice l 1 (S.length l - 1) in
     let l = replace "\"" "\\\"" l in
     let l = S.concat ["\""; l; "\""] in
     if Cnf.is_true g then
@@ -81,6 +82,7 @@ let rec to_formatted_string ?(id=0) t =
   let dict_el_to_string (l, (g, t)) =
     let replace input output =
       Str.global_replace (Str.regexp_string input) output in
+    let l = S.slice l 1 (S.length l - 1) in
     let l = replace "\"" "\\\"" l in
     let l = S.concat ["\""; l; "\""] in
     if Cnf.is_true g then
