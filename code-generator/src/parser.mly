@@ -12,7 +12,32 @@
 (*%token SCOLON LEQ EQ *)
 
 %start <Term.t Core.Std.String.Map.t * bool Core.Std.String.Map.t> values_parse
+%start <(string list * string) Core.Std.String.Map.t> code_hash_parse
 %%
+
+code_hash_parse:
+  | code_hash_entry* EOF
+    {
+      let module SM = Core.Std.String.Map in
+      let module L = Core.Std.List in
+      let l = L.dedup ~compare:(fun (k, _) (k', _) -> String.compare k k') $1 in
+      SM.of_alist_exn l
+    }
+
+code_hash_entry:
+  | STRING COLON LPAREN RPAREN STRING
+    {
+      let module S = Core.Std.String in
+      $1, ([], $5)
+    }
+  | STRING COLON LPAREN separated_nonempty_list(COMMA, param) RPAREN STRING
+    {
+      let module S = Core.Std.String in
+      $1, ($4, $6)
+    }
+
+param:
+  | STRING { $1 }
 
 values_parse:
   | assignment+ EOF

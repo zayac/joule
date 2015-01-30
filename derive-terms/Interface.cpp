@@ -4,6 +4,8 @@
 
 namespace interface {
 
+static const std::string self = "\%self\%";
+
 bool isValidType(const QualType& ty) {
     const QualType cty = ty.getCanonicalType();
     if ((cty->isPointerType() && cty.isConstQualified()) || cty->isReferenceType())
@@ -26,6 +28,48 @@ bool isGlobalContext(const DeclContext *context) {
     return false;
 }
 
+std::string typeToString(const QualType& ty, bool global_object_allowed) {
+    QualType cty(ty.getCanonicalType());
+    using namespace term;
+    if (cty->isPointerType() && cty.isConstQualified()) {
+        QualType deref = cty->getPointeeType();
+        std::string s = ty.getAsString();
+        if (s.substr(0, s.size() - 2) == deref.getAsString()) {
+            return self + " * const";
+        } else {
+            return typeToString(cty->getPointeeType(), true) + " * const";
+        }
+    } else if (cty->isReferenceType()) {
+        QualType deref = cty->getPointeeType();
+        std::string s = ty.getAsString();
+        if (s.substr(0, s.size() - 2) == deref.getAsString()) {
+            return self + " &";
+        } else {
+            return typeToString(cty->getPointeeType(), true) + " &";
+        }
+    } else if (cty->isBuiltinType()) { // builtin types are always canonical
+        return cty.getCanonicalType().getAsString();
+    /* Class declarations */
+    } else if (cty->isClassType()) {
+        const CXXRecordDecl *record = cty->getAsCXXRecordDecl();
+        if (isGlobalContext(record->getDeclContext()) && !global_object_allowed) {
+            std::cerr << "global object '" << record->getNameAsString()
+                      << "' must be used only as a reference or a const pointer" << std::endl;
+            exit(1);
+        }
+        global_object_allowed = false;
+
+        if (!isGlobalContext(record->getDeclContext())) {
+            std::cerr << "method parameters cannot contain interface objects or their pointers/references" << std::endl;
+        }
+        return "global::" + record->getNameAsString();
+    } else {
+        std::cerr << "unsupported type" << std::endl;
+        exit(1);
+    }
+
+}
+
 std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it) {
     QualType cty(ty.getCanonicalType());
     static bool global_object_allowed = false;
@@ -35,7 +79,7 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
         std::string s = ty.getAsString();
         if (s.substr(0, s.size() - 2) == deref.getAsString()) {
             std::vector<std::unique_ptr<Term>> tup;
-            tup.push_back(make_symbol("self"));
+            tup.push_back(make_symbol(self));
             tup.push_back(make_symbol("*const"));
             return std::unique_ptr<Term>(new Tuple(tup));
         } else {
@@ -56,7 +100,7 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
         std::string s = ty.getAsString();
         if (s.substr(0, s.size() - 2) == deref.getAsString()) {
             std::vector<std::unique_ptr<Term>> tup;
-            tup.push_back(make_symbol("self"));
+            tup.push_back(make_symbol(self));
             tup.push_back(make_symbol("&"));
             return std::unique_ptr<Term>(new Tuple(tup));
         } else {
@@ -165,17 +209,18 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
             }
         }
     }
-    
+
     //methods
     for(CXXRecordDecl::method_iterator mit = RD->method_begin(); mit != RD->method_end(); mit++) {
+
         if (mit->isImplicit())
             continue;
 
         std::string method_name = mit->getDeclName().getAsString();
         if (method_name == RD->getNameAsString())
-            method_name = "constructor";
+            method_name = self;
         else if (method_name[0] == '~')
-            method_name = "destructor";
+            method_name = "~" + self;
         bool all_parameters_valid = true;
         method_name += "(";
 
@@ -189,7 +234,7 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
             param_names.emplace_back(par.getName());
 
             if (isValidType(par.getOriginalType())) {
-                method_name += term::toString(typeToTerm(par.getOriginalType(), it), true);
+                method_name += typeToString(par.getOriginalType(), false);
             } else {
                 all_parameters_valid = false;
                 break;
@@ -207,25 +252,40 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
             exit(1);
         }
 
+        //if (method_name == RD->getNameAsString() || method_name[0] == '~') 
+
         if (mit->doesThisDeclarationHaveABody()) {
             std::string body = getStmtAsString(mit->getBody());
 
             std::stringstream ss;
             ss << std::hash<std::string>()(body);
-            std::string hash = ss.str();
+            std::string hash = "hash_" + ss.str();
             method_body[hash] = make_pair(param_names, body);
 
-            std::vector<std::unique_ptr<term::Term>> tup;
-            tup.emplace_back(typeToTerm(mit->getReturnType(), it));
+            //std::vector<std::unique_ptr<term::Term>> tup;
+            //tup.emplace_back(term::make_symbol(typeToString(mit->getReturnType(), false)));
+
+            std::unique_ptr<term::Term> code_term;
             if (mit->isVolatile()) {
                 std::vector<std::unique_ptr<term::Term>> override_tuple;
                 override_tuple.emplace_back(term::make_symbol("override"));
                 override_tuple.emplace_back(term::make_symbol(hash));
-                tup.emplace_back(std::unique_ptr<term::Term>(new term::Tuple(override_tuple)));
+                code_term = std::unique_ptr<term::Term>(new term::Tuple(override_tuple));
+                //tup.emplace_back(std::unique_ptr<term::Term>(new term::Tuple(override_tuple)));
             } else
-                tup.emplace_back(term::make_symbol(hash));
+                code_term = term::make_symbol(hash);
+                //tup.emplace_back(term::make_symbol(hash));
 
-            class_repr[method_name] = std::unique_ptr<term::Term>(new term::Tuple(tup));
+            auto prefix = std::mismatch(self.begin(), self.end(), method_name.begin());
+            if (prefix.first == self.end() || method_name[0] == '~') {
+                class_repr[method_name] = std::move(code_term);
+            } else {
+                std::vector<std::unique_ptr<term::Term>> tup;
+                tup.emplace_back(term::make_symbol(typeToString(mit->getReturnType(), false)));
+                tup.emplace_back(std::move(code_term));
+                class_repr[method_name] = std::unique_ptr<term::Term>(new term::Tuple(tup));
+            }
+
         } else {
             std::vector<std::unique_ptr<term::Term>> tup;
             tup.emplace_back(typeToTerm(mit->getReturnType(), it));

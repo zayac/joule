@@ -73,7 +73,7 @@ void replaceAll(std::string &s, const std::string &search, const std::string &re
 
 static void genCodeHashFile() {
     std::ofstream ofile;
-    ofile.open(path + "/code-hash");
+    ofile.open(path + "/code-hash", std::fstream::app);
     for (auto &el : method_body) {
         std::vector<std::string> params = el.second.first;
         std::string body = el.second.second;
@@ -83,7 +83,7 @@ static void genCodeHashFile() {
         for (std::vector<std::string>::iterator it = params.begin(); it != params.end(); ++it) {
             if (it != params.begin())
                 ofile << ", ";
-            ofile << "\"" << *it;
+            ofile << "\"" << *it << "\"";
         }
         ofile << ") \"" << body << "\"" << std::endl;
     }
