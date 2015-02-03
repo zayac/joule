@@ -26,16 +26,16 @@ void genDeclsForCallExprs(Rewriter &Rewrite) {
         }
         for (const CallExpr* exp : output_interfaces_calls[el.first]) {
             const Expr *e = exp->getArg(exp->getNumArgs() - 1);
-            Rewrite.InsertTextAfterToken(e->getLocEnd(), " " + tail_name + "_use");
+            Rewrite.InsertTextAfterToken(e->getLocEnd(), " DOWN_" + tail_name + "_use");
         }
         for (const FunctionDecl* decl : output_interfaces_decls[el.first]) {
             // tail variables
             const ParmVarDecl *p = decl->getParamDecl(decl->getNumParams() - 1);
-            Rewrite.InsertTextAfterToken(p->getLocEnd(), " " + tail_name + "_decl");
+            Rewrite.InsertTextAfterToken(p->getLocEnd(), " DOWN_" + tail_name + "_decl");
         }
 
-        header_file << "#define " << tail_name << "_decl" << std::endl;
-        header_file << "#define " << tail_name << "_use" << std::endl;
+        header_file << "#define DOWN_" << tail_name << "_decl" << std::endl;
+        header_file << "#define DOWN_" << tail_name << "_use" << std::endl;
     }
 }
 
@@ -73,7 +73,7 @@ static void genInterfaceClassMatchers(Rewriter &Rewrite) {
     for (const CXXRecordDecl* crd : interface_classes) {
         Rewrite.InsertTextBefore(crd->getLocStart(), "\n#if defined(CAL_FI_VARIABLES_ENABLED)\n");
         Rewrite.InsertTextBefore(crd->getLocStart(),
-                "\n#define " + crd->getNameAsString() + " class_" + prefix + "_" + crd->getNameAsString() + "\n");
+                "\n#define " + crd->getNameAsString() + " DOWN_class_" + prefix + "_" + crd->getNameAsString() + "\n");
 
         Rewrite.InsertTextAfter(crd->getLocEnd().getLocWithOffset(2), "\n#endif\n");
     }
@@ -109,8 +109,8 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
         --pit;
 
         // tail variable
-        Rewrite.InsertTextAfterToken((*pit)->getLocation(), " " + macro_prefix + FD->getNameAsString() + "_decl");
-        header_file << "#define " << macro_prefix << FD->getNameAsString() << "_decl" << std::endl;
+        Rewrite.InsertTextAfterToken((*pit)->getLocation(), " DOWN_" + macro_prefix + FD->getNameAsString() + "_decl");
+        header_file << "#define DOWN_" << macro_prefix << FD->getNameAsString() << "_decl" << std::endl;
 
         Rewrite.InsertTextBefore(FD->getLocStart(),
                   "#ifndef f_"

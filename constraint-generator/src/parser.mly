@@ -8,13 +8,13 @@
     (* If left term is a variable, and the right one is a structure, we assume
        that the constraint is the definition of an interface object. *)
     match lt, rt with
-    | Var v, Record (r, None) ->
+    | DownVar v, Record (r, None) ->
       class_hash := String.Map.add !class_hash ~key:v ~data:r
     | _ -> ()
 %}
 
 %token <int> INT
-%token <string> VAR ID STRING
+%token <string> UP_VAR DOWN_VAR ID STRING
 %token NONE
 %token NIL TRUE FALSE NOT OR AND
 %token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET LANGULAR RANGULAR LSMILE RSMILE LAUX RAUX
@@ -62,10 +62,8 @@ term:
   | NOMINAL INT { Term.NominalInt $2 }
   | INT { Term.OrdinalInt $1 }
   | STRING { Term.Symbol $1 }
-  | VAR
-    {
-          Term.Var $1
-    }
+  | UP_VAR { Term.UpVar $1 }
+  | DOWN_VAR { Term.DownVar $1 }
   | ID { Term.Symbol (Core.Std.String.concat ["\""; $1; "\""]) }
   | LPAREN term+ RPAREN
     {
@@ -85,7 +83,7 @@ term:
     {
       Util.switch_of_alist_exn $2
     }
-  | LSMILE separated_nonempty_list(COMMA, rec_entry) rec_list_tail? RSMILE
+  | LSMILE separated_nonempty_list(COMMA, rec_entry) rec_list_tail_choice? RSMILE
     {
       Term.Choice (Util.map_of_alist_exn $2, $3)
     }
@@ -117,17 +115,8 @@ rec_entry:
     }
 
 label:
-  | ID
-    {
-      Core.Std.String.concat ["\""; $1; "\""]
-    }
-  | STRING
-    {
-      if String.length $1 <= 2 then
-        Errors.parse_error "Empty string as a label is not allowed" $startpos $endpos
-      else
-        $1
-    }
+  | ID { Core.Std.String.concat ["\""; $1; "\""] }
+  | STRING { $1 }
 
 guard:
   | LPAREN logical_term RPAREN { $2 }
@@ -154,12 +143,16 @@ logical_term:
       Core.Std.List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a * b))
     }
   | LPAREN NOT logical_term RPAREN { Logic.(~-$3) }
-  | VAR
+  | UP_VAR
+  | DOWN_VAR
     {
       Errors.parse_error "invalid Boolean expression" $startpos $endpos
     }
   | error { Errors.parse_error "wrong format of a flag" $startpos $endpos }
 
+rec_list_tail_choice:
+| BAR UP_VAR { $2 }
+
 rec_list_tail:
-  | BAR VAR { $2 }
+  | BAR DOWN_VAR { $2 }
 

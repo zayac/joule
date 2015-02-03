@@ -132,9 +132,9 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
             * a term variable and generate auxiliary constraint */
             if (cached_classes.find(record->getNameAsString()) == cached_classes.end()) {
                 cached_classes.insert(record->getNameAsString());
-                constraints.insert(make_pair(std::unique_ptr<term::Term>(new Var(record->getNameAsString())), classDeclToTerm(record, it)));
+                constraints.insert(make_pair(make_var(record->getNameAsString()), classDeclToTerm(record, it)));
             }
-            return std::unique_ptr<term::Term>(new Var(record->getNameAsString()));
+            return make_var(record->getNameAsString());
         } else {
             return classDeclToTerm(record, it);
         }

@@ -45,7 +45,7 @@ std::string term::toString(const std::unique_ptr<term::Term> &t, bool escape_quo
                 ret += toString(*it, escape_quotes);
             }
             if (!casted->tail.empty())
-                ret += "| $" + casted->tail;
+                ret += "| $_" + casted->tail;
             ret += "]";
             return ret;
             break;
@@ -59,7 +59,7 @@ std::string term::toString(const std::unique_ptr<term::Term> &t, bool escape_quo
                 ret += double_quote + it->first + double_quote + ": " + toString(it->second, escape_quotes);
             }
             if (!casted->tail.empty())
-                ret += "| $" + casted->tail;
+                ret += "| $_" + casted->tail;
             ret += "}";
             return ret;
             break;
@@ -73,15 +73,20 @@ std::string term::toString(const std::unique_ptr<term::Term> &t, bool escape_quo
                 ret += double_quote + it->first + double_quote + ": " + toString(it->second, escape_quotes);
             }
             if (!casted->tail.empty())
-                ret += "| $" + casted->tail;
+                ret += "| $^" + casted->tail;
             ret += ":)";
             return ret;
             break;
         }
-        case TTVar: {
-            const Var* casted = static_cast<Var*>(t.get());
-            return "$" + casted->value;
+        case TTUpVar: {
+            const UpVar* casted = static_cast<UpVar*>(t.get());
+            return "$^" + casted->value;
         }
+        case TTDownVar: {
+            const DownVar* casted = static_cast<DownVar*>(t.get());
+            return "$_" + casted->value;
+        }
+
         case TTEof: {
             return "???";
         }

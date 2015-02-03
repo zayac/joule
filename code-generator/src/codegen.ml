@@ -11,10 +11,11 @@ let dequotize s =
   else
     s
 
-let term_to_type = function
+let term_to_type t =
+  match t with
   | Nil -> "const void *"
   | Symbol s -> dequotize s
-  | _ -> raise (WrongFormat "unexpected format of a type")
+  | _ -> raise (WrongFormat ("unexpected format of a type: " ^ (Term.to_string t)))
   
 let term_to_cpp_macro is_decl = function
   | Nil -> ""
@@ -29,11 +30,9 @@ let term_to_cpp_macro is_decl = function
       )
   | _ -> raise (WrongFormat "unexpected format of a term")
 
-let remove_quotes x = String.slice x 1 (String.length x - 1)
-
 let field_to_string name = function
   | Symbol s ->
-    String.concat [s; " "; remove_quotes name; ";\n"]
+    String.concat [s; " "; dequotize name; ";\n"]
   | _ -> raise (WrongFormat "unexpected format of a field")
 
 let get_method_type_from_term t =
@@ -47,13 +46,13 @@ let get_method_type_from_term t =
   | _ -> raise (WrongFormat ("unexpected format of method body: " ^ (Term.to_string t)))
 
 let method_to_string cl name t =
-  let name = remove_quotes name in
+  let name = dequotize name in
   let header = String.substr_replace_all name ~pattern:"%self%" ~with_:cl in
   let ret, hash = get_method_type_from_term t in
   match String.Map.find !method_body_hash ("\"" ^ hash ^ "\"") with
   | Some value ->
     let params, body = value in
-    let params, body = List.map ~f:remove_quotes params, remove_quotes body in
+    let params, body = List.map ~f:dequotize params, dequotize body in
     let index = ref 0 in
     let ss = String.fold header ~init:""
                 ~f:(fun acc el ->
@@ -100,16 +99,16 @@ let open_code_hash_file dirname =
 let generate_from_terms outc name t =
   match t with
   | Nil ->
-    fprintf outc "#define CAL_FI_%s_decl %s\n" name (term_to_cpp_macro true t);
-    fprintf outc "#define CAL_FI_%s_use %s\n" name (term_to_cpp_macro false t)
+    fprintf outc "#define DOWN_CAL_FI_%s_decl %s\n" name (term_to_cpp_macro true t);
+    fprintf outc "#define DOWN_CAL_FI_%s_use %s\n" name (term_to_cpp_macro false t)
   | Record (map, None) ->
-    if String.is_prefix ~prefix:"class_" name then
-      let short_name = String.substr_replace_first ~pattern:"class_" ~with_:"" name in
+    if String.is_prefix ~prefix:"DOWN_class_" name then
+      let short_name = String.substr_replace_first ~pattern:"DOWN_class_" ~with_:"" name in
       fprintf outc "%s" (create_class_decl short_name map)
     else
       begin
-        fprintf outc "#define CAL_FI_%s_decl %s\n" name (term_to_cpp_macro true t);
-        fprintf outc "#define CAL_FI_%s_use %s\n" name (term_to_cpp_macro false t)
+        fprintf outc "#define DOWN_CAL_FI_%s_decl %s\n" name (term_to_cpp_macro true t);
+        fprintf outc "#define DOWN_CAL_FI_%s_use %s\n" name (term_to_cpp_macro false t)
       end
   | Choice (head, None) ->
     let more_than_one = ref false in

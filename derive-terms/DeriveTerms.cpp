@@ -55,7 +55,7 @@ static void genConstraintsFromVars() {
     for(auto &p : merged_vars) {
         for (auto &v_el : p.second) {
             using namespace term;
-            constraints.insert(make_pair(std::unique_ptr<Term>(new Var(v_el)), std::unique_ptr<Term>(new Var(p.first))));
+            constraints.insert(make_pair(make_var(v_el), make_var(p.first)));
         }
     }
 }
@@ -152,7 +152,7 @@ int main(int argc, const char **argv) {
         ofile << it->first << "(" << flag << "): " << term::toString(it->second);
     }
     /* choice */
-    ofile << "| $" << file_name;
+    ofile << "| $^" << file_name;
     ofile << " :)" << std::endl << std::endl;
 
     ofile << "(:";
@@ -171,7 +171,7 @@ int main(int argc, const char **argv) {
         ofile << "): " << term::toString(it->second);
     }
     /* choice */
-    ofile << "| $" << file_name;
+    ofile << "| $^" << file_name;
     ofile << " :)";
     return 0;
 }

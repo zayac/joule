@@ -109,7 +109,7 @@ rec_entry:
 
 label:
   | ID { Core.Std.String.concat ["\""; $1; "\""] }
-  | STRING { $1 }
+  | STRING { Core.Std.String.concat ["\""; $1; "\""] }
 
 guard:
   | LPAREN logical_term RPAREN { $2 }

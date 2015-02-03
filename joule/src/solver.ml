@@ -14,14 +14,6 @@ let boolean_constraints = ref Cnf.CSet.empty
 (* stores term variables that are choices *)
 let choice_vars = ref String.Map.empty
 
-(*let may_be_choice s logic =*)
-  (*match String.Map.find !choice_vars s with*)
-  (*| None -> false*)
-  (*| Some v ->*)
-    (*if Cnf.(v = logic) then true*)
-    (*else if Option.is_some (Sat.solve Cnf.(v * logic)) then true*)
-    (*else false*)
-
 let log_bool_constr depth b =
   let indent = String.make depth ' ' in
   LLog.logf "%sadding a boolean constraint '%s'" indent (Cnf.to_string b)
@@ -515,13 +507,6 @@ let set_list_bound depth constrs v lst =
               ) in
   let constrs = set_bound_exn (depth + 1) constrs v map in
   constrs
-
-(*let assert_choice depth constrs s logic =*)
-  (*choice_vars := String.Map.change !choice_vars s*)
-                   (*(function None -> Some logic*)
-                           (*| Some v -> Some Cnf.(v + logic)*)
-                   (*);*)
-  (*set_bound_exn depth constrs s (Cnf.Map.singleton logic Term.none)*)
 
 let rec solve_senior depth constrs left right =
   let logic_left, term_left = left in

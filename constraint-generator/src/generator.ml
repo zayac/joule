@@ -17,11 +17,11 @@ let gen_class_constraints classes left right =
                 String.Map.iter2 lr rr
                   ~f:(fun ~key ~data ->
                     match data with
-                    | `Both ((_, Var lv), (_, Var rv))
+                    | `Both ((_, DownVar lv), (_, DownVar rv))
                         when String.Map.mem classes lv && String.Map.mem classes rv ->
                       let r = String.Map.find_exn classes lv in
                       let filtered = String.Map.filter r ~f:(fun ~key ~data -> not (String.contains key '(')) in
-                      constrs := !constrs @ [Var rv, Record (filtered, None)]
+                      constrs := !constrs @ [DownVar rv, Record (filtered, None)]
                     | _ -> ()
                   )
               end

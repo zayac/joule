@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <stdexcept>
 
 namespace term {
 
@@ -16,7 +17,8 @@ enum TermType {
 	TTList,
 	TTRecord,
 	TTChoice,
-	TTVar,
+	TTUpVar,
+	TTDownVar,
 	TTEof
 };
 
@@ -94,9 +96,14 @@ struct Choice : Term {
 	}
 };
 
-struct Var : Term {
+struct UpVar : Term {
 	std::string value;
-	explicit Var(const std::string &s) : value(s), Term(TTVar) {}
+	explicit UpVar(const std::string &s) : value(s), Term(TTUpVar) {}
+};
+
+struct DownVar : Term {
+	std::string value;
+	explicit DownVar(const std::string &s) : value(s), Term(TTDownVar) {}
 };
 
 inline std::unique_ptr<Term> make_symbol(const std::string &s) {
@@ -104,7 +111,14 @@ inline std::unique_ptr<Term> make_symbol(const std::string &s) {
 }
 
 inline std::unique_ptr<Term> make_var(const std::string &s) {
-	return std::unique_ptr<Term>(new Var(s));
+    std::string up("UP_");
+    std::string down("DOWN_");
+    auto res = std::mismatch(up.begin(), up.end(), s.begin());
+    if (res.first == up.end())
+	    return std::unique_ptr<Term>(new UpVar(s));
+    //res = std::mismatch(down.begin(), down.end(), s.begin());
+    //if (res.first == down.end())
+    return std::unique_ptr<Term>(new DownVar(s));
 }
 
 

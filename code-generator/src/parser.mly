@@ -4,7 +4,7 @@
 %}
 
 %token <int> INT
-%token <string> VAR ID STRING
+%token <string> UP_VAR DOWN_VAR ID STRING
 %token NONE
 %token NIL TRUE FALSE
 %token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET LSMILE RSMILE EQ
@@ -60,7 +60,11 @@ bool_var_assignment:
     }
 
 term_var_assignment:
-  | VAR EQ term
+  | DOWN_VAR EQ term
+    {
+      term_hash := Core.Std.String.Map.add !term_hash ~key:$1 ~data:$3
+    }
+  | UP_VAR EQ term
     {
       term_hash := Core.Std.String.Map.add !term_hash ~key:$1 ~data:$3
     }
@@ -106,15 +110,6 @@ rec_entry:
     }
 
 label:
-  | ID
-    {
-      $1
-    }
-  | STRING
-    {
-      if String.length $1 <= 2 then
-        Errors.parse_error "Empty string as a label is not allowed" $startpos $endpos
-      else
-        $1
-    }
+  | ID { Core.Std.String.concat ["\""; $1; "\""] }
+  | STRING { $1 }
 

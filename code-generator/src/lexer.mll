@@ -22,7 +22,8 @@ let int = '-'? ['0'-'9'] ['0'-'9']*
 let white = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
 let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_' '+']*
-let var = '$' id
+let up_var = "$^" id
+let down_var = "$_" id
 
 (*let str = ('"' [' ' '!' '#'-'~']* '"')
         | ('\'' [' ' '!'-'&' '('-'~']* '\'')*)
@@ -63,10 +64,16 @@ rule read = parse
       let s = stringl buffer lexbuf in
       STRING (String.concat "" ["\""; s; "\""])
     }
-  | var as i {
-               let open Core.Std in
-               VAR (String.suffix i (String.length i - 1)) 
-             }
+  | up_var as i
+    {
+      let open Core.Std in
+      UP_VAR (String.suffix i (String.length i - 2)) 
+    }
+  | down_var as i
+    {
+      let open Core.Std in
+      DOWN_VAR (String.suffix i (String.length i - 2)) 
+    }
   | eof      { EOF }
   | _
       {
