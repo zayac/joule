@@ -14,23 +14,23 @@
   "sum_double"(f_sum_sum_double): 
     {
       a: double,
-      b: double | $sum_double
+      b: double | $_sum_double
     },
   "sum_int"(f_sum_sum_int): 
     {
       a: int,
-      b: int | $sum_int
-    } | $f_sum
+      b: int | $_sum_int
+    } | $^f_sum
 :);
 
-$union_power_double_power_int <= (union $power_double $power_int);
-$union_sum_int_sum_double <= (union $sum_int $sum_double);
+$_union_power_double_power_int <= (union $_power_double $_power_int);
+$_union_sum_int_sum_double <= (union $_sum_int $_sum_double);
 
 (:
   "power_int"((or f_sum_sum_double f_sum_sum_int)): 
     {
-      v: int | $union_sum_int_sum_double
-    } | $f_sum
+      v: int | $_union_sum_int_sum_double
+    } | $^f_sum
 :)
 <=
 
@@ -38,21 +38,21 @@ $union_sum_int_sum_double <= (union $sum_int $sum_double);
   "power_double"(f_power_power_double): 
     {
       base: double,
-      v: double | $power_double
+      v: double | $_power_double
     },
   "power_int"(f_power_power_int): 
     {
       base: int,
-      v: int | $power_int
-    } | $f_power
+      v: int | $_power_int
+    } | $^f_power
 :);
 
 
 (:
   result((or f_power_power_double f_power_power_int)): 
     {
-      p: double | $union_power_double_power_int
-    } | $f_power
+      p: double | $_union_power_double_power_int
+    } | $^f_power
 :)
 <=
 

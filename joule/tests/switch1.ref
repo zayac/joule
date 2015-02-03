@@ -5,5 +5,5 @@ d = true
 e = false
 f = false
 
-$x = 2
-$y = 2
+$_x = 2
+$_y = 2

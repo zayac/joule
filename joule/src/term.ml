@@ -10,7 +10,8 @@ module T = struct
     | List of t list * string option
     | Record of (Cnf.t * t) String.Map.t * string option
     | Choice of (Cnf.t * t) String.Map.t * string option
-    | Var of string
+    | UpVar of string
+    | DownVar of string
     | Switch of t Cnf.Map.t
   with sexp, compare
 end
@@ -66,7 +67,8 @@ let rec to_string t =
   | Record (x, tail) -> print_dict x tail "{" "}"
   | Choice (x, None) when SM.is_empty x -> "none"
   | Choice (x, tail) -> print_dict x  tail "(:" ":)"
-  | Var x -> "$" ^ x
+  | UpVar x
+  | DownVar x -> "$" ^ x
   | Switch x ->
     let alist = Cnf.Map.to_alist x in
     let sl = L.map
@@ -108,7 +110,8 @@ let rec to_formatted_string ?(id=0) t =
   match t with
   (* basic cases *)
   | List ([], None) | Nil | NominalInt _ | OrdinalInt _ | Symbol _ | Tuple _
-  | Var _ -> to_string t
+  | UpVar _
+  | DownVar _ -> to_string t
   | Record (x, None)
       when SM.for_all x ~f:(fun (l, _) -> Cnf.is_false l) -> to_string t
   | Choice (x, None) when SM.is_empty x -> to_string t
@@ -146,7 +149,8 @@ let rec get_vars t =
   let module SM = String.Map in
   let module L = List in
   match t with
-  | Var v -> String.Set.singleton v
+  | UpVar v -> String.Set.singleton v
+  | DownVar v -> String.Set.singleton v
   | Nil | NominalInt _ | OrdinalInt _ | Symbol _ -> SS.empty
   | Tuple x -> L.fold_left ~init:SS.empty ~f:SS.union (L.map ~f:get_vars x)
   | List (x, tail) ->
@@ -174,7 +178,8 @@ let rec is_nil = function
     if String.Map.is_empty x then Some true
     else if String.Set.is_empty (get_vars t) then Some false
     else None
-  | Var _
+  | UpVar _
+  | DownVar _
   | List (_, Some _)
   | Record (_, Some _) -> None
   | OrdinalInt _ | NominalInt _ | Symbol _ | Tuple _ | Choice (_, _) ->
@@ -197,7 +202,8 @@ let rec is_nil_exn t =
       if String.Map.is_empty x then true
       else if String.Set.is_empty (get_vars t) then false
       else raise (Non_Ground t)
-    | Var _
+    | UpVar _
+    | DownVar _
     | List (_, Some _)
     | Record (_, Some _) -> raise (Non_Ground t)
     | OrdinalInt _ | NominalInt _ | Symbol _ | Tuple _ | Choice (_, _) ->
@@ -232,7 +238,8 @@ let rec is_ground = function
   | Choice (_, _)
   | Record (_, _)
   | List (_, _)
-  | Var _ -> false
+  | UpVar _
+  | DownVar _ -> false
   | Switch x -> Cnf.Map.fold ~init:true
     ~f:(fun ~key ~data acc ->
       if Cnf.is_false key then acc else acc && is_ground data) x
@@ -348,8 +355,10 @@ let rec join t t' =
           jt
       ), !s in
   match t, t' with
-  | Var _, _ -> raise (Non_Ground t)
-  | _, Var _ -> raise (Non_Ground t')
+  | UpVar _, _ -> raise (Non_Ground t)
+  | DownVar _, _ -> raise (Non_Ground t)
+  | _, UpVar _ -> raise (Non_Ground t')
+  | _, DownVar _ -> raise (Non_Ground t')
   | Symbol _, Tuple [Symbol "override"; t]
   | Tuple [Symbol "override"; t], Symbol _ -> Some (Tuple [Symbol "override"; t], Cnf.Set.empty)
   | Choice _, Nil
@@ -479,3 +488,5 @@ let none = Choice (String.Map.empty, None)
 let is_choice = function
   | Choice _ -> true
   | _ -> false
+
+let is_up_var s = String.is_prefix s ~prefix:"^"

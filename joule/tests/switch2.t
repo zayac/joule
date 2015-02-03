@@ -1,4 +1,4 @@
-$v <= <a: {l(b): int}>;
-$w <= <c: {l(d): int | $v }>;
-nil <= $v;
-nil <= $w;
+$_v <= <a: {l(b): int}>;
+$_w <= <c: {l(d): int | $_v }>;
+nil <= $_v;
+nil <= $_w;

@@ -57,21 +57,21 @@ let union_terms_to_vars union_var t t' =
   let open Term in
   let transform t =
     match t with
-    | Var v -> v
+    | DownVar v -> v
     | t ->
       let v = get_free_term_var () in
-      let _ = constrs := !constrs @ [Var v, t; t, Var v] in
+      let _ = constrs := !constrs @ [DownVar v, t; t, DownVar v] in
       v in
   let t =
     match t with
-    | Var _ -> t
-    | _ -> (Var (transform t)) in
+    | DownVar _ -> t
+    | _ -> (DownVar (transform t)) in
   let t' =
     match t' with
-    | Var _ -> t'
-    | _ -> (Var (transform t')) in
+    | DownVar _ -> t'
+    | _ -> (DownVar (transform t')) in
   match t, t' with
-  | Var v, Var v' ->
+  | DownVar v, DownVar v' ->
     union_variables :=
       String.Map.add !union_variables ~key:union_var ~data:(v, v');
     t, t', !constrs
@@ -92,17 +92,17 @@ let to_union logic term =
       let t, t', new_constrs = union_terms_to_vars new_term_var t t' in
       let _ = constrs := !constrs @ new_constrs in
       let return_switch = Util.switch_of_alist_exn
-        [ Logic.(Var new_bool_var), Term.(Var new_term_var);
+        [ Logic.(Var new_bool_var), Term.(DownVar new_term_var);
           Logic.(~-(Var new_bool_var)), Tuple [Symbol "union"; t; t']
         ] logic in
       let switch1 = Util.switch_of_alist_exn
-        [ Logic.(Var new_bool_var), Term.(Var new_term_var);
+        [ Logic.(Var new_bool_var), Term.(DownVar new_term_var);
           Logic.(~-(Var new_bool_var)), t
         ] logic in
       let switch2 = Util.switch_of_alist_exn
-        [ Logic.(Var new_bool_var), Term.(Var new_term_var);
+        [ Logic.(Var new_bool_var), Term.(DownVar new_term_var);
           Logic.(~-(Var new_bool_var)), t' ] logic in
-      constrs := !constrs @ [switch1, t; switch2, t'; Term.Var new_term_var, Term.Nil];
+      constrs := !constrs @ [switch1, t; switch2, t'; Term.DownVar new_term_var, Term.Nil];
       return_switch
     | Tuple l ->
       Tuple (List.map l ~f:transform)

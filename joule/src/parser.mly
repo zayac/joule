@@ -17,7 +17,7 @@ let convert_constrs l r =
 %}
 
 %token <int> INT
-%token <string> VAR ID STRING
+%token <string> UP_VAR DOWN_VAR ID STRING
 %token NONE
 %token NIL TRUE FALSE NOT OR AND
 %token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET LANGULAR RANGULAR LSMILE RSMILE
@@ -28,10 +28,10 @@ let convert_constrs l r =
 
 parse:
   | constrs* EOF
-  {
-    let open Core.Std in
-    List.concat_no_order $1, !bool_constrs 
-  }
+    {
+      let open Core.Std in
+      List.concat_no_order $1, !bool_constrs 
+    }
 
 constrs:
   | term+ LEQ term+ SCOLON { convert_constrs $1 $3 }
@@ -47,12 +47,18 @@ term:
   | INT { Term.OrdinalInt $1 }
   | ID { Term.Symbol $1 }
   | STRING { Term.Symbol $1 }
-  | VAR
-  {
-    let module T = Transform in
-    T.initial_term_variables := Core.Std.String.Set.add !T.initial_term_variables $1;
-    Term.Var $1
-  }
+  | UP_VAR
+    {
+      let module T = Transform in
+      T.initial_term_variables := Core.Std.String.Set.add !T.initial_term_variables $1;
+      Term.UpVar $1
+    }
+  | DOWN_VAR
+    {
+      let module T = Transform in
+      T.initial_term_variables := Core.Std.String.Set.add !T.initial_term_variables $1;
+      Term.DownVar $1
+    }
   | LPAREN term+ RPAREN
     {
       let open Core.Std in
@@ -71,7 +77,7 @@ term:
     {
       Util.switch_of_alist_exn $2 bool_constrs
     }
-  | LSMILE separated_nonempty_list(COMMA, rec_entry) rec_list_tail? RSMILE
+  | LSMILE separated_nonempty_list(COMMA, rec_entry) rec_list_tail_choice? RSMILE
     {
       Term.Choice (Util.map_of_alist_exn $2 bool_constrs, $3)
     }
@@ -102,7 +108,7 @@ rec_entry:
     }
 
 label:
-  | ID { $1 }
+  | ID { Core.Std.String.concat ["\""; $1; "\""] }
   | STRING { $1 }
 
 guard:
@@ -135,15 +141,24 @@ logical_term:
       Core.Std.List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a * b))
     }
   | LPAREN NOT logical_term RPAREN { Logic.(~-$3) }
-  | VAR
+  | UP_VAR
+  | DOWN_VAR
     {
       Errors.parse_error "invalid Boolean expression" $startpos $endpos
     }
 
-rec_list_tail:
-  | BAR VAR
+rec_list_tail_choice:
+  | BAR UP_VAR
     {
       let module T = Transform in
       T.initial_term_variables := Core.Std.String.Set.add !T.initial_term_variables $2;
-      $2 
+      $2
+    }
+
+rec_list_tail:
+  | BAR DOWN_VAR
+    {
+      let module T = Transform in
+      T.initial_term_variables := Core.Std.String.Set.add !T.initial_term_variables $2;
+      $2
     }

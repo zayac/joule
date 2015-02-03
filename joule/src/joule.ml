@@ -98,7 +98,8 @@ let loop dot_output debug verbose format_output limit filename =
         String.Set.iter
           (String.Set.diff all_vars (String.Set.of_list (String.Map.keys terms)))
           ~f:(fun x ->
-            f ~key:x ~data:Term.Nil
+            if Term.is_up_var x then f ~key:x ~data:Term.none
+            else f ~key:x ~data:Term.Nil
           )
       end
   with Lexer.Syntax_Error msg

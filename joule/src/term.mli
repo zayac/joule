@@ -11,7 +11,8 @@ type t =
   | List of t list * string option
   | Record of (Cnf.t * t) String.Map.t * string option
   | Choice of (Cnf.t * t) String.Map.t * string option
-  | Var of string
+  | UpVar of string
+  | DownVar of string
   | Switch of t Cnf.Map.t
 
 val compare_t : t -> t -> int
@@ -81,3 +82,5 @@ val cnf_map_of_alist : (Cnf.t * t) list -> t Cnf.Map.t * Cnf.t
 val none : t
 
 val is_choice : t -> bool
+
+val is_up_var : string -> bool

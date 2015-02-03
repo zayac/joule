@@ -5,5 +5,5 @@ d = true
 e = false
 f = false
 
-$x = 1
-$y = nil
+$_x = 1
+$_y = nil

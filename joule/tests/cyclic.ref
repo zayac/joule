@@ -1,7 +1,7 @@
 q = false
 
-$u = [char]
-$w = char
-$x = nil
-$y = [char]
-$z = [nil, char]
+$_u = [char]
+$_w = char
+$_x = nil
+$_y = [char]
+$_z = [nil, char]

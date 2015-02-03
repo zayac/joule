@@ -4,5 +4,5 @@ c = false
 d = true
 e = false
 
-$x = nil
-$y = nil
+$_x = nil
+$_y = nil

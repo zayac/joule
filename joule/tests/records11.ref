@@ -1,2 +1,2 @@
-$x = {"d": nil}
-$y = nil
+$_x = {"d": nil}
+$_y = nil

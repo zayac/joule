@@ -2,5 +2,5 @@ a = false
 b = false
 c = false
 
-$x = {"e": nil, "f": nil, "q": nil}
-$y = {"q": nil}
+$_x = {"e": nil, "f": nil, "q": nil}
+$_y = {"q": nil}

@@ -6,5 +6,5 @@ e = false
 f = false
 g = true
 
-$x = {"a": 0}
-$y = nil
+$_x = {"a": 0}
+$_y = nil

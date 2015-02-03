@@ -3,9 +3,9 @@ ppi = true
 ssd = false
 ssi = true
 
-$power = none
-$power_double = nil
-$sum = none
-$sum_double = nil
-$sum_int = {"base": int}
-$power_int = nil
+$^power = none
+$^sum = none
+$_power_double = nil
+$_sum_double = nil
+$_sum_int = {"base": int}
+$_power_int = nil
