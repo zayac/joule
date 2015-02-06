@@ -29,6 +29,7 @@ static cl::extrahelp MoreHelp("\nMore help text...");
 
 std::string directory_path;
 std::string file_name;
+std::string short_file_name;
 
 const std::string macro_prefix = "CAL_FI_";
 /* FIXME poor style below */

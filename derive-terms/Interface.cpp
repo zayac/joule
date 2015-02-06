@@ -35,7 +35,10 @@ std::string typeToString(const QualType& ty, bool global_object_allowed) {
         QualType deref = cty->getPointeeType();
         std::string s = ty.getAsString();
         if (s.substr(0, s.size() - 2) == deref.getAsString()) {
-            return self + " * const";
+            if (deref.isConstQualified())
+                return "const " + self + " * const";
+            else
+                return self + " * const";
         } else {
             return typeToString(cty->getPointeeType(), true) + " * const";
         }
@@ -43,7 +46,10 @@ std::string typeToString(const QualType& ty, bool global_object_allowed) {
         QualType deref = cty->getPointeeType();
         std::string s = ty.getAsString();
         if (s.substr(0, s.size() - 2) == deref.getAsString()) {
-            return self + " &";
+            if (deref.isConstQualified())
+                return "const " + self + " &";
+            else
+                return "const " + self + " &";
         } else {
             return typeToString(cty->getPointeeType(), true) + " &";
         }

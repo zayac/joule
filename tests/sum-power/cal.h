@@ -1,3 +1,5 @@
+#pragma once
+
 typedef void variant;
 typedef void message;
 typedef void variant_message;
@@ -13,6 +15,3 @@ public:
 
 }
 
-#ifdef CAL_FI_VARIABLES_ENABLED
-#include "CAL_FI_variables.h"
-#endif

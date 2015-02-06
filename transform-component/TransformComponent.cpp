@@ -6,8 +6,9 @@ static std::default_random_engine random_engine;
 
 void FlowInheritanceHandler::enableCalVariables(FileID fid) {
     SourceLocation sl = Rewrite.getSourceMgr().getLocForStartOfFile(fid);
-    Rewrite.InsertTextBefore(sl, "#define CAL_FI_VARIABLES_ENABLED 1\n");
-    header_file.open(directory_path + "/" + macro_prefix + "variables.h", std::fstream::out);
+    Rewrite.InsertTextBefore(sl, "#include \"cal.h\"\n"
+                                 "#include \"" + short_file_name + "_" + macro_prefix + "variables.h\"\n");
+    header_file.open(directory_path + "/" + short_file_name + "_" + macro_prefix + "variables.h", std::fstream::out);
 }
 
 inline std::string getCallExprName(const CallExpr* CE) {
@@ -17,7 +18,7 @@ inline std::string getCallExprName(const CallExpr* CE) {
 
 void genDeclsForCallExprs(Rewriter &Rewrite) {
     for (const auto& el : output_interfaces_names) {
-        std::string tail_name = macro_prefix;
+        std::string tail_name = "";
         // string concatenation
         for (auto &s : el.second) {
             if (s != el.second[0])
@@ -26,16 +27,16 @@ void genDeclsForCallExprs(Rewriter &Rewrite) {
         }
         for (const CallExpr* exp : output_interfaces_calls[el.first]) {
             const Expr *e = exp->getArg(exp->getNumArgs() - 1);
-            Rewrite.InsertTextAfterToken(e->getLocEnd(), " DOWN_" + tail_name + "_use");
+            Rewrite.InsertTextAfterToken(e->getLocEnd(), " " + short_file_name + "_DOWN_" + tail_name + "_use");
         }
         for (const FunctionDecl* decl : output_interfaces_decls[el.first]) {
             // tail variables
             const ParmVarDecl *p = decl->getParamDecl(decl->getNumParams() - 1);
-            Rewrite.InsertTextAfterToken(p->getLocEnd(), " DOWN_" + tail_name + "_decl");
+            Rewrite.InsertTextAfterToken(p->getLocEnd(), " " + short_file_name + "_DOWN_" + tail_name + "_decl");
         }
 
-        header_file << "#define DOWN_" << tail_name << "_decl" << std::endl;
-        header_file << "#define DOWN_" << tail_name << "_use" << std::endl;
+        header_file << "#define " << short_file_name << "_DOWN_" << tail_name << "_decl" << std::endl;
+        header_file << "#define " << short_file_name << "_DOWN_" << tail_name << "_use" << std::endl;
     }
 }
 
@@ -67,13 +68,10 @@ void genVolleysPredicates(Rewriter &Rewrite) {
 static std::set<const CXXRecordDecl*> interface_classes;
 
 static void genInterfaceClassMatchers(Rewriter &Rewrite) {
-    size_t start = file_name.find_last_of("/") + 1;
-    size_t end = file_name.find_last_of(".");
-    std::string prefix = file_name.substr(start, end - start);
     for (const CXXRecordDecl* crd : interface_classes) {
-        Rewrite.InsertTextBefore(crd->getLocStart(), "\n#if defined(CAL_FI_VARIABLES_ENABLED)\n");
+        Rewrite.InsertTextBefore(crd->getLocStart(), "\n#if !defined(CAL_FI_HIDE_CLASSES)\n");
         Rewrite.InsertTextBefore(crd->getLocStart(),
-                "\n#define " + crd->getNameAsString() + " DOWN_class_" + prefix + "_" + crd->getNameAsString() + "\n");
+                "\n#define " + crd->getNameAsString() + " " + short_file_name + "_DOWN_class_"+ crd->getNameAsString() + "\n");
 
         Rewrite.InsertTextAfter(crd->getLocEnd().getLocWithOffset(2), "\n#endif\n");
     }
@@ -109,8 +107,8 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
         --pit;
 
         // tail variable
-        Rewrite.InsertTextAfterToken((*pit)->getLocation(), " DOWN_" + macro_prefix + FD->getNameAsString() + "_decl");
-        header_file << "#define DOWN_" << macro_prefix << FD->getNameAsString() << "_decl" << std::endl;
+        Rewrite.InsertTextAfterToken((*pit)->getLocation(), " " + short_file_name + "_DOWN_" + FD->getNameAsString() + "_decl");
+        header_file << "#define " << short_file_name << "_DOWN_" << FD->getNameAsString() << "_decl" << std::endl;
 
         Rewrite.InsertTextBefore(FD->getLocStart(),
                   "#ifndef f_"
@@ -242,6 +240,9 @@ void CalInitialTransformation::EndSourceFileAction() {
 std::unique_ptr<ASTConsumer> CalInitialTransformation::CreateASTConsumer(CompilerInstance &CI,
                                                 StringRef file) {
     file_name = file.data();
+    size_t start = file_name.find_last_of("/") + 1;
+    size_t end = file_name.find_last_of(".");
+    short_file_name = file_name.substr(start, end - start);
     directory_path = file_name.substr(0, file_name.find_last_of('/'));
     TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
     return llvm::make_unique<MyASTConsumer>(TheRewriter);

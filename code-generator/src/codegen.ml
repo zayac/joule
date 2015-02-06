@@ -96,20 +96,24 @@ let open_code_hash_file dirname =
         ~f:(fun inx -> Parser.code_hash_parse Lexer.read (Lexing.from_channel inx))
   with Sys_error _ -> ()
 
-let generate_from_terms outc name t =
+let generate_from_terms outc file_name name t =
   match t with
   | Nil ->
-    fprintf outc "#define DOWN_CAL_FI_%s_decl %s\n" name (term_to_cpp_macro true t);
-    fprintf outc "#define DOWN_CAL_FI_%s_use %s\n" name (term_to_cpp_macro false t)
+    fprintf outc "#define %s_DOWN_%s_decl %s\n" file_name name (term_to_cpp_macro true t);
+    fprintf outc "#define %s_DOWN_%s_use %s\n" file_name name (term_to_cpp_macro false t)
   | Record (map, None) ->
-    if String.is_prefix ~prefix:"DOWN_class_" name then
-      let short_name = String.substr_replace_first ~pattern:"DOWN_class_" ~with_:"" name in
-      fprintf outc "%s" (create_class_decl short_name map)
-    else
-      begin
-        fprintf outc "#define DOWN_CAL_FI_%s_decl %s\n" name (term_to_cpp_macro true t);
-        fprintf outc "#define DOWN_CAL_FI_%s_use %s\n" name (term_to_cpp_macro false t)
-      end
+    begin
+      let index = String.substr_index name ~pattern:"DOWN_class_" in
+      match index with
+      | Some i ->
+        (*let short_name = String.drop_prefix name i in*)
+        fprintf outc "%s" (create_class_decl name map)
+      | None ->
+        begin
+          fprintf outc "#define %s_DOWN_%s_decl %s\n" file_name name (term_to_cpp_macro true t);
+          fprintf outc "#define %s_DOWN_%s_use %s\n" file_name name (term_to_cpp_macro false t)
+        end
+    end
   | Choice (head, None) ->
     let more_than_one = ref false in
     let args = String.Map.fold head ~init:""

@@ -111,14 +111,10 @@ inline std::unique_ptr<Term> make_symbol(const std::string &s) {
 }
 
 inline std::unique_ptr<Term> make_var(const std::string &s) {
-    std::string up("UP_");
-    std::string down("DOWN_");
-    auto res = std::mismatch(up.begin(), up.end(), s.begin());
-    if (res.first == up.end())
-	    return std::unique_ptr<Term>(new UpVar(s));
-    //res = std::mismatch(down.begin(), down.end(), s.begin());
-    //if (res.first == down.end())
-    return std::unique_ptr<Term>(new DownVar(s));
+    if (s.find("_UP_") != std::string::npos)
+        return std::unique_ptr<Term>(new UpVar(s));
+    else
+        return std::unique_ptr<Term>(new DownVar(s));
 }
 
 

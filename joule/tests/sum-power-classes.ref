@@ -5,11 +5,11 @@ f_sum_sum_int = true
 
 $^power = (:"k": nil:)
 $^sum = (:"k": nil:)
-$_DOWN_class_power_BClass = {"%self%(%self% &)": hash_4096886239439440404, "a_62YYn7BOTz": int, "a_fkXtwLcuiG": int, "b": int, "c_8kNisFTT28": int, "foo(global::GlobalObject &)": (void (override hash_15506319419576443349))}
-$_DOWN_class_sum_AClass = {"%self%(%self% &)": hash_4096886239439440404, "%self%()": hash_1326381182976453604, "a_62YYn7BOTz": int, "a_fkXtwLcuiG": int, "b": int, "bar(int, int, int)": (int hash_13986934892522949596), "c_8kNisFTT28": int, "foo(global::GlobalObject &)": (void (override hash_15506319419576443349))}
+$_power_DOWN_class_BClass = {"%self%(const %self% &)": hash_4096886239439440404, "a_TBihd2P83W": int, "a_jRW1KN17b6": int, "b": int, "c_WJ5pUjggb4": int, "foo(global::GlobalObject &)": (void (override hash_15506319419576443349))}
 $_power_double = nil
 $_power_double_power_int = nil
 $_power_int = nil
+$_sum_DOWN_class_AClass = {"%self%()": hash_8744321538534338666, "%self%(const %self% &)": hash_4096886239439440404, "a_TBihd2P83W": int, "a_jRW1KN17b6": int, "b": int, "bar(int, int, int)": (int hash_13986934892522949596), "c_WJ5pUjggb4": int, "foo(global::GlobalObject &)": (void (override hash_15506319419576443349))}
 $_sum_double = nil
 $_sum_int = nil
 $_sum_int_sum_double = nil

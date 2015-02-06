@@ -27,7 +27,8 @@ clean_tool() {
     rm -f $dir/*.transformed.cpp $dir/*.terms
     mv $dir/environment.terms.keep $dir/environment.terms
     rm -f $dir/*.constraints $dir/*.solution
-    rm -f $dir/CAL_FI_variables.h
+    rm -f $dir/*CAL_FI_variables.h
+    rm -f $dir/code-hash
 }
 
 build_tool () {
