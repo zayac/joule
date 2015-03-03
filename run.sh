@@ -36,7 +36,7 @@ build_tool () {
     echo "Reading net list file \"$filename\"..."
     files=()
     while read line; do
-        if [[ $line =~ ([[:alpha:]]*)[[:space:]]([[:alpha:]]*) ]]
+        if [[ $line =~ ([[:alpha:]]*)\@[[:digit:]]+[[:space:]][[:digit:]]+\@([[:alpha:]]*) ]]
         then
             if [ "${BASH_REMATCH[1]}" != "environment" ]
             then

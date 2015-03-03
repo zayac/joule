@@ -131,5 +131,5 @@ let generate_from_terms outc file_name name t =
 let generate_from_bools outc name value =
   match value with
   | false ->
-    fprintf outc "#define f_%s\n" name
+    fprintf outc "#define %s\n" name
   | true -> ()

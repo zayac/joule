@@ -7,7 +7,9 @@ add_clang_executable(derive-terms
   DeriveTerms.cpp
   Interface.cpp
   CalTerm.cpp
-  json11.cpp
+  Shell.cpp
+  Derivator.cpp
+  Variant.cpp
   )
 target_link_libraries(derive-terms
   clangTooling

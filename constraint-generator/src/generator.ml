@@ -2,6 +2,40 @@ open Core.Std
 
 exception MessageFormat_Error of string
 
+module Node = struct
+  type t = string
+  let compare = compare
+  let hash = Hashtbl.hash
+  let equal = (=)
+  let default = ""
+end
+
+module Edge = struct
+  type t = int * int
+  let compare = compare
+  let default = 0, 0
+end
+module G = Graph.Persistent.Digraph.ConcreteBidirectionalLabeled(Node)(Edge)
+
+(*let netlist = G.empty*)
+let in_term_map = ref String.Map.empty
+let out_term_map = ref String.Map.empty
+
+let match_in_channel s =
+  let l = String.split ~on:'-' s in
+  match l with
+  | [] -> None, s
+  | hd :: tl ->
+    Some (int_of_string hd), String.concat ~sep:"-" tl
+
+let match_out_channel s =
+  let l = String.split ~on:'-' s in
+  match l with
+  | [] -> None, s
+  | _ ->
+    let first, last = List.split_n l (List.length l - 1) in
+    Some (int_of_string (List.hd_exn last)), String.concat ~sep:"-" first
+
 let gen_class_constraints classes left right =
   let constrs = ref [] in
   let open Term in

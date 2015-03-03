@@ -35,7 +35,7 @@ const std::string macro_prefix = "CAL_FI_";
 /* FIXME poor style below */
 std::string function_name;
 std::fstream header_file;
-std::map<std::string, std::vector<std::string>> output_interfaces_names;
+std::map<std::string, std::set<std::string>> output_interfaces_names;
 std::map<std::string, std::unordered_set<const CallExpr*>> output_interfaces_calls;
 std::map<std::string, std::unordered_set<const FunctionDecl*>> output_interfaces_decls;
 

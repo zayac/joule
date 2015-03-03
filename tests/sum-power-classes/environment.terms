@@ -1,4 +1,4 @@
 IN
-    1: (: result: {p: double}, k: nil:)
+    1: (: result: {p: {b: int}}, k: nil:)
 OUT
     1: (: sum_int: {a: int, b: int, base: int}, k: nil :)

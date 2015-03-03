@@ -1,4 +1,4 @@
-#include "Interface.h"
+#include "Interface.hpp"
 #include <functional>
 #include <sstream>
 
@@ -304,6 +304,29 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
     }
 
     return std::unique_ptr<term::Term>(new term::Record(class_repr));
+}
+
+std::map<std::string, std::unique_ptr<term::Term>> getDeclFromFunctionDecl(const FunctionDecl* FD, enum InterfaceType it) {
+    std::map<std::string, std::unique_ptr<term::Term>> struct_term;
+
+    for (FunctionDecl::param_const_iterator pit = FD->param_begin(); pit != FD->param_end(); ++pit) {
+        clang::Decl *param = *pit;
+        const NamedDecl *namedDecl = dyn_cast<NamedDecl>(param);
+        const ValueDecl *valueDecl = dyn_cast<ValueDecl>(param);
+
+        if (namedDecl || valueDecl) {
+            QualType declQT = valueDecl->getType().getCanonicalType();
+
+            if (!interface::isValidType(declQT)) {
+                std::cerr << "type " << declQT.getAsString() << " is not supported in the interface" << std::endl;
+            }
+            clang::ASTContext &context = param->getASTContext();
+            struct_term[namedDecl->getNameAsString()] = typeToTerm(declQT, it);
+        } else {
+            std::cerr << "wrong declaration of function " << FD->getNameAsString() << std::endl;
+        }
+    }
+    return struct_term;
 }
 
 }

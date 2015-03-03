@@ -12,7 +12,7 @@ let next_line lexbuf =
     }
 }
 
-let int = '-'? ['0'-'9'] ['0'-'9']*
+let int = ['-' '0'-'9'] ['0'-'9']*
 
 (*let digit = ['0'-'9']*)
 (*let frac = '.' digit**)
@@ -58,6 +58,7 @@ rule read = parse
   | '|'      { BAR }
   | "<="     { LEQ }
   | '='      { EQ }
+  | '@'      { AT }
   | '~'      { NOMINAL }
   | '"'
     {
@@ -65,6 +66,7 @@ rule read = parse
       let s = stringl buffer lexbuf in
       STRING (String.concat "" ["\""; s; "\""])
     }
+  (*| channel as i { CHANNEL i }*)
   | id as i  { ID i }
   | up_var as i
     {

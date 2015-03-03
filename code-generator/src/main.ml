@@ -5,10 +5,20 @@ let ochannels = ref String.Map.empty
 
 let create_or_open_file dirname key data =
   let file_name_id =
-    let starti = if String.is_prefix key ~prefix:"f_" then 2 else 0 in
+    let starti =
+      if String.is_prefix key ~prefix:"f_" then 2
+      else if String.is_prefix key ~prefix:"_" then
+        match String.index_from key 1 '_' with
+        | Some i -> i + 1
+        | None -> 0
+      else
+        0
+    in
     match String.index_from key starti '_' with
-    | Some i -> String.slice key starti i
-    | None -> key
+    | Some i ->
+      String.slice key starti i
+    | None ->
+      key
   in
   match String.Map.find !ochannels file_name_id with
   | None ->

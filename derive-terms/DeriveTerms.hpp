@@ -4,8 +4,8 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
-#include "Interface.h"
-
+#include "Derivator.hpp"
+#include "Interface.hpp"
 using namespace clang::tooling;
 using namespace llvm;
 using namespace clang;
@@ -23,55 +23,25 @@ static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 // A help message for this specific tool can be added afterwards.
 static cl::extrahelp MoreHelp("\nMore help text...");
 
-std::set<std::pair<std::unique_ptr<term::Term>, std::unique_ptr<term::Term>>, term::TermComparator> constraints;
+/* FIXME Would like to avoid global variables */
+Rewriter TheRewriter;
+SourceManager* TheSourceMgr;
+derivator::Derivator D;
 
+/* Variables are referred from 'ComponentAnalyser::run' function */
+/* FIXME Would like to get rid of these variables. */
+std::unique_ptr<std::string> variant_name; // nullptr
+int variant_channel;
+Variant current_variant;
+
+/* further constraints */
+std::set<std::pair<std::unique_ptr<term::Term>, std::unique_ptr<term::Term>>, term::TermComparator> constraints;
 std::set<std::string> cached_classes;
 std::map<std::string, std::pair<std::vector<std::string>, std::string>> method_body;
 
-//std::map<std::string, const QualType&> class_storage;
-
-std::string file_name;
-std::string file_name_with_path;
-std::string path;
-std::map<std::string, std::unique_ptr<term::Term>> output_interface;
-std::map<std::string, std::unique_ptr<term::Term>> input_interface;
-std::map<std::string, std::string> input_interface_flags;
-std::map<std::string, std::set<std::string>> output_interface_flags;
-Rewriter TheRewriter;
-SourceManager* TheSourceMgr;
-
-inline std::string getFileName(const ASTContext *Context, const SourceLocation &SpellingLoc) {
-    return Context->getSourceManager().getFilename(SpellingLoc);
-}
-
-inline std::string getFileNamePrefixWithPath(const ASTContext *Context, const SourceLocation &SpellingLoc) {
-    std::string full_path = getFileName(Context, SpellingLoc);
-    full_path = full_path.substr(0, full_path.find('.', full_path.find_last_of('/')));
-    return full_path;
-}
-
-inline std::string getPath(const ASTContext *Context, const SourceLocation &SpellingLoc) {
-    std::string path = getFileName(Context, SpellingLoc);
-    path = path.substr(0, path.find_last_of('/'));
-    return path;
-}
-
-inline std::string getFileNamePrefix(const ASTContext *Context, const SourceLocation &SpellingLoc) {
-    std::string full_path = getFileName(Context, SpellingLoc);
-    full_path = full_path.substr(full_path.find_last_of('/')+1);
-    full_path = full_path.substr(0, full_path.find('.'));
-    return full_path;
-}
-
 class ComponentAnalyser : public MatchFinder::MatchCallback {
-
-    std::string function_name;
-
-    std::unique_ptr<term::Term> getDeclFromFunctionDecl(const FunctionDecl* FD, enum interface::InterfaceType it);
-    std::pair<std::string, std::unique_ptr<term::Term>> getDeclFromCallExpr(const ASTContext *Context, const CallExpr* CE, enum interface::InterfaceType it);
-public:
-
     virtual void run(const MatchFinder::MatchResult &Result);
+public:
 };
 
 class MyASTConsumer : public ASTConsumer {
@@ -98,7 +68,7 @@ public:
     std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef file) override {
         TheSourceMgr = &CI.getSourceManager();
-        TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
+        TheRewriter.setSourceMgr(*TheSourceMgr, CI.getLangOpts());
         return llvm::make_unique<MyASTConsumer>();
     }
 };

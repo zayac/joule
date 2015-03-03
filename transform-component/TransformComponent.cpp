@@ -1,6 +1,7 @@
 #include "TransformComponent.h"
 #include <iostream>
 #include <random>
+#include <regex>
 
 static std::default_random_engine random_engine;
 
@@ -20,10 +21,10 @@ void genDeclsForCallExprs(Rewriter &Rewrite) {
     for (const auto& el : output_interfaces_names) {
         std::string tail_name = "";
         // string concatenation
-        for (auto &s : el.second) {
-            if (s != el.second[0])
-                tail_name += '_';
-            tail_name += s;
+        for (auto it = el.second.begin(); it != el.second.end(); ++it) {
+            //if (it != el.second.begin())
+                //tail_name += '_';
+            tail_name += *it;
         }
         for (const CallExpr* exp : output_interfaces_calls[el.first]) {
             const Expr *e = exp->getArg(exp->getNumArgs() - 1);
@@ -92,9 +93,20 @@ static void findInterfaceClasses(const FunctionDecl* fd) {
     }
 }
 
+static bool containsChannel(const std::string &s) {
+    std::regex good_variant("_[[:digit:]]+_.*");
+    return regex_match(s, good_variant);
+}
+
 void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
     ASTContext *Context = Result.Context;
     if (const FunctionDecl *FD = Result.Nodes.getNodeAs<FunctionDecl>("componentVariantDecl")) {
+        function_name = FD->getNameAsString();
+        if (!containsChannel(function_name)) {
+            std::cerr << "variant function must contain a channel as a prefix" << std::endl;
+            return;
+        }
+
         findInterfaceClasses(FD);
 
         if (!header_added) {
@@ -102,7 +114,6 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
             header_added = true;
         }
 
-        function_name = FD->getNameAsString();
         FunctionDecl::param_const_iterator pit = FD->param_end();
         --pit;
 
@@ -126,10 +137,12 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
             output_interfaces_names[call_name] = {function_name};
             output_interfaces_calls[call_name] = {CE};
         } else {
-            output_interfaces_names[call_name].push_back(function_name);
+            output_interfaces_names[call_name].insert(function_name);
             output_interfaces_calls[call_name].insert(CE);
         }
     } else if (const FunctionDecl *FD = Result.Nodes.getNodeAs<FunctionDecl>("messageDecl")) {
+        function_name = FD->getNameAsString();
+
         findInterfaceClasses(FD);
 
         if (!header_added) {
@@ -138,7 +151,6 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
             header_added = true;
         }
 
-        function_name = FD->getNameAsString();
         if (output_interfaces_decls.find(function_name) == output_interfaces_decls.end()) {
             output_interfaces_decls[function_name] = {FD};
         } else {

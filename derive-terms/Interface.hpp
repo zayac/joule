@@ -10,12 +10,11 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Frontend/CompilerInstance.h"
 
-#include "CalTerm.h"
+#include "CalTerm.hpp"
 
 using namespace llvm;
 using namespace clang;
 
-//extern std::map<std::string, std::unique_ptr<term::Term>> class_declarations;
 extern std::set<std::pair<std::unique_ptr<term::Term>, std::unique_ptr<term::Term>>, term::TermComparator> constraints;
 extern std::set<std::string> cached_classes;
 extern std::map<std::string, std::pair<std::vector<std::string>, std::string>> method_body;
@@ -38,12 +37,7 @@ bool isValidType(const QualType& ty);
 
 std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it);
 
-/*
-class Interface {
-	std::unique_ptr<term::Term> output_interface;
-	std::unique_ptr<term::Term> input_interface;
-public:
-	void addInputVariant(std::string variant_name, std::unique_ptr<term::Term>);
-};
-*/
+std::map<std::string, std::unique_ptr<term::Term>> getDeclFromFunctionDecl(const FunctionDecl* FD, enum InterfaceType it);
+
 }
+

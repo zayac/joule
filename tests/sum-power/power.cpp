@@ -3,10 +3,10 @@
 
 message result(double p);
 
-variant power_double(double v, double base) {
+variant _1_power_double(double v, double base) {
     result(pow(v, base));
 }
 
-variant power_int(int v, int base) {
+variant _1_power_int(int v, int base) {
     result(pow(v, base));
 }

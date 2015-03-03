@@ -1,6 +1,10 @@
 %{
   let additional_constraints = ref []
   let class_hash = ref Core.Std.String.Map.empty
+  let g = ref Generator.G.empty
+  let in_term_map = ref Core.Std.Int.Map.empty
+  let out_term_map = ref Core.Std.Int.Map.empty
+
 
   let index_class lt rt =
     let open Core.Std in
@@ -18,33 +22,45 @@
 %token NONE
 %token NIL TRUE FALSE NOT OR AND
 %token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET LANGULAR RANGULAR LSMILE RSMILE LAUX RAUX
-%token COLON COMMA BAR NOMINAL EOF
+%token COLON COMMA BAR NOMINAL AT EOF
 %token SCOLON LEQ EQ
 
-%start <(Term.t * Term.t) *
+%start <Term.t Core.Std.Int.Map.t *
+        Term.t Core.Std.Int.Map.t *
         (Term.t * Term.t) list *
         ((Cnf.t * Term.t) Core.Std.String.Map.t) Core.Std.String.Map.t> term_parse
-%start <(string * string) list> netlist_parse
+%start <Generator.G.t> netlist_parse
 %%
 
 netlist_parse:
-  | channel+ EOF { $1 }
+  | channel+ EOF { !g }
 
 channel:
-  | ID ID { $1, $2 }
+  | ID AT INT INT AT ID
+    {
+      g := Generator.G.add_edge_e !g (Generator.G.E.create $1 ($3, $4) $6)
+      (*match (Generator.match_out_channel $1), (Generator.match_in_channel $2) with*)
+      (*| (Some ch, comp), (Some ch', comp') ->*)
+        (*g := Generator.G.add_edge_e !g (Generator.G.E.create comp (ch, ch') comp')*)
+      (*| _ ->*)
+        (*Errors.parse_error "wrong format of a channel" $startpos $endpos*)
+    }
   | error
     { Errors.parse_error "invalid connection" $startpos $endpos }
 
 
 term_parse:
-  | constrs? term term EOF
+  | constrs? in_interface out_interface EOF
     {
-      let terms = $2, $3 in
-      terms, !additional_constraints, !class_hash
+      let ret_class_hash = !class_hash in
+      let _ = class_hash := Core.Std.String.Map.empty in
+      !in_term_map, !out_term_map, !additional_constraints, ret_class_hash
     }
 
 constrs:
   | LAUX constr* RAUX {}
+  | error
+    { Errors.parse_error "wrong format of auxiliary constraints" $startpos $endpos }
 
 constr:
   | term LEQ term SCOLON
@@ -55,6 +71,36 @@ constr:
   | term EQ term SCOLON
     {
       additional_constraints := !additional_constraints @ [($1, $3); ($3, $1)]
+    }
+
+in_interface:
+  | ID channel_map+
+    {
+      match $1 with
+      | "IN" ->
+        Core.Std.List.iter $2 ~f:(fun el ->
+          let ch, t = el in
+          in_term_map := Core.Std.Int.Map.add !in_term_map ~key:ch ~data:t
+        )
+      | _ -> Errors.parse_error "Expected 'IN' keyword" $startpos $endpos
+    }
+
+out_interface:
+  | ID channel_map+
+    {
+      match $1 with
+      | "OUT" ->
+        Core.Std.List.iter $2 ~f:(fun el ->
+          let ch, t = el in
+          out_term_map := Core.Std.Int.Map.add !out_term_map ~key:ch ~data:t
+        )
+      | _ -> Errors.parse_error "Expected 'OUT' keyword" $startpos $endpos
+    }
+
+channel_map:
+  | INT COLON term
+    {
+      $1, $3
     }
 
 term:
