@@ -1,12 +1,12 @@
 #include "cal.h"
 
-message power_int(int v);
-message power_double(double v);
+message salvo(int i);
+message salvo2(double d);
 
 variant _1_sum_int(int a, int b) {
-  power_int(a + b);
+  salvo(a + b);
 }
 
 variant _1_sum_double(double a, double b) {
-  power_int(a + b);
+  salvo(a + b);
 }

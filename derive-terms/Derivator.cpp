@@ -71,13 +71,23 @@ std::set<int> Derivator::getOutChannels() const {
 }
 
 void Derivator::genOutTermForChannel(std::ostream& ofile, int ch) const {
+    std::map<std::pair<int, std::string>, std::string> rename_variants = getShell().getOutInterface().getVariantSubstitutions();
+    std::map<std::tuple<int, std::string, std::string>, std::string> rename_records = getShell().getOutInterface().getRecordSubstitutions();
+
     ofile << "(:";
     auto salvo_it = this->routing.find(ch);
     if (salvo_it != this->routing.end()) {
         for (auto it = salvo_it->second.begin(); it != salvo_it->second.end(); ++it) {
             if (it != salvo_it->second.begin())
                 ofile << ", ";
-            ofile << it->first << "(";
+
+            /* perform variant field rename */
+            auto rv_it = rename_variants.find(make_pair(ch, it->first));
+            if (rv_it != rename_variants.end())
+                ofile << rv_it->second << "(";
+            else
+                ofile << it->first << "(";
+
             std::set<std::string> set = it->second.flags;
             if (set.size() > 1)
                 ofile << "or ";
@@ -94,7 +104,13 @@ void Derivator::genOutTermForChannel(std::ostream& ofile, int ch) const {
             for (auto rit = record_it->second.begin(); rit != record_it->second.end(); ++rit) {
                 if (rit != record_it->second.begin())
                     ofile << ", ";
-                ofile << "\"" << rit->first << "\": " + term::toString(rit->second);
+
+                /* perform record field rename */
+                auto rr_it = rename_records.find(make_tuple(ch, it->first, rit->first));
+                if (rr_it != rename_records.end())
+                    ofile << "\"" << rr_it->second << "\": " + term::toString(rit->second);
+                else
+                    ofile << "\"" << rit->first << "\": " + term::toString(rit->second);
             }
             if (!set.empty()) {
                 std::string tail_var = accumulate(set.begin(), set.end(), std::string(""));
@@ -105,7 +121,6 @@ void Derivator::genOutTermForChannel(std::ostream& ofile, int ch) const {
     }
     ofile << "| $^" << this->short_fname;
     ofile << ":)";
-
 }
 
 void Derivator::genInTerms(std::ostream& ofile) const {

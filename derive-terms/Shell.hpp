@@ -13,9 +13,15 @@ public:
     void print_vmap() const;
     const std::multimap<int, std::string>& getCMap() const { return cmap; }
     const std::multimap<std::string, int>& getVMap() const { return vmap; }
+    void add_variant_substitution(int ch, const std::string &from, const std::string &to);
+    void add_record_substitution(int ch, const std::string &from_variant, const std::string &from_record, const std::string &to);
+    const std::map<std::pair<int, std::string>, std::string>& getVariantSubstitutions() const { return variant_substitutions; }
+    const std::map<std::tuple<int, std::string, std::string>, std::string>& getRecordSubstitutions() const { return record_substitutions; }
 private:
     std::multimap<int, std::string> cmap;
     std::multimap<std::string, int> vmap;
+    std::map<std::pair<int, std::string>, std::string> variant_substitutions;
+    std::map<std::tuple<int, std::string, std::string>, std::string> record_substitutions;
 
     template<class T>
     void print_map(const T& map) const;
