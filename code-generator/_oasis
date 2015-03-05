@@ -16,7 +16,7 @@ Synopsis: code generation
 
 Description: code generation
 
-Executable code-generator
+Executable code_generator
   Path:           src
   MainIs:         main.ml
   BuildDepends:   core,
@@ -27,7 +27,8 @@ Executable code-generator
                   ocamlgraph,
                   threads,
                   ctypes,
-                  ctypes.foreign
+                  ctypes.foreign,
+                  yojson
   CompiledObject: best
   ByteOpt:        -g
 

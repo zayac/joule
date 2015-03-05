@@ -21,7 +21,7 @@ void Derivator::setFNames(const std::string& _cpp_fname) {
     this->cpp_fname = _cpp_fname;
     this->shell_fname = dir_path + "/" + short_fname + ".shell";
     this->terms_fname = dir_path + "/" + short_fname + ".terms";
-    this->hash_fname = dir_path + "/code-hash";
+    this->json_fname = dir_path + "/hash.json";
 }
 
 void Derivator::addVariant(int channel, std::string name, Variant&& var) {
@@ -191,22 +191,36 @@ void Derivator::replaceAll(std::string &s, const std::string &search, const std:
     }
 }
 
-void Derivator::genCodeHashFile() const {
+void Derivator::genJsonFile() const {
     std::ofstream ofile;
-    ofile.open(this->hash_fname, std::fstream::app);
-    for (auto &el : method_body) {
-        std::vector<std::string> params = el.second.first;
-        std::string body = el.second.second;
-        replaceAll(body, "\"", "\\\"");
-        replaceAll(body, "\n", "\\n");
-        ofile << "\"" << el.first << "\": (";
-        for (std::vector<std::string>::iterator it = params.begin(); it != params.end(); ++it) {
-            if (it != params.begin())
-                ofile << ", ";
-            ofile << "\"" << *it << "\"";
+    ofile.open(this->json_fname, std::fstream::app);
+    //ofile << "{\n";
+    /* code hash */
+    if (!method_body.empty()) {
+        ofile << "\t\"code_hash\": [\n";
+        for (auto it = method_body.begin(); it != method_body.end(); ++it) {
+            if (it != method_body.begin())
+                ofile << ",\n";
+            auto& el = *it;
+            std::vector <std::string> params = el.second.first;
+            std::string body = el.second.second;
+            replaceAll(body, "\"", "\\\"");
+            replaceAll(body, "\n", "\\n");
+            ofile << "\t\t{ \"hash\": ";
+            ofile << "\"" << el.first << "\", ";
+            ofile << "\"arguments\": [";
+            for (std::vector<std::string>::iterator it = params.begin(); it != params.end(); ++it) {
+                if (it != params.begin())
+                    ofile << ", ";
+                ofile << "\"" << *it << "\"";
+            }
+            ofile << "], \"code\": ";
+            ofile << "\"" << body << "\"}";
         }
-        ofile << ") \"" << body << "\"" << std::endl;
+        ofile << "\n";
+        //ofile << "\t]\n";
     }
+    //ofile << "}\n";
 }
 
 }

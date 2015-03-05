@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 9757d0121a2527c8683bfb5e12a3f9cd) *)
+(* DO NOT EDIT (digest: 639fcacf281e7a11aece4b3d74d9b00e) *)
 
 This is the INSTALL file for the code-generator distribution.
 
@@ -18,6 +18,7 @@ In order to compile this package, you will need:
 * comparelib
 * ocamlgraph
 * ctypes
+* yojson
 * menhir
 
 Installing

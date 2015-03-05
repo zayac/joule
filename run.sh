@@ -28,7 +28,7 @@ clean_tool() {
     mv $dir/environment.terms.keep $dir/environment.terms
     rm -f $dir/*.constraints $dir/*.solution
     rm -f $dir/*CAL_FI_variables.h
-    rm -f $dir/code-hash
+    rm -f $dir/*.json
 }
 
 build_tool () {
@@ -52,9 +52,9 @@ build_tool () {
     for file in ${unique_files[@]}
     do
         echo "Transforming source file \"$file.cpp\"..."
-        test $BIN_DIR/$TRANSFORM_COMP_BIN $dir/$file.cpp --
+        test $BIN_DIR/$TRANSFORM_COMP_BIN $dir/$file.cpp -- -I/usr/include/c++/4.2.1
         echo "Deriving interface from transformed source file \"$file.transformed.cpp\"..."
-        test $BIN_DIR/$DERIVE_BIN $dir/$file.transformed.cpp --
+        test $BIN_DIR/$DERIVE_BIN $dir/$file.transformed.cpp -- -I/usr/include/c++/4.2.1
     done
     echo "Deriving constraints..."
     test $BIN_DIR/$CONSTRAINT_GEN_BIN $filename

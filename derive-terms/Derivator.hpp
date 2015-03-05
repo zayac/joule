@@ -16,7 +16,7 @@ class Derivator {
     std::string cpp_fname;
     std::string shell_fname;
     std::string terms_fname;
-    std::string hash_fname;
+    std::string json_fname;
 
     shell::Shell shell;
 
@@ -42,7 +42,7 @@ public:
     void genOutTerms(std::ostream& ofile) const;
     void genConstraints(std::ostream& ofile) const;
     void replaceAll(std::string &s, const std::string &search, const std::string &replace) const;
-    void genCodeHashFile() const;
+    void genJsonFile() const;
     std::map<std::string, std::unique_ptr<term::Term>> getDeclFromFunctionDecl(const FunctionDecl* FD, enum interface::InterfaceType it) const;
 };
 

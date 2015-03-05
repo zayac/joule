@@ -265,6 +265,14 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
 
             std::stringstream ss;
             ss << std::hash<std::string>()(body);
+
+            /*std::string param_string = "";
+            for (auto it = param_names.begin(); it != param_names.end(); ++it) {
+                if (it != param_names.begin())
+                    param_string += ",";
+                param_string += *it;
+            }*/
+
             std::string hash = "hash_" + ss.str();
             method_body[hash] = make_pair(param_names, body);
 

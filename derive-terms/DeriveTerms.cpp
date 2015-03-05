@@ -90,6 +90,6 @@ int main(int argc, const char **argv) {
     /* Printing out terms */
     D.genOutTerms(ofile);
     
-    D.genCodeHashFile();
+    D.genJsonFile();
     return 0;
 }

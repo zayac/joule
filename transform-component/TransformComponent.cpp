@@ -100,7 +100,15 @@ static bool containsChannel(const std::string &s) {
 
 void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
     ASTContext *Context = Result.Context;
+    const SourceManager& SM = Context->getSourceManager();
+
     if (const FunctionDecl *FD = Result.Nodes.getNodeAs<FunctionDecl>("componentVariantDecl")) {
+        /* ignore system headers */
+        const SourceLocation& SL = FD->getLocation();
+        if (SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
+            SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
+            return;
+
         function_name = FD->getNameAsString();
         if (!containsChannel(function_name)) {
             std::cerr << "variant function must contain a channel as a prefix" << std::endl;
@@ -128,6 +136,12 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
                 + "\n");
         Rewrite.ReplaceText(FD->getLocEnd(), "}\n#endif\n");
     } else if (const CallExpr *CE = Result.Nodes.getNodeAs<CallExpr>("messageCall")) {
+        /* ignore system headers */
+        const SourceLocation& SL = CE->getLocStart();
+        if (SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
+            SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
+            return;
+
         if (function_name.empty()) {
             std::cerr << "expression that sends a message is used in the unknown context" << std::endl;
             return;
@@ -162,7 +176,15 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
 
 void PrivateDeclsHandler::run(const MatchFinder::MatchResult &Result) {
     ASTContext *Context = Result.Context;
+    const SourceManager& SM = Context->getSourceManager();
+
     if (const NamedDecl *decl = Result.Nodes.getNodeAs<NamedDecl>("privateDecl")) {
+        /* ignore system headers */
+        const SourceLocation& SL = decl->getLocStart();
+        if (SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
+            SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
+            return;
+
         std::string oldName = decl->getNameAsString();
         std::string newName;
         if (privateVariables.find(oldName) == privateVariables.end()) {
@@ -172,6 +194,12 @@ void PrivateDeclsHandler::run(const MatchFinder::MatchResult &Result) {
             newName = privateVariables[oldName];
         Rewrite.ReplaceText(decl->getLocation(), oldName.size(), newName);
     } else if (const MemberExpr *expr = Result.Nodes.getNodeAs<MemberExpr>("privateDeclUse")) {
+        /* ignore system headers */
+        const SourceLocation& SL = expr->getLocStart();
+        if (SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
+            SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
+            return;
+
         std::string oldName = expr->getMemberNameInfo().getName().getAsString();
         if (privateVariables.find(oldName) != privateVariables.end()) {
             std::string newName = privateVariables[oldName];
@@ -179,9 +207,20 @@ void PrivateDeclsHandler::run(const MatchFinder::MatchResult &Result) {
                 Rewrite.ReplaceText(expr->getExprLoc(), oldName.size(), newName);
         }
     } else if (const AccessSpecDecl *accessDecl = Result.Nodes.getNodeAs<AccessSpecDecl>("accessSpecDecl")) {
+        /* ignore system headers */
+        const SourceLocation& SL = accessDecl->getLocStart();
+        if (SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
+            SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
+            return;
+
         Rewrite.ReplaceText(accessDecl->getSourceRange(), "public:");
     } else if (const CXXCtorInitializer *ctor = Result.Nodes.getNodeAs<CXXCtorInitializer>("ctorInitializer")) {
+        //if (Context->getSourceManager().isInSystemHeader(Context->getSourceManager().getLocForStartOfFile(Context->getSourceManager().getFileID(decl->getSourceRange().getBegin()))) || Context->getSourceManager().isInExternCSystemHeader(Context->getSourceManager().getLocForStartOfFile(Context->getSourceManager().getFileID(decl->getSourceRange().getBegin()))))
+            //return;
+
         FieldDecl* decl = ctor->getMember();
+        if (decl == nullptr)
+            return;
         if (decl->getAccess() == AS_private) {
             std::string oldName = decl->getDeclName().getAsString();
             std::string newName;

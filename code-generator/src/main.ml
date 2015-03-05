@@ -34,11 +34,13 @@ let loop values_filename =
   let term_var_hash, bool_var_hash = In_channel.with_file values_filename
     ~f:(fun inx -> Parser.values_parse Lexer.read (Lexing.from_channel inx)) in
   let dirname = Filename.dirname values_filename in
-  let _ = Codegen.open_code_hash_file dirname in
   try
     String.Map.iter term_var_hash
       ~f:(fun ~key ~data ->
         let file_name, outc = create_or_open_file dirname key data in
+        let _ = Codegen.read_json_file
+                  (String.concat [dirname; "/"; file_name; ".json"])
+        in
         Codegen.generate_from_terms outc file_name key data
       );
     String.Map.iter bool_var_hash
