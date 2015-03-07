@@ -17,7 +17,8 @@ let term_to_type t =
   | Symbol s -> dequotize s
   | _ -> raise (WrongFormat ("unexpected format of a type: " ^ (Term.to_string t)))
   
-let term_to_cpp_macro is_decl = function
+let term_to_cpp_macro is_decl term =
+  match term with
   | Nil -> ""
   | Record (head, None) ->
     String.Map.fold head ~init:"COMMA "
@@ -28,7 +29,7 @@ let term_to_cpp_macro is_decl = function
         else
           acc ^ (dequotize key)
       )
-  | _ -> raise (WrongFormat "unexpected format of a term")
+  | _ -> raise (WrongFormat ("unexpected format of a term " ^ (Term.to_string term)))
 
 let field_to_string name = function
   | Symbol s ->
@@ -142,7 +143,8 @@ let generate_from_terms outc file_name name t =
           String.concat [acc; term_to_type t; " "; dequotize key]
       ) in
     fprintf outc "variant_message %s(%s);\n" name args
-  | _ -> raise (WrongFormat "unexpected format of a term")
+  | Symbol _ -> ()
+  | _ -> raise (WrongFormat ("unexpected format of a term " ^ (Term.to_string t)))
 
 let generate_from_bools outc name value =
   match value with

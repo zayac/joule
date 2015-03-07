@@ -1,25 +1,15 @@
 #pragma once
 
+#pragma clang system_header
+#pragma GCC system_header
+
 #include <vector>
 #include <string>
+#include <sstream>
 
 typedef void variant;
 typedef void message;
 typedef void variant_message;
-
-class Message {
-    std::string type;
-    std::vector<void*> data;
-public:
-    std::string getType() const { return type; }
-    void setType(const std::string& s) { type = s; }
-
-    std::vector<void*> unpack() const { return data; }
-    template<class T>
-    void pack(const T& element);
-};
-
-void output(int channel, Message);
 
 namespace global {
 
@@ -30,4 +20,16 @@ public:
 };
 
 }
+
+class Message {
+    std::string type;
+public:
+    std::stringstream ss;
+
+    std::string getType() const { return type; }
+    void setType(const std::string& s) { type = s; }
+};
+
+void output(int channel, Message&&);
+
 

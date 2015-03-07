@@ -28,6 +28,14 @@ bool isGlobalContext(const DeclContext *context) {
     return false;
 }
 
+bool isStdContext(const DeclContext *context) {
+    if (isa<NamespaceDecl>(*context)) {
+        const NamespaceDecl *ns = static_cast<const NamespaceDecl*>(context);
+        return ns->getNameAsString() == "std";
+    }
+    return false;
+}
+
 std::string typeToString(const QualType& ty, bool global_object_allowed) {
     QualType cty(ty.getCanonicalType());
     using namespace term;
@@ -58,14 +66,14 @@ std::string typeToString(const QualType& ty, bool global_object_allowed) {
     /* Class declarations */
     } else if (cty->isClassType()) {
         const CXXRecordDecl *record = cty->getAsCXXRecordDecl();
-        if (isGlobalContext(record->getDeclContext()) && !global_object_allowed) {
+        if ((isGlobalContext(record->getDeclContext()) || isStdContext(record->getDeclContext())) && !global_object_allowed) {
             std::cerr << "global object '" << record->getNameAsString()
                       << "' must be used only as a reference or a const pointer" << std::endl;
             exit(1);
         }
         global_object_allowed = false;
 
-        if (!isGlobalContext(record->getDeclContext())) {
+        if (!isGlobalContext(record->getDeclContext()) && !isStdContext(record->getDeclContext())) {
             std::cerr << "method parameters cannot contain interface objects or their pointers/references" << std::endl;
         }
         return "global::" + record->getNameAsString();
@@ -176,6 +184,10 @@ std::string getStmtAsString(Stmt *stmt)
 std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum InterfaceType it) {
     if (isGlobalContext(RD->getDeclContext())) {
         return term::make_symbol("global::" + RD->getNameAsString());
+    }
+
+    if (isStdContext(RD->getDeclContext())) {
+        return term::make_symbol("std::" + RD->getNameAsString());
     }
 
     std::map<std::string, std::unique_ptr<term::Term>> class_repr;

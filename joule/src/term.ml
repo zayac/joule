@@ -57,7 +57,8 @@ let rec to_string t =
     let s_without_quotes = S.strip ~drop:(Char.(=) '"') x in
     if S.for_all ~f:(fun x -> Char.is_alpha x) s_without_quotes then
       s_without_quotes
-    else x
+    else
+      String.concat ["\""; x; "\""]
   | Tuple x -> S.concat ["("; S.concat ~sep:" " (L.map ~f:to_string x); ")"]
   | List (x, tail) ->
     S.concat ["["; S.concat ~sep:", " (L.map ~f:to_string x);
