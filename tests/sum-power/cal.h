@@ -6,6 +6,9 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
 
 typedef void variant;
 typedef void message;

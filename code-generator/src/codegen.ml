@@ -16,18 +16,49 @@ let term_to_type t =
   | Nil -> "const void *"
   | Symbol s -> dequotize s
   | _ -> raise (WrongFormat ("unexpected format of a type: " ^ (Term.to_string t)))
-  
+
+let number_of_elements term =
+  match term with
+  | Nil -> 0
+  | Record (head, None) -> String.Map.length head
+  | _ -> raise (WrongFormat ("unexpected format of a term " ^ (Term.to_string term)))
+
 let term_to_cpp_macro is_decl term =
   match term with
   | Nil -> ""
   | Record (head, None) ->
-    String.Map.fold head ~init:"COMMA "
+    String.Map.fold head ~init:""
       ~f:(fun ~key ~data acc ->
         let g, t = data in
         if is_decl then
-          String.concat [acc; term_to_type t; " "; dequotize key]
+          String.concat [acc; " COMMA "; term_to_type t; " "; dequotize key]
         else
-          acc ^ (dequotize key)
+          String.concat [acc; " COMMA "; dequotize key]
+      )
+  | _ -> raise (WrongFormat ("unexpected format of a term " ^ (Term.to_string term)))
+
+let term_to_cpp_macro_decl term =
+  term_to_cpp_macro true term
+
+let term_to_cpp_macro_use term =
+  term_to_cpp_macro false term
+
+let term_to_cpp_macro_tuple_get term =
+    let n = number_of_elements term in
+    let s = ref "" in
+    for i = 0 to n-1 do
+      s := String.concat [!s; " COMMA "; "std::get<"; string_of_int i; ">(data)"]
+    done;
+    !s
+
+let term_to_cpp_macro_types term =
+  match term with
+  | Nil -> ""
+  | Record (head, None) ->
+    String.Map.fold head ~init:""
+      ~f:(fun ~key ~data acc ->
+        let _, t = data in
+        String.concat [acc; " COMMA "; term_to_type t]
       )
   | _ -> raise (WrongFormat ("unexpected format of a term " ^ (Term.to_string term)))
 
@@ -114,10 +145,13 @@ let open_code_hash_file dirname =
     (*[>()<]*)
 
 let generate_from_terms outc file_name name t =
+  
   match t with
   | Nil ->
-    fprintf outc "#define %s_DOWN_%s_decl %s\n" file_name name (term_to_cpp_macro true t);
-    fprintf outc "#define %s_DOWN_%s_use %s\n" file_name name (term_to_cpp_macro false t)
+    fprintf outc "#define %s_DOWN_%s_decl %s\n" file_name name (term_to_cpp_macro_decl t);
+    fprintf outc "#define %s_DOWN_%s_use %s\n" file_name name (term_to_cpp_macro_use t);
+    fprintf outc "#define %s_DOWN_%s_tuple_get %s\n" file_name name (term_to_cpp_macro_tuple_get t);
+    fprintf outc "#define %s_DOWN_%s_types %s\n" file_name name (term_to_cpp_macro_types t)
   | Record (map, None) ->
     begin
       let index = String.substr_index name ~pattern:"DOWN_class_" in
@@ -127,8 +161,10 @@ let generate_from_terms outc file_name name t =
         fprintf outc "%s" (create_class_decl name map)
       | None ->
         begin
-          fprintf outc "#define %s_DOWN_%s_decl %s\n" file_name name (term_to_cpp_macro true t);
-          fprintf outc "#define %s_DOWN_%s_use %s\n" file_name name (term_to_cpp_macro false t)
+          fprintf outc "#define %s_DOWN_%s_decl %s\n" file_name name (term_to_cpp_macro_decl t);
+          fprintf outc "#define %s_DOWN_%s_use %s\n" file_name name (term_to_cpp_macro_use t);
+          fprintf outc "#define %s_DOWN_%s_tuple_get %s\n" file_name name (term_to_cpp_macro_tuple_get t);
+          fprintf outc "#define %s_DOWN_%s_types %s\n" file_name name (term_to_cpp_macro_types t)
         end
     end
   | Choice (head, None) ->

@@ -52,9 +52,9 @@ build_tool () {
     for file in ${unique_files[@]}
     do
         echo "Transforming source file \"$file.cpp\"..."
-        test $BIN_DIR/$TRANSFORM_COMP_BIN $dir/$file.cpp -- -stdlib=libc++ -std=c++11 -I/usr/local/include -I/usr/include -I/usr/include/c++/4.2.1
+        test $BIN_DIR/$TRANSFORM_COMP_BIN $dir/$file.cpp -- -stdlib=libc++ -std=c++11 -I/usr/local/include -I/usr/include -I/usr/local/Cellar/gcc/4.7.2/gcc/include/c++/4.7.2 -I/usr/local/Cellar/gcc/4.7.2/gcc/include/c++/4.7.2/x86_64-apple-darwin12.2.1
         echo "Deriving interface from transformed source file \"$file.transformed.cpp\"..."
-        test $BIN_DIR/$DERIVE_BIN $dir/$file.transformed.cpp -- -stdlib=libc++ -std=c++11 -I/usr/local/include -I/usr/include -I/usr/include/c++/4.2.1
+        test $BIN_DIR/$DERIVE_BIN $dir/$file.transformed.cpp -- -stdlib=libc++ -std=c++11 -I/usr/local/include -I/usr/include -I/usr/local/Cellar/gcc/4.7.2/gcc/include/c++/4.7.2 -I/usr/local/Cellar/gcc/4.7.2/gcc/include/c++/4.7.2/x86_64-apple-darwin12.2.1
     done
     echo "Deriving constraints..."
     test $BIN_DIR/$CONSTRAINT_GEN_BIN $filename

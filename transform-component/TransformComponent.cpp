@@ -93,11 +93,16 @@ static void findInterfaceClasses(const FunctionDecl* fd) {
     }
 }
 
-static bool containsChannel(const std::string &s) {
-    std::regex good_variant("_[[:digit:]]+_.*");
-    return regex_match(s, good_variant);
+static std::pair<int, std::string> slice(const std::string &s) {
+    std::regex channel("_([[:digit:]]+)_(.*)");
+    std::smatch match;
+    std::string::size_type sz;
+    if (std::regex_search(s.begin(), s.end(), match, channel)) {
+        return make_pair(std::stoi(match[1], &sz), match[2]);
+    } else {
+        return make_pair(-1, s);
+    }
 }
-
 void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
     ASTContext *Context = Result.Context;
     const SourceManager& SM = Context->getSourceManager();
@@ -110,10 +115,21 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
             return;
 
         function_name = FD->getNameAsString();
-        if (!containsChannel(function_name)) {
+        std::pair<int, std::string> p = slice(function_name);
+        if (p.first == -1) {
             std::cerr << "variant function must contain a channel as a prefix" << std::endl;
             return;
         }
+
+        current_variant = VariantInfo();
+        current_variant.channel = p.first;
+        current_variant.name = p.second;
+        for (FunctionDecl::param_const_iterator pit = FD->param_begin(); pit != FD->param_end(); ++pit) {
+            current_variant.params.push_back((*pit)->getOriginalType().getAsString());
+        }
+        apigen.addVariantInfo(p.first, current_variant);
+        locationtoInsert = FD->getLocEnd();
+
 
         findInterfaceClasses(FD);
 
@@ -147,6 +163,18 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
             return;
         }
         std::string call_name = getCallExprName(CE);
+
+        /* store salvo */
+        SalvoInfo salvo;
+        salvo.name = call_name;
+        salvo.flags.insert(function_name);
+        const FunctionDecl *FD = CE->getDirectCallee();
+        for (FunctionDecl::param_const_iterator pit = FD->param_begin(); pit != FD->param_end(); ++pit) {
+            salvo.param_names.push_back((*pit)->getNameAsString());
+            salvo.param_types.push_back((*pit)->getOriginalType().getAsString());
+        }
+        apigen.addSalvoInfo(call_name, salvo);
+
         if (output_interfaces_names.find(call_name) == output_interfaces_names.end()) {
             output_interfaces_names[call_name] = {function_name};
             output_interfaces_calls[call_name] = {CE};
@@ -170,7 +198,6 @@ void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
         } else {
             output_interfaces_decls[function_name].insert(FD);
         }
-
     }
 }
 
@@ -181,8 +208,9 @@ void PrivateDeclsHandler::run(const MatchFinder::MatchResult &Result) {
     if (const NamedDecl *decl = Result.Nodes.getNodeAs<NamedDecl>("privateDecl")) {
         /* ignore system headers */
         const SourceLocation& SL = decl->getLocStart();
-        if (SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
-            SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
+        if (SL.isInvalid() || SM.getLocForStartOfFile(SM.getFileID(SL)).isInvalid() ||
+                SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
+                SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
             return;
 
         std::string oldName = decl->getNameAsString();
@@ -196,8 +224,9 @@ void PrivateDeclsHandler::run(const MatchFinder::MatchResult &Result) {
     } else if (const MemberExpr *expr = Result.Nodes.getNodeAs<MemberExpr>("privateDeclUse")) {
         /* ignore system headers */
         const SourceLocation& SL = expr->getLocStart();
-        if (SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
-            SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
+        if (SL.isInvalid() || SM.getLocForStartOfFile(SM.getFileID(SL)).isInvalid() ||
+                SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
+                SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
             return;
 
         std::string oldName = expr->getMemberNameInfo().getName().getAsString();
@@ -209,14 +238,16 @@ void PrivateDeclsHandler::run(const MatchFinder::MatchResult &Result) {
     } else if (const AccessSpecDecl *accessDecl = Result.Nodes.getNodeAs<AccessSpecDecl>("accessSpecDecl")) {
         /* ignore system headers */
         const SourceLocation& SL = accessDecl->getLocStart();
-        if (SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
-            SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
+        if (SL.isInvalid() || SM.getLocForStartOfFile(SM.getFileID(SL)).isInvalid() ||
+                SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
+                SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
             return;
 
         Rewrite.ReplaceText(accessDecl->getSourceRange(), "public:");
     } else if (const CXXCtorInitializer *ctor = Result.Nodes.getNodeAs<CXXCtorInitializer>("ctorInitializer")) {
         //if (Context->getSourceManager().isInSystemHeader(Context->getSourceManager().getLocForStartOfFile(Context->getSourceManager().getFileID(decl->getSourceRange().getBegin()))) || Context->getSourceManager().isInExternCSystemHeader(Context->getSourceManager().getLocForStartOfFile(Context->getSourceManager().getFileID(decl->getSourceRange().getBegin()))))
             //return;
+
 
         FieldDecl* decl = ctor->getMember();
         if (decl == nullptr)
@@ -279,6 +310,9 @@ void CalInitialTransformation::EndSourceFileAction() {
     genDeclsForCallExprs(TheRewriter);
     genVolleysPredicates(TheRewriter);
     genInterfaceClassMatchers(TheRewriter);
+
+    TheRewriter.InsertTextAfterToken(locationtoInsert,
+            apigen.genInputApi(short_file_name, header_file) + apigen.genOutputApi(short_file_name, header_file));
 
     size_t pos = file_name.find_last_of('.');
     std::string path = file_name.substr(0, pos) + ".transformed" + file_name.substr(pos);

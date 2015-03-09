@@ -7,8 +7,16 @@
 
 void ComponentAnalyser::run(const MatchFinder::MatchResult &Result) {
     ASTContext *Context = Result.Context;
+    const SourceManager& SM = Context->getSourceManager();
+
     /* found a function declaration that returns 'variant' */
     if (const FunctionDecl *FD = Result.Nodes.getNodeAs<FunctionDecl>("componentVariantDecl")) {
+        const SourceLocation& SL = FD->getLocation();
+        if (SL.isInvalid() || SM.getLocForStartOfFile(SM.getFileID(SL)).isInvalid() ||
+                SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
+                SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
+            return;
+
         std::string var_name = FD->getNameAsString();
         /* previous variant is processed. Add to collection of variants */
         if (variant_name != nullptr) {
@@ -23,6 +31,11 @@ void ComponentAnalyser::run(const MatchFinder::MatchResult &Result) {
         current_variant.declaration = interface::getDeclFromFunctionDecl(FD, interface::TInputInterface);
     /* found a call of a function that returns 'message' */
     } else if (const CallExpr *CE = Result.Nodes.getNodeAs<CallExpr>("messageCall")) {
+        const SourceLocation& SL = CE->getLocStart();
+        if (SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
+                SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
+            return;
+
         const FunctionDecl* FD = CE->getDirectCallee();
         std::pair<int, std::string> p = Variant::slice(FD->getNameAsString());
 

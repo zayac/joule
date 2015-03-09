@@ -9,6 +9,7 @@
 #include <vector>
 #include <fstream>
 #include <numeric>
+#include "ApiGen.h"
 
 using namespace clang::tooling;
 using namespace llvm;
@@ -38,6 +39,10 @@ std::fstream header_file;
 std::map<std::string, std::set<std::string>> output_interfaces_names;
 std::map<std::string, std::unordered_set<const CallExpr*>> output_interfaces_calls;
 std::map<std::string, std::unordered_set<const FunctionDecl*>> output_interfaces_decls;
+
+ApiGen apigen;
+struct VariantInfo current_variant;
+SourceLocation locationtoInsert;
 
 inline std::string getFileName(const ASTContext *Context, const SourceLocation &SpellingLoc) {
     return Context->getSourceManager().getFilename(SpellingLoc);
