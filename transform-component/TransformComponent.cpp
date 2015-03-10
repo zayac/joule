@@ -74,6 +74,21 @@ static void genInterfaceClassMatchers(Rewriter &Rewrite) {
         Rewrite.InsertTextBefore(crd->getLocStart(),
                 "\n#define " + crd->getNameAsString() + " " + short_file_name + "_DOWN_class_"+ crd->getNameAsString() + "\n");
 
+
+        std::ostringstream ss;
+        ss << "\n\ttemplate<class Archive>\n";
+        ss << "\tvoid serialize(Archive& archive) {\n";
+        ss << "\t\tarchive(";
+        for (const std::string& s : class_fields[crd->getNameAsString()]) {
+            if (s != *class_fields[crd->getNameAsString()].begin())
+                ss << ", ";
+            ss << s;
+        }
+        ss << " " << short_file_name << "_DOWN_class_" << crd->getNameAsString() << "_fields );\n";
+        ss << "\t}\n";
+        Rewrite.InsertTextAfter(crd->getLocEnd().getLocWithOffset(-1), ss.str());
+        header_file << "#define " << short_file_name << "_DOWN_class_" << crd->getNameAsString() << "_fields\n";
+
         Rewrite.InsertTextAfter(crd->getLocEnd().getLocWithOffset(2), "\n#endif\n");
     }
 }
@@ -103,6 +118,23 @@ static std::pair<int, std::string> slice(const std::string &s) {
         return make_pair(-1, s);
     }
 }
+
+bool isGlobalContext(const DeclContext *context) {
+    if (isa<NamespaceDecl>(*context)) {
+        const NamespaceDecl *ns = static_cast<const NamespaceDecl*>(context);
+        return ns->getNameAsString() == "global";
+    }
+    return false;
+}
+
+bool isStdContext(const DeclContext *context) {
+    if (isa<NamespaceDecl>(*context)) {
+        const NamespaceDecl *ns = static_cast<const NamespaceDecl*>(context);
+        return ns->getNameAsString() == "std";
+    }
+    return false;
+}
+
 void FlowInheritanceHandler::run(const MatchFinder::MatchResult &Result) {
     ASTContext *Context = Result.Context;
     const SourceManager& SM = Context->getSourceManager();
@@ -205,9 +237,25 @@ void PrivateDeclsHandler::run(const MatchFinder::MatchResult &Result) {
     ASTContext *Context = Result.Context;
     const SourceManager& SM = Context->getSourceManager();
 
-    if (const NamedDecl *decl = Result.Nodes.getNodeAs<NamedDecl>("privateDecl")) {
+    if (const CXXRecordDecl *record = Result.Nodes.getNodeAs<CXXRecordDecl>("classDecl")) {
+        const SourceLocation &SL = record->getLocStart();
+        if (SL.isInvalid() || SM.getLocForStartOfFile(SM.getFileID(SL)).isInvalid() ||
+                SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
+                SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
+            return;
+
+        current_class = record->getNameAsString();
+    } else if (const FieldDecl *decl = Result.Nodes.getNodeAs<FieldDecl>("publicFieldDecl")) {
+        const SourceLocation &SL = decl->getLocStart();
+        if (SL.isInvalid() || SM.getLocForStartOfFile(SM.getFileID(SL)).isInvalid() ||
+                SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
+                SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
+            return;
+
+        addClassField(current_class, decl->getNameAsString());
+    } else if (const NamedDecl *decl = Result.Nodes.getNodeAs<NamedDecl>("privateDecl")) {
         /* ignore system headers */
-        const SourceLocation& SL = decl->getLocStart();
+        const SourceLocation &SL = decl->getLocStart();
         if (SL.isInvalid() || SM.getLocForStartOfFile(SM.getFileID(SL)).isInvalid() ||
                 SM.isInSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))) ||
                 SM.isInExternCSystemHeader(SM.getLocForStartOfFile(SM.getFileID(SL))))
@@ -221,6 +269,10 @@ void PrivateDeclsHandler::run(const MatchFinder::MatchResult &Result) {
         } else
             newName = privateVariables[oldName];
         Rewrite.ReplaceText(decl->getLocation(), oldName.size(), newName);
+
+        if (decl->getFunctionType() == nullptr)
+            addClassField(current_class, newName);
+
     } else if (const MemberExpr *expr = Result.Nodes.getNodeAs<MemberExpr>("privateDeclUse")) {
         /* ignore system headers */
         const SourceLocation& SL = expr->getLocStart();
@@ -284,7 +336,14 @@ MyASTConsumer::MyASTConsumer(Rewriter &R) : HandlerForPrivateDecls(R, privateVar
     /* Parsing class definition */
     Matcher.addMatcher(namedDecl(isPrivate()).bind("privateDecl"),
         &HandlerForPrivateDecls);
-    Matcher.addMatcher(memberExpr(hasDeclaration(namedDecl(isPrivate()))).bind("privateDeclUse"),
+
+    Matcher.addMatcher(fieldDecl(isPublic()).bind("publicFieldDecl"),
+            &HandlerForPrivateDecls);
+
+    Matcher.addMatcher(recordDecl().bind("classDecl"),
+        &HandlerForPrivateDecls);
+
+    Matcher.addMatcher(memberExpr(hasDeclaration(namedDecl(isPrivate())), unless(hasAncestor(isImplicit()))).bind("privateDeclUse"),
         &HandlerForPrivateDecls);
     Matcher.addMatcher(accessSpecDecl().bind("accessSpecDecl"),
         &HandlerForPrivateDecls);

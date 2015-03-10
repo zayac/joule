@@ -40,6 +40,15 @@ std::map<std::string, std::set<std::string>> output_interfaces_names;
 std::map<std::string, std::unordered_set<const CallExpr*>> output_interfaces_calls;
 std::map<std::string, std::unordered_set<const FunctionDecl*>> output_interfaces_decls;
 
+std::string current_class;
+std::map<std::string, std::set<std::string>> class_fields;
+void addClassField(const std::string &cl, const std::string& field) {
+    if (class_fields.find(cl) == class_fields.end())
+        class_fields.insert(make_pair(cl, std::set<std::string>()));
+    class_fields.find(cl)->second.insert(field);
+}
+
+
 ApiGen apigen;
 struct VariantInfo current_variant;
 SourceLocation locationtoInsert;

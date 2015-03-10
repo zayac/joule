@@ -5,7 +5,6 @@ class BClass {
 private:
     int a;
 public:
-    BClass(BClass& b) {}
     int b;
     void foo(global::GlobalObject &t) volatile {
         b = t.b;
