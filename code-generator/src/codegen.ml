@@ -81,7 +81,7 @@ let method_to_string cl name t =
   let name = dequotize name in
   let header = String.substr_replace_all name ~pattern:"%self%" ~with_:cl in
   let ret, hash = get_method_type_from_term t in
-  match String.Map.find !method_body_hash ("\"" ^ hash ^ "\"") with
+  match String.Map.find !method_body_hash hash with
   | Some value ->
     let params, body = value in
     let params, body = List.map ~f:dequotize params, dequotize body in
@@ -128,21 +128,21 @@ let open_code_hash_file dirname =
         ~f:(fun inx -> Parser.code_hash_parse Lexer.read (Lexing.from_channel inx))
   with Sys_error _ -> ()
 
-(*let read_json_file file_name =*)
-  (*let json = Yojson.Basic.from_file file_name in*)
-  (*let open Yojson.Basic.Util in*)
-  (*[>try<]*)
-    (*let code_hash = json |> member "code_hash" |> to_list in*)
-    (*let hash_list = List.map code_hash*)
-                      (*~f:(fun json ->*)
-                        (*let hash = json |> member "hash" |> to_string in*)
-                        (*let args = json |> member "arguments" |> to_list |> filter_string in*)
-                        (*let code = json |> member "code" |> to_string in*)
-                        (*hash, (args, code)*)
-                      (*) in*)
-    (*method_body_hash := String.Map.of_alist_exn hash_list*)
-  (*[>with Yojson.Basic.Util.Type_error _ -><]*)
-    (*[>()<]*)
+(*let read_json_file file_name =
+  let json = Yojson.Basic.from_file file_name in
+  let open Yojson.Basic.Util in
+  try
+    let code_hash = json |> member "code_hash" |> to_list in
+    let hash_list = List.map code_hash
+                      ~f:(fun json ->
+                        let hash = json |> member "hash" |> to_string in
+                        let args = json |> member "arguments" |> to_list |> filter_string in
+                        let code = json |> member "code" |> to_string in
+                        hash, (args, code)
+                      ) in
+    method_body_hash := String.Map.of_alist_exn hash_list
+  with Yojson.Basic.Util.Type_error _ ->
+    ()*)
 
 let generate_from_terms outc file_name name t =
   
