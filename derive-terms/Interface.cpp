@@ -66,11 +66,11 @@ std::string typeToString(const QualType& ty, bool global_object_allowed) {
     /* Class declarations */
     } else if (cty->isClassType()) {
         const CXXRecordDecl *record = cty->getAsCXXRecordDecl();
-        if ((isGlobalContext(record->getDeclContext()) || isStdContext(record->getDeclContext())) && !global_object_allowed) {
-            std::cerr << "global object '" << record->getNameAsString()
+        /*if ((isGlobalContext(record->getDeclContext()) || isStdContext(record->getDeclContext())) && !global_object_allowed) {
+            std::cerr << "global (or std) object '" << record->getNameAsString()
                       << "' must be used only as a reference or a const pointer" << std::endl;
             exit(1);
-        }
+        }*/
         global_object_allowed = false;
 
         if (!isGlobalContext(record->getDeclContext()) && !isStdContext(record->getDeclContext())) {
@@ -134,14 +134,14 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
     /* Class declarations */
     } else if (cty->isClassType()) {
         const CXXRecordDecl *record = cty->getAsCXXRecordDecl();
-        if (isGlobalContext(record->getDeclContext()) && !global_object_allowed) {
-            std::cerr << "global object '" << record->getNameAsString()
+        /*if ((isGlobalContext(record->getDeclContext()) || isStdContext(record->getDeclContext())) && !global_object_allowed) {
+            std::cerr << "global (or std) object '" << record->getNameAsString()
                       << "' must be used only as a reference or a const pointer" << std::endl;
             exit(1);
-        }
+        }*/
         global_object_allowed = false;
 
-        if (!isGlobalContext(record->getDeclContext())) {
+        if (!isGlobalContext(record->getDeclContext()) && !isStdContext(record->getDeclContext())) {
             /* Instead of returning class representation as a term, we return
             * a term variable and generate auxiliary constraint */
             if (cached_classes.find(record->getNameAsString()) == cached_classes.end()) {

@@ -111,8 +111,10 @@ let solve_max set =
   | Solutions [] -> None
   | Solutions (hd :: tl) ->
     let falses x =
+      (*let _ = printf "\n" in*)
       String.Map.fold x ~init:0
         ~f:(fun ~key ~data acc ->
+          (*let _ = printf "%s: %s, " key (if data then "true" else "false") in*)
           if not data then acc + 1 else acc
         ) in
     let count, result = List.fold tl ~init:((falses hd), hd)

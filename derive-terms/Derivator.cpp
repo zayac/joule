@@ -22,6 +22,7 @@ void Derivator::setFNames(const std::string& _cpp_fname) {
     this->shell_fname = dir_path + "/" + short_fname + ".shell";
     this->terms_fname = dir_path + "/" + short_fname + ".terms";
     this->hash_fname = dir_path + "/code-hash";
+    this->json_fname = dir_path + "/" + short_fname + ".json";
 }
 
 void Derivator::addVariant(int channel, std::string name, Variant&& var) {
@@ -32,6 +33,17 @@ void Derivator::addVariant(int channel, std::string name, Variant&& var) {
 
 void Derivator::addSalvo(std::string s, std::map<std::string, std::unique_ptr<term::Term>>&& t) {
     this->salvos.emplace(s, std::move(t));
+}
+
+void Derivator::addSalvoMapping(std::string salvo, int channel, std::string variant_name) {
+    if (this->salvos_mapping.find(salvo) == this->salvos_mapping.end())
+        this->salvos_mapping.insert(make_pair(salvo, std::set<std::pair<int, std::string>>()));
+
+    std::map<std::pair<int, std::string>, std::string> rename_variants = getShell().getOutInterface().getVariantSubstitutions();
+    if (rename_variants.find(make_pair(channel, variant_name)) == rename_variants.end())
+        this->salvos_mapping.find(salvo)->second.insert(make_pair(channel, variant_name));
+    else
+        this->salvos_mapping.find(salvo)->second.insert(make_pair(channel, rename_variants.find(make_pair(channel, variant_name))->second));
 }
 
 void Derivator::addRouting(int channel, RoutedSalvo route) {
@@ -61,6 +73,34 @@ void Derivator::printRoutedSalvos() const {
         }
         std::cout << std:: endl;
     }
+}
+
+void Derivator::genJsonFile(std::ostream& ofile) const {
+    ofile << "{\n";
+    ofile << "\t\"salvos\": [";
+    for (auto it = salvos_mapping.begin(); it != salvos_mapping.end(); ++it) {
+        if (it != salvos_mapping.begin())
+            ofile << ",\n";
+        ofile << "\t{ \"name\": \"" << it->first << "\", \"mapping\": [ ";
+        for (auto sit = it->second.begin(); sit != it->second.end(); ++sit) {
+            if (sit != it->second.begin())
+                ofile << ", ";
+            ofile << "{ \"channel\": " << sit->first << ", \"variant\": \"" << sit->second << "\" }";
+        }
+        ofile << "] }";
+    }
+    ofile << "],\n";
+
+    ofile << "\t\"variants\": [";
+    for (auto it = variants.begin(); it != variants.end(); ++it) {
+        for (auto vit = it->second.begin(); vit != it->second.end(); ++vit) {
+            if (it != variants.begin() || vit != it->second.begin())
+                ofile << ", ";
+            ofile << "{ \"name\": \"_" << vit->second.channel << "_" << vit->first << "\", \"arguments\": " << vit->second.declaration.size() << "}";
+        }
+    }
+    ofile << "]\n";
+    ofile << "}\n";
 }
 
 std::set<int> Derivator::getOutChannels() const {

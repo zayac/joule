@@ -1222,7 +1222,7 @@ let solve_exn lst logic verbose limit =
       let bool_map = String.Set.fold union ~init:bool_map
                        ~f:(fun acc el ->
                          if not (String.Map.mem bool_map el) then
-                           String.Map.add acc ~key:el ~data:true
+                           String.Map.add acc ~key:el ~data:false
                          else acc
                        ) in
       Some (bool_map, (Constr.substitute constrs bool_map))

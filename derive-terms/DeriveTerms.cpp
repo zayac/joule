@@ -27,6 +27,7 @@ void ComponentAnalyser::run(const MatchFinder::MatchResult &Result) {
         variant_name = std::unique_ptr<std::string>(new std::string(p.second));
         variant_channel = p.first;
         current_variant.name = *variant_name;
+        current_variant.channel = p.first;
         current_variant.flag = /*"f_" + D.getFPrefix() + */ "_" + std::to_string(variant_channel) + "_" + *variant_name;
         current_variant.declaration = interface::getDeclFromFunctionDecl(FD, interface::TInputInterface);
     /* found a call of a function that returns 'message' */
@@ -47,6 +48,8 @@ void ComponentAnalyser::run(const MatchFinder::MatchResult &Result) {
             }
             /* if channel number is provided, send output message to the channel */
             D.addRouting(p.first, {p.second, {current_variant.flag}});
+
+            D.addSalvoMapping(FD->getNameAsString(), p.first, p.second);
         } else {
             current_variant.salvos[p.second] = std::set<int>();
             /* if channel number is not provided, check whether routing is defined in shell */
@@ -55,6 +58,8 @@ void ComponentAnalyser::run(const MatchFinder::MatchResult &Result) {
                 auto range = map_ref.equal_range(p.second);
                 for (auto it = range.first; it != range.second; ++it) {
                     D.addRouting(it->second, {p.second, {current_variant.flag}});
+
+                    D.addSalvoMapping(FD->getNameAsString(), it->second, p.second);
                 }
             } else {
                 /* send to all channels */
@@ -63,6 +68,8 @@ void ComponentAnalyser::run(const MatchFinder::MatchResult &Result) {
                     channels.emplace(1);
                 for (const auto& el : channels) {
                     D.addRouting(el, {p.second, {current_variant.flag}});
+
+                    D.addSalvoMapping(FD->getNameAsString(), el, p.second);
                 }
             }
         }
@@ -102,8 +109,12 @@ int main(int argc, const char **argv) {
 
     /* Printing out terms */
     D.genOutTerms(ofile);
-    
-    //D.genJsonFile();
+
     D.genCodeHashFile();
+
+    /* Gen Json file */
+    std::ofstream jsonfile;
+    jsonfile.open(D.getJsonFName());
+    D.genJsonFile(jsonfile);
     return 0;
 }

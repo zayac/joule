@@ -36,10 +36,18 @@ let loop values_filename =
   let dirname = Filename.dirname values_filename in
   let _ = Codegen.open_code_hash_file dirname in
   try
+    let set = ref String.Set.empty in
     String.Map.iter term_var_hash
       ~f:(fun ~key ~data ->
         let file_name, outc = create_or_open_file dirname key data in
-        Codegen.generate_from_terms outc file_name key data
+        Codegen.generate_from_terms outc file_name key data;
+        if not (String.Set.mem !set file_name) then
+          begin
+            Codegen.read_json_file file_name (String.concat [dirname; "/"; file_name; ".json"]);
+            (*Codegen.term_to_cpp_placeholders file_name outc;*)
+            Codegen.print_salvo_routing outc file_name;
+            set := String.Set.add !set file_name
+          end
       );
     String.Map.iter bool_var_hash
       ~f:(fun ~key ~data ->
