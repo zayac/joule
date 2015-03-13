@@ -20,6 +20,14 @@ bool isValidType(const QualType& ty) {
     return false;
 }
 
+std::string getNamespace(const DeclContext *context) {
+    if (isa<NamespaceDecl>(*context)) {
+        const NamespaceDecl *ns = static_cast<const NamespaceDecl*>(context);
+        return ns->getNameAsString();
+    }
+    return "";
+}
+
 bool isGlobalContext(const DeclContext *context) {
     if (isa<NamespaceDecl>(*context)) {
         const NamespaceDecl *ns = static_cast<const NamespaceDecl*>(context);
@@ -32,6 +40,14 @@ bool isStdContext(const DeclContext *context) {
     if (isa<NamespaceDecl>(*context)) {
         const NamespaceDecl *ns = static_cast<const NamespaceDecl*>(context);
         return ns->getNameAsString() == "std";
+    }
+    return false;
+}
+
+bool isCvContext(const DeclContext *context) {
+    if (isa<NamespaceDecl>(*context)) {
+        const NamespaceDecl *ns = static_cast<const NamespaceDecl*>(context);
+        return ns->getNameAsString() == "cv";
     }
     return false;
 }
@@ -73,10 +89,11 @@ std::string typeToString(const QualType& ty, bool global_object_allowed) {
         }*/
         global_object_allowed = false;
 
-        if (!isGlobalContext(record->getDeclContext()) && !isStdContext(record->getDeclContext())) {
+        /*if (!isGlobalContext(record->getDeclContext()) && !isStdContext(record->getDeclContext())) {
             std::cerr << "method parameters cannot contain interface objects or their pointers/references" << std::endl;
-        }
-        return "global::" + record->getNameAsString();
+        }*/
+
+        return getNamespace(record->getDeclContext()) + "::" + record->getNameAsString();
     } else {
         std::cerr << "unsupported type" << std::endl;
         exit(1);
@@ -141,7 +158,8 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
         }*/
         global_object_allowed = false;
 
-        if (!isGlobalContext(record->getDeclContext()) && !isStdContext(record->getDeclContext())) {
+        if (getNamespace(record->getDeclContext()).empty()) {
+        //if (!isGlobalContext(record->getDeclContext()) && !isStdContext(record->getDeclContext())) {
             /* Instead of returning class representation as a term, we return
             * a term variable and generate auxiliary constraint */
             if (cached_classes.find(record->getNameAsString()) == cached_classes.end()) {
@@ -182,13 +200,17 @@ std::string getStmtAsString(Stmt *stmt)
 }
 
 std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum InterfaceType it) {
-    if (isGlobalContext(RD->getDeclContext())) {
+    std::string ns;
+    if (!(ns = getNamespace(RD->getDeclContext())).empty())
+        return term::make_symbol(ns + "::" + RD->getNameAsString());
+
+    /*if (isGlobalContext(RD->getDeclContext())) {
         return term::make_symbol("global::" + RD->getNameAsString());
     }
 
     if (isStdContext(RD->getDeclContext())) {
         return term::make_symbol("std::" + RD->getNameAsString());
-    }
+    }*/
 
     std::map<std::string, std::unique_ptr<term::Term>> class_repr;
     // fields
