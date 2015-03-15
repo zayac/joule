@@ -121,8 +121,8 @@ public:
             header_file << "#define " << prefix << "_DOWN_" << cit->first << "_ochannels\n";
 
             ss << "})) {\n";
-            ss << "\t\tMessage msg;\n";
-            ss << "\t\tcereal::BinaryOutputArchive oarchive(msg.ss);\n";
+            ss << "\t\tMessage _msg;\n";
+            ss << "\t\tcereal::BinaryOutputArchive oarchive(_msg.ss);\n";
             ss << "\t\toarchive(";
             for (int i = 0; i < cit->second.param_names.size(); ++i) {
                 if (i != 0)
@@ -130,8 +130,8 @@ public:
                 ss << cit->second.param_names[i];
             }
             ss << " " << prefix << "_DOWN_" << tail_name << "_use);\n";
-            ss << "\t\tmsg.setType(_p.second);\n";
-            ss << "\t\toutput(_p.first, std::move(msg));\n";
+            ss << "\t\t_msg.setType(_p.second);\n";
+            ss << "\t\toutput(_p.first, std::move(_msg));\n";
             ss << "\t}\n";
             ss << "}\n";
             ss << "#endif\n";

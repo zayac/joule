@@ -1,9 +1,9 @@
 #include "cal.h"
 
-message send_img(cv::Mat img);
+message send_img(std::vector<std::vector<double>> img);
 message _2_error(std::string msg);
 
-variant _1_denoise(cv::Mat img, std::string kind) {
+variant _1_denoise(std::vector<std::vector<double>> img, std::string kind) {
     cv::Mat result;
     if (kind == "grayscale")
         cv::fastNlMeansDenoising(img, result);

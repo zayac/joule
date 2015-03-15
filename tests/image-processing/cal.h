@@ -10,6 +10,8 @@
 #include <cereal/types/string.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/photo/photo.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 typedef void variant;
 typedef void message;

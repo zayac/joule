@@ -151,6 +151,8 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
     /* Class declarations */
     } else if (cty->isClassType()) {
         const CXXRecordDecl *record = cty->getAsCXXRecordDecl();
+        if (record->getNameAsString() == "vector")
+            record->dump();
         /*if ((isGlobalContext(record->getDeclContext()) || isStdContext(record->getDeclContext())) && !global_object_allowed) {
             std::cerr << "global (or std) object '" << record->getNameAsString()
                       << "' must be used only as a reference or a const pointer" << std::endl;
