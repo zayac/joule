@@ -20,6 +20,20 @@ bool isValidType(const QualType& ty) {
     return false;
 }
 
+std::string classDeclOrTemplate(const CXXRecordDecl *record) {
+    if (isa<ClassTemplateSpecializationDecl>(*record)) {
+        const TemplateArgumentList& tal = static_cast<const ClassTemplateSpecializationDecl *>(record)->getTemplateArgs();
+        std::string s = "";
+        for (unsigned i = 0; i < tal.size(); ++i) {
+            if (i != 0)
+                s += ", ";
+            s += tal[i].getAsType().getAsString();
+        }
+        return record->getNameAsString() + "<" + s + ">";
+    } else
+        return record->getNameAsString();
+}
+
 std::string getNamespace(const DeclContext *context) {
     if (isa<NamespaceDecl>(*context)) {
         const NamespaceDecl *ns = static_cast<const NamespaceDecl*>(context);
@@ -93,13 +107,14 @@ std::string typeToString(const QualType& ty, bool global_object_allowed) {
             std::cerr << "method parameters cannot contain interface objects or their pointers/references" << std::endl;
         }*/
 
-        return getNamespace(record->getDeclContext()) + "::" + record->getNameAsString();
+        return getNamespace(record->getDeclContext()) + "::" + classDeclOrTemplate(record);
     } else {
         std::cerr << "unsupported type" << std::endl;
         exit(1);
     }
 
 }
+
 
 std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it) {
     QualType cty(ty.getCanonicalType());
@@ -151,8 +166,10 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
     /* Class declarations */
     } else if (cty->isClassType()) {
         const CXXRecordDecl *record = cty->getAsCXXRecordDecl();
-        if (record->getNameAsString() == "vector")
-            record->dump();
+        //if (isa<ClassTemplateSpecializationDecl>(*record))
+            //std::cout << classDeclOrTemplate(record) << std::endl;
+            //static_cast<const ClassTemplateSpecializationDecl*>(record)->dump();
+
         /*if ((isGlobalContext(record->getDeclContext()) || isStdContext(record->getDeclContext())) && !global_object_allowed) {
             std::cerr << "global (or std) object '" << record->getNameAsString()
                       << "' must be used only as a reference or a const pointer" << std::endl;
@@ -166,9 +183,9 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
             * a term variable and generate auxiliary constraint */
             if (cached_classes.find(record->getNameAsString()) == cached_classes.end()) {
                 cached_classes.insert(record->getNameAsString());
-                constraints.insert(make_pair(make_var(record->getNameAsString()), classDeclToTerm(record, it)));
+                constraints.insert(make_pair(make_var(classDeclOrTemplate(record)), classDeclToTerm(record, it)));
             }
-            return make_var(record->getNameAsString());
+            return make_var(classDeclOrTemplate(record));
         } else {
             return classDeclToTerm(record, it);
         }
@@ -204,7 +221,7 @@ std::string getStmtAsString(Stmt *stmt)
 std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum InterfaceType it) {
     std::string ns;
     if (!(ns = getNamespace(RD->getDeclContext())).empty())
-        return term::make_symbol(ns + "::" + RD->getNameAsString());
+        return term::make_symbol(ns + "::" + classDeclOrTemplate(RD));
 
     /*if (isGlobalContext(RD->getDeclContext())) {
         return term::make_symbol("global::" + RD->getNameAsString());
@@ -247,7 +264,7 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
         if (isa<CXXRecordDecl>(*dit)) {
             const CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(*dit);
             if (record->isExternallyVisible() && !RD->isAbstract() && !record->isInjectedClassName()) {
-                class_repr[record->getNameAsString()] = classDeclToTerm(record, it);
+                class_repr[classDeclOrTemplate(record)] = classDeclToTerm(record, it);
             }
         }
     }

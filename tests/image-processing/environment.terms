@@ -1,0 +1,5 @@
+IN
+    1: (: send_img: {img: "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>"} :)
+    2: (: error: {msg: "std::basic_string<char, struct std::char_traits<char>, class std::allocator<char>>"} :)
+OUT
+    1: (: read_color: {fname: "std::basic_string<char, struct std::char_traits<char>, class std::allocator<char>>"} :)

@@ -75,9 +75,13 @@ let term_to_cpp_placeholders file outc =
 let term_to_cpp_macro_variants outc file variant term =
   match String.Map.find !variant_args file with
   | None -> ()
+    (*fprintf outc "#define %s_DOWN_%s_tuple_get\n" file variant;*)
+    (*fprintf outc "#define %s_DOWN_%s_types\n" file variant*)
   | Some v ->
     match String.Map.find v variant with
     | None -> ()
+      (*fprintf outc "#define %s_DOWN_%s_tuple_get\n" file variant;*)
+      (*fprintf outc "#define %s_DOWN_%s_types\n" file variant*)
     | Some start_arg ->
       begin
         let n = number_of_elements term in

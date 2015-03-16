@@ -9,7 +9,7 @@ let create_or_open_file dirname key data =
       if String.is_prefix key ~prefix:"f_" then 2
       else if String.is_prefix key ~prefix:"_" then
         match String.index_from key 1 '_' with
-        | Some i -> i + 1
+        | Some i -> i+1
         | None -> 0
       else
         0
@@ -18,7 +18,7 @@ let create_or_open_file dirname key data =
     | Some i ->
       String.slice key starti i
     | None ->
-      key
+      String.drop_prefix key starti
   in
   match String.Map.find !ochannels file_name_id with
   | None ->
@@ -40,14 +40,14 @@ let loop values_filename =
     String.Map.iter term_var_hash
       ~f:(fun ~key ~data ->
         let file_name, outc = create_or_open_file dirname key data in
-        Codegen.generate_from_terms outc file_name key data;
         if not (String.Set.mem !set file_name) then
           begin
             Codegen.read_json_file file_name (String.concat [dirname; "/"; file_name; ".json"]);
             (*Codegen.term_to_cpp_placeholders file_name outc;*)
             Codegen.print_salvo_routing outc file_name;
             set := String.Set.add !set file_name
-          end
+          end;
+        Codegen.generate_from_terms outc file_name key data
       );
     String.Map.iter bool_var_hash
       ~f:(fun ~key ~data ->
