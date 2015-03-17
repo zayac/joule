@@ -47,6 +47,10 @@ val is_nil_exn : t -> bool
     an exception. It returns [None] instead. *)
 val is_nil : t -> bool option
 
+(** [is_semiground t] returns [true] only if term [t] does not contain term of
+    the form [Var s] as children. *)
+val is_semiground : t -> bool
+
 (** [is_ground t] returns [true] only if term [t] does not contain term of
     the form [Var s] as children. *)
 val is_ground : t -> bool

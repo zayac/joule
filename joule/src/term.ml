@@ -58,7 +58,7 @@ let rec to_string t =
     if S.for_all ~f:(fun x -> Char.is_alpha x) s_without_quotes then
       s_without_quotes
     else
-      String.concat ["\""; x; "\""]
+      String.concat ["\""; s_without_quotes; "\""]
   | Tuple x -> S.concat ["("; S.concat ~sep:" " (L.map ~f:to_string x); ")"]
   | List (x, tail) ->
     S.concat ["["; S.concat ~sep:", " (L.map ~f:to_string x);
@@ -227,6 +227,23 @@ let canonize t =
   match t with
   | List (x, None) -> List (List.rev (trim_list_rev (List.rev x)), None)
   | x -> x
+
+let rec is_semiground = function
+  | Nil | OrdinalInt _ | NominalInt _ | Symbol _ ->
+    true
+  | List (x, None)
+  | Tuple x -> List.for_all ~f:is_semiground x
+  | Record (x, None)
+  | Choice (x, None) ->
+    String.Map.for_all ~f:(fun (g, t) -> is_semiground t) x
+  | Choice (_, _)
+  | Record (_, _)
+  | List (_, _)
+  | UpVar _
+  | DownVar _ -> false
+  | Switch x -> Cnf.Map.fold ~init:true
+    ~f:(fun ~key ~data acc ->
+      if Cnf.is_false key then acc else acc && is_semiground data) x
 
 let rec is_ground = function
   | Nil | OrdinalInt _ | NominalInt _ | Symbol _ ->

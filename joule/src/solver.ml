@@ -420,6 +420,7 @@ let prepare_record_term cr cr' logic map =
   (Cnf.Map.singleton logic (Term.Record (new_map', None)))
 
 let rec set_bound_exn depth constrs var terms =
+  Cnf.Map.iter terms ~f:(fun ~key ~data -> assert (Term.is_semiground data));
   let cstrs = ref constrs in
   let simplify t =
     let t = Term.canonize t in
@@ -705,7 +706,7 @@ let rec solve_senior depth constrs left right =
           | Some s ->
             (* possible values of the left tail variable *)
             let bounds = bound_terms_exn depth !cstrs logic_combined (DownVar s) in
-            let result = ref Cnf.(Map.singleton logic_combined (Term.Record(!right_values, None))) in
+            let result = ref (bound_terms_exn (depth+1) !cstrs logic_combined (Term.Record(!right_values, None))) in
             Cnf.Map.iter bounds
               ~f:(fun ~key ~data ->
                 let logic = key in
@@ -728,6 +729,7 @@ let rec solve_senior depth constrs left right =
                         match data with
                         | `Left _ -> ()
                         | `Right data ->
+                          (* FIXME Bug is here *)
                           missing_elements := String.Map.add !missing_elements ~key ~data
                         | `Both ((g, t), (g', t')) ->
                           begin
@@ -889,7 +891,7 @@ let rec solve_senior depth constrs left right =
           | Some s' ->
             (* possible values of the right tail variable *)
             let bounds = bound_terms_exn depth !cstrs logic_combined (UpVar s') in
-            let result = ref Cnf.(Map.singleton logic_combined (Term.Choice(!left_values, None))) in
+            let result = ref (bound_terms_exn (depth+1) !cstrs logic_combined (Term.Choice(!left_values, None))) in
             Cnf.Map.iter bounds
               ~f:(fun ~key ~data ->
                 let logic = key in
@@ -980,7 +982,6 @@ let rec solve_senior depth constrs left right =
                 | _ ->
                   add_bool_constr depth Cnf.(~-(logic * logic_combined))
               );
-            (*cstrs := assert_choice depth !cstrs s' Cnf.(logic_combined);*)
             cstrs := set_bound_exn (depth + 1) !cstrs s' !result in
         (* PROCESSING LEFT TAIL VARIABLE *)
         let _ = match v with
@@ -1019,9 +1020,9 @@ let rec solve_senior depth constrs left right =
                           end
                         | `Left (g, t) ->
                           begin
-                            (* [key] label is in the tail variable of the
-                               left choice.  If there is a tail of the right
-                               term, we have to make [key] is included to the
+                            (* [key] label is in the tail variable of the left
+                               choice.  If there is a tail of the right term, we
+                               have to make sure [key] is included to the
                                corresponding choice.  *)
                             match v' with
                             | None ->

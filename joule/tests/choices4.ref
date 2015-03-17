@@ -1,4 +1,4 @@
-b = true
-c = true
+b = false
+c = false
 
-$^b = (:"d": 4, "e": 5:)
+$^b = (::)

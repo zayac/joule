@@ -58,9 +58,25 @@ let loop filename =
         printf "\n"
       );
     Generator.G.iter_edges_e (fun (sname, (s, d), dname) ->
-      let left = Int.Map.find_exn (String.Map.find_exn !out_terms_map sname) s in
-      let right = Int.Map.find_exn (String.Map.find_exn !in_terms_map dname) d in
-      fprintf outc "%s <= %s;\n" (Term.to_string left) (Term.to_string right)
+      match String.Map.find !out_terms_map sname with
+      | None -> raise (Sys_error (sprintf "Cannot find component '%s'\n" sname))
+      | Some lc ->
+        begin
+          match String.Map.find !in_terms_map dname with
+          | None -> raise (Sys_error (sprintf "Cannot find component '%s'\n" dname))
+          | Some rc ->
+            begin
+              match Int.Map.find lc s with
+              | None -> raise (Sys_error (sprintf "Cannot find output channel %d in component '%s'\n" s sname))
+              | Some left ->
+                begin
+                  match Int.Map.find rc d with
+                  | None -> raise (Sys_error (sprintf "Cannot find output channel %d in component '%s'\n" d dname))
+                  | Some right ->
+                    fprintf outc "%s <= %s;\n" (Term.to_string left) (Term.to_string right)
+                end
+            end
+        end
     ) g
   with Lexer.Syntax_Error msg
      | Errors.Parsing_Error msg
