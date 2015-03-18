@@ -39,24 +39,24 @@ let loop filename =
       ~f:(fun (l, r) ->
         fprintf outc "%s <= %s;\n" (Term.to_string l) (Term.to_string r)
       );
-    String.Map.iter !in_terms_map
-      ~f:(fun ~key ~data ->
-        printf "%s: " key;
-        Int.Map.iter data
-          ~f:(fun ~key ~data ->
-            printf "%d " key
-          );
-        printf "\n"
-      );
-    String.Map.iter !out_terms_map
-      ~f:(fun ~key ~data ->
-        printf "%s: " key;
-        Int.Map.iter data
-          ~f:(fun ~key ~data ->
-            printf "%d " key
-          );
-        printf "\n"
-      );
+    (*String.Map.iter !in_terms_map*)
+      (*~f:(fun ~key ~data ->*)
+        (*printf "%s: " key;*)
+        (*Int.Map.iter data*)
+          (*~f:(fun ~key ~data ->*)
+            (*printf "%d " key*)
+          (*);*)
+        (*printf "\n"*)
+      (*);*)
+    (*String.Map.iter !out_terms_map*)
+      (*~f:(fun ~key ~data ->*)
+        (*printf "%s: " key;*)
+        (*Int.Map.iter data*)
+          (*~f:(fun ~key ~data ->*)
+            (*printf "%d " key*)
+          (*);*)
+        (*printf "\n"*)
+      (*);*)
     Generator.G.iter_edges_e (fun (sname, (s, d), dname) ->
       match String.Map.find !out_terms_map sname with
       | None -> raise (Sys_error (sprintf "Cannot find component '%s'\n" sname))
@@ -73,6 +73,7 @@ let loop filename =
                   match Int.Map.find rc d with
                   | None -> raise (Sys_error (sprintf "Cannot find output channel %d in component '%s'\n" d dname))
                   | Some right ->
+                    printf "Connecting output channel #%d of component '%s' with input channel #%d of component '%s'\n" s sname d dname;
                     fprintf outc "%s <= %s;\n" (Term.to_string left) (Term.to_string right)
                 end
             end

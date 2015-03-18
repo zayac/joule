@@ -87,4 +87,6 @@ val none : t
 
 val is_choice : t -> bool
 
+val get_map_exn : t -> (Cnf.t * t) String.Map.t
+
 val is_up_var : string -> bool

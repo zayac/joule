@@ -1,10 +1,10 @@
-a = true
+a = false
 b = false
 q = false
 
+$_q = nil
 $_u = [char]
 $_w = char
 $_x = nil
 $_y = [char]
 $_z = [nil, char]
-$_q = nil

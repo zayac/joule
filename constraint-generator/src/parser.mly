@@ -51,10 +51,13 @@ channel:
 
 term_parse:
   | constrs? in_interface out_interface EOF
-    {
-      let ret_class_hash = !class_hash in
-      let _ = class_hash := Core.Std.String.Map.empty in
-      !in_term_map, !out_term_map, !additional_constraints, ret_class_hash
+      {
+      let ret = !in_term_map, !out_term_map, !additional_constraints, !class_hash in
+      class_hash := Core.Std.String.Map.empty;
+      in_term_map := Core.Std.Int.Map.empty;
+      out_term_map := Core.Std.Int.Map.empty;
+      additional_constraints := [];
+      ret
     }
 
 constrs:

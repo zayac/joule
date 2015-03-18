@@ -11,9 +11,6 @@ let verbose_output = ref false
 
 let boolean_constraints = ref Cnf.CSet.empty
 
-(* stores term variables that are choices *)
-let choice_vars = ref String.Map.empty
-
 let log_bool_constr depth b =
   let indent = String.make depth ' ' in
   LLog.logf "%sadding a boolean constraint '%s'" indent (Cnf.to_string b)
@@ -419,8 +416,18 @@ let prepare_record_term cr cr' logic map =
   (Cnf.Map.singleton logic (Term.Record (new_map, None))),
   (Cnf.Map.singleton logic (Term.Record (new_map', None)))
 
+let simplify_map map =
+  let cl = Cnf.Map.to_alist map in
+  let tl = List.map cl ~f:(fun (a, b) -> b, a) in
+  let map = Term.Map.of_alist_multi tl in
+  let map = Term.Map.map ~f:(fun (hd :: tl) -> List.fold ~init:hd ~f:(fun acc el -> Cnf.(acc + el)) tl) map in
+  let tl = Term.Map.to_alist map in
+  let cl = List.map tl ~f:(fun (a, b) -> b, a) in
+  Cnf.Map.of_alist_exn cl
+
 let rec set_bound_exn depth constrs var terms =
   Cnf.Map.iter terms ~f:(fun ~key ~data -> assert (Term.is_semiground data));
+  (*let terms = simplify_map terms in*)
   let cstrs = ref constrs in
   let simplify t =
     let t = Term.canonize t in
@@ -665,7 +672,7 @@ let rec solve_senior depth constrs left right =
         String.Map.iter map
           ~f:(fun ~key ~data ->
             let g, _ = data in
-            add_bool_constr depth Cnf.(logic_combined * ~-g)
+            add_bool_constr depth Cnf.(logic_combined ==> ~-g)
           );
         match var with
         | None -> constrs
@@ -676,369 +683,240 @@ let rec solve_senior depth constrs left right =
     | Record (r, v), Record (r', v') ->
       begin
         let cstrs = ref constrs in
-        let left_values = ref String.Map.empty in
-        let right_values = ref String.Map.empty in
-        String.Map.iter2 r r'
+        let assignment = ref Cnf.Map.empty in
+        let v_bounds =
+          match v' with
+          | None -> Cnf.Map.singleton Cnf.make_true (Record (String.Map.empty, None))
+          | Some s' ->
+            bound_terms_exn (depth+1) !cstrs logic_combined (DownVar s')
+        in
+        Cnf.Map.iter v_bounds
           ~f:(fun ~key ~data ->
+            let logic = Cnf.(logic_combined ==> key) in
+            let data =
+              match data with
+              | Nil -> Record (String.Map.empty, None)
+              | _ -> data
+            in
             match data with
-            | `Both ((g, t), (g', t')) ->
+            | Record (map, None) ->
               begin
-                try
-                  cstrs := solve_senior (depth + 1) !cstrs (g, t) (g', t');
-                  add_bool_constr depth Cnf.(logic_combined ==> (g' ==> g))
-                with Errors.Unsatisfiability_Error _ ->
-                  add_bool_constr depth Cnf.(~-(logic_combined * g'))
+                let opt = ref [logic, String.Map.empty] in
+                String.Map.iter2 r' map
+                  ~f:(fun ~key ~data ->
+                    match data with
+                    | `Left el
+                    | `Right el ->
+                      opt :=
+                        List.map !opt
+                          ~f:(fun (l, map) ->
+                            l, String.Map.add map ~key ~data:el
+                          )
+                    | `Both ((g, t), (g', t')) ->
+                      begin
+                        add_bool_constr (depth+1) Cnf.(logic ==> (~-g + ~-g'));
+                        let opt1 =
+                          List.map !opt
+                            ~f:(fun (l, map) ->
+                              Cnf.(l * ~-g'), String.Map.add map ~key ~data:(g, t)
+                            ) in
+                        let opt2 =
+                          List.map !opt
+                            ~f:(fun (l, map) ->
+                              Cnf.(l * ~-g), String.Map.add map ~key ~data:(g', t')
+                            ) in
+                          opt := opt1 @ opt2
+                      end
+                  );
+                match Cnf.Map.of_alist !opt with
+                | `Duplicate_key key ->
+                  add_bool_constr (depth+1) Cnf.(logic_combined ==> ~-key)
+                | `Ok map ->
+                  assignment := Cnf.Map.merge !assignment map
+                                  ~f:(fun ~key -> function
+                                    | `Left x
+                                    | `Right x -> Some x
+                                    | `Both (x, y) ->
+                                      add_bool_constr (depth+1) Cnf.(logic_combined ==> ~-key);
+                                      None
+                                  )
               end
-            | `Left el ->
-              left_values := String.Map.add !left_values ~key ~data:el
-            | `Right el ->
-              right_values := String.Map.add !right_values ~key ~data:el
+            | _ -> ()
           );
-        (* PROCESSING LEFT TAIL VARIABLE *)
+        (*Cnf.Map.iter !assignment*)
+          (*~f:(fun ~key ~data ->*)
+            (*printf "%s: " (Cnf.to_string key);*)
+            (*String.Map.iter data*)
+              (*~f:(fun ~key ~data ->*)
+                (*let _, t = data in*)
+                (*printf "%s: %s, " key (Term.to_string t)*)
+              (*);*)
+            (*printf "\n"*)
+          (*);*)
+        let result = ref Cnf.Map.empty in
+        Cnf.Map.iter !assignment
+          ~f:(fun ~key ~data ->
+            let logic = Cnf.(logic_combined * key) in
+            let right_values = ref String.Map.empty in
+            String.Map.iter2 r data
+              ~f:(fun ~key ~data ->
+                match data with
+                | `Both ((g, t), (g', t')) ->
+                  begin
+                    try
+                      cstrs := solve_senior (depth + 1) !cstrs (g, t) (g', t');
+                      add_bool_constr depth Cnf.(logic ==> (g' ==> g));
+                    with Errors.Unsatisfiability_Error _ ->
+                      add_bool_constr depth Cnf.(logic ==> ~-g')
+                  end
+                | `Right el ->
+                  right_values := String.Map.add !right_values ~key ~data:el
+                | `Left el -> ()
+              );
+            if not (String.Map.is_empty !right_values) then
+              result := Cnf.Map.add !result ~key:logic ~data:(Term.Record(!right_values, None))
+          );
+        (* PROCESSING RIGHT TAIL VARIABLE *)
         let _ = match v with
           | None ->
-            if not (String.Map.is_empty !right_values) then
-              String.Map.iter !right_values
+            if not (Cnf.Map.is_empty !result) then
+              Cnf.Map.iter !result
                 ~f:(fun ~key ~data ->
-                  let g, _ = data in
-                  add_bool_constr depth Cnf.(logic_combined ==> ~-g)
+                  let logic = key in
+                  match data with
+                  | Record (map, None) ->
+                    String.Map.iter map
+                      ~f:(fun ~key ~data ->
+                        let g, _ = data in
+                        add_bool_constr depth Cnf.(logic_combined ==> logic ==> ~-g)
+                      )
+                  | _ -> assert false
                 )
           | Some s ->
-            (* possible values of the left tail variable *)
-            let bounds = bound_terms_exn depth !cstrs logic_combined (DownVar s) in
-            let result = ref (bound_terms_exn (depth+1) !cstrs logic_combined (Term.Record(!right_values, None))) in
-            Cnf.Map.iter bounds
+            Cnf.Map.iter !result
               ~f:(fun ~key ~data ->
-                let logic = key in
-                match data with
-                | Nil -> ()
-                | Record (tail_map, None) ->
-                  begin
-                    (* eliminate labels that duplicate in the record body and the tail *)
-                    String.Map.iter2 r tail_map
-                      ~f:(fun ~key ~data ->
-                        match data with
-                        | `Both ((g, _), (g', _)) ->
-                          add_bool_constr depth Cnf.(~-(logic * logic_combined * g * g'))
-                        | _ -> ()
-                      );
-                    (* compare with corresponding elements in the right term body *)
-                    let missing_elements = ref String.Map.empty in
-                    String.Map.iter2 tail_map !right_values
-                      ~f:(fun ~key ~data ->
-                        match data with
-                        | `Left _ -> ()
-                        | `Right data ->
-                          (* FIXME Bug is here *)
-                          missing_elements := String.Map.add !missing_elements ~key ~data
-                        | `Both ((g, t), (g', t')) ->
-                          begin
-                            try
-                              cstrs := solve_senior (depth + 1) !cstrs (g, t) (g', t');
-                              add_bool_constr depth Cnf.(logic_combined ==> (logic ==> (g' ==> g)))
-                            with Errors.Unsatisfiability_Error _ ->
-                              add_bool_constr depth Cnf.(~-(logic_combined * logic * g'))
-                          end
-                      );
-                    let missing_elements' = ref Cnf.Map.empty in
-                    (* compare with corresponding elements in the right term tail variable *)
-                    match v' with
-                    | None -> ()
-                    | Some s' ->
-                      let bounds = bound_terms_exn depth !cstrs logic_combined (DownVar s') in
-                      Cnf.Map.iter bounds
-                        ~f:(fun ~key ~data ->
-                          match data with
-                          | Record (tail_map', None) ->
-                            let record = ref String.Map.empty in
-                            String.Map.iter2 tail_map tail_map'
-                              ~f:(fun ~key ~data ->
-                                match data with
-                                | `Left _ -> ()
-                                | `Right data ->
-                                  record := String.Map.add !record ~key ~data
-                                | `Both ((g, t), (g', t')) ->
-                                  begin
-                                    try
-                                      cstrs := solve_senior (depth + 1) !cstrs (g, t) (g', t');
-                                      add_bool_constr depth Cnf.(logic_combined ==> (logic ==> (g' ==> g)))
-                                    with Errors.Unsatisfiability_Error _ ->
-                                      add_bool_constr depth Cnf.(~-(logic_combined * logic * g'))
-                                  end
-                              );
-                            missing_elements' := Cnf.Map.add !missing_elements' ~key ~data:!record
-                          | _ -> ()
-                        );
-                      let value = Cnf.Map.fold !missing_elements' ~init:[(Cnf.make_true, String.Map.empty)]
-                                    ~f:(fun ~key ~data acc ->
-                                      let result = ref acc in
-                                      result := List.map ~f:(fun (l, m) -> Cnf.(l * key), m) !result;
-                                      String.Map.iter2 !missing_elements data
-                                        ~f:(fun ~key ~data ->
-                                          match data with
-                                          | `Left el
-                                          | `Right el ->
-                                            result := List.map ~f:(fun (cond, map) -> cond, String.Map.add map ~key ~data:el) !result
-                                          | `Both ((g, t), (g', t')) ->
-                                            let l = List.map !result
-                                                      ~f:(fun (cond, map) -> Cnf.(cond * ~-g'), String.Map.add map ~key ~data:(g, t)) in
-                                            let l' = List.map !result
-                                                       ~f:(fun (cond, map) -> Cnf.(cond * ~-g), String.Map.add map ~key ~data:(g', t')) in
-                                            result := l @ l'
-                                        );
-                                      !result
-                                    ) in
-                      let value = List.map value ~f:(fun (l, m) -> l, Record (m, None)) in
-                      let map, logic = Term.cnf_map_of_alist value in
-                      add_bool_constr depth logic;
-                      result := map
-                  end
-                | Choice _ ->
-                  cstrs := set_bound_exn (depth + 1) constrs s Cnf.(Map.singleton (logic * logic_combined) Nil)
-                | _ ->
-                  add_bool_constr depth Cnf.(~-(logic * logic_combined))
-              );
-            cstrs := set_bound_exn (depth + 1) !cstrs s !result in
-        (* PROCESSING RIGHT TAIL VARIABLE *)
-        let _ = match v' with
-          | None -> ()
-          | Some s' ->
-            (* possible values of the right tail variable *)
-            let bounds = bound_terms_exn depth !cstrs logic_combined (DownVar s') in
-            Cnf.Map.iter bounds
-              ~f:(fun ~key ~data ->
-                let logic = key in
-                match data with
-                | Nil -> ()
-                | Record (tail_map, None) ->
-                  begin
-                    (* eliminate labels that duplicate in the record body and the tail *)
-                    String.Map.iter2 r' tail_map
-                      ~f:(fun ~key ~data ->
-                        match data with
-                        | `Both ((g, _), (g', _)) ->
-                          add_bool_constr depth Cnf.(~-(logic * logic_combined * g * g'))
-                        | _ -> ()
-                      );
-                    (* seniority relation with terms to the left *)
-                    String.Map.iter2 r tail_map
-                      ~f:(fun ~key ~data ->
-                        match data with
-                        | `Both ((g, t), (g', t')) ->
-                          begin
-                            try
-                              cstrs := solve_senior (depth + 1) !cstrs (g, t) (g', t');
-                              add_bool_constr depth Cnf.(logic_combined * (logic ==> (g' ==> g)))
-                            with Errors.Unsatisfiability_Error _ ->
-                              add_bool_constr depth Cnf.(~-(logic_combined * logic * g'))
-                          end
-                        | `Right (g, t) ->
-                          begin
-                            (* [key] label is in the right tail variable of the
-                               right record.  If there is a tail of the left
-                               term, we have to make [key] is included to the
-                               corresponding record.  *)
-                            match v with
-                            | None ->
-                              add_bool_constr depth Cnf.(~-(logic_combined * logic * g))
-                            | Some tv ->
-                              let bounds = bound_terms_exn depth !cstrs g t in
-                              let bounds = Cnf.Map.map bounds
-                                ~f:(fun t -> Record(String.Map.singleton key (g, t), None)) in
-                              cstrs := set_bound_exn (depth + 1) !cstrs tv bounds
-                          end
-                        | _ -> ()
-                      )
-                  end
-                | Choice _ ->
-                  cstrs := set_bound_exn (depth + 1) constrs s' Cnf.(Map.singleton (logic * logic_combined) Nil)
-                | _ ->
-                  add_bool_constr depth Cnf.(~-(logic * logic_combined))
-              ) in
+                let bounds = bound_terms_exn (depth+1) constrs Cnf.(logic_combined * key) data in
+                cstrs := set_bound_exn (depth + 1) !cstrs s bounds
+              )
+        in
         !cstrs
       end
     (* CHOICES *)
     | Choice (r, v), Choice (r', v') ->
       begin
         let cstrs = ref constrs in
-        let left_values = ref String.Map.empty in
-        let right_values = ref String.Map.empty in
-        String.Map.iter2 r r'
+        let assignment = ref Cnf.Map.empty in
+        let v_bounds =
+          match v with
+          | None -> Cnf.Map.singleton Cnf.make_true (Choice (String.Map.empty, None))
+          | Some s ->
+            bound_terms_exn (depth+1) !cstrs logic_combined (UpVar s)
+        in
+        Cnf.Map.iter v_bounds
           ~f:(fun ~key ~data ->
+            let logic = Cnf.(logic_combined ==> key) in
             match data with
-            | `Both ((g, t), (g', t')) ->
+            | Choice (map, None) ->
               begin
-                try
-                  cstrs := solve_senior (depth + 1) !cstrs (g, t) (g', t');
-                  add_bool_constr depth Cnf.(logic_combined ==> (g ==> g'))
-                with Errors.Unsatisfiability_Error _ ->
-                  add_bool_constr depth Cnf.(~-(logic_combined * g))
+                let opt = ref [logic, String.Map.empty] in
+                String.Map.iter2 r map
+                  ~f:(fun ~key ~data ->
+                    match data with
+                    | `Left el
+                    | `Right el ->
+                      opt :=
+                        List.map !opt
+                          ~f:(fun (l, map) ->
+                            l, String.Map.add map ~key ~data:el
+                          )
+                    | `Both ((g, t), (g', t')) ->
+                      begin
+                        add_bool_constr (depth+1) Cnf.(logic ==> (~-g + ~-g'));
+                        let opt1 =
+                          List.map !opt
+                            ~f:(fun (l, map) ->
+                              Cnf.(l * ~-g'), String.Map.add map ~key ~data:(g, t)
+                            ) in
+                        let opt2 =
+                          List.map !opt
+                            ~f:(fun (l, map) ->
+                              Cnf.(l * ~-g), String.Map.add map ~key ~data:(g', t')
+                            ) in
+                          opt := opt1 @ opt2
+                      end
+                  );
+                match Cnf.Map.of_alist !opt with
+                | `Duplicate_key key ->
+                  add_bool_constr (depth+1) Cnf.(logic_combined ==> ~-key)
+                | `Ok map ->
+                  assignment := Cnf.Map.merge !assignment map
+                                  ~f:(fun ~key -> function
+                                    | `Left x
+                                    | `Right x -> Some x
+                                    | `Both (x, y) ->
+                                      add_bool_constr (depth+1) Cnf.(logic_combined ==> ~-key);
+                                      None
+                                  )
               end
-            | `Left el ->
-              left_values := String.Map.add !left_values ~key ~data:el
-            | `Right el ->
-              right_values := String.Map.add !right_values ~key ~data:el
+            | _ -> ()
+          );
+        let result = ref Cnf.Map.empty in
+        (*Cnf.Map.iter !assignment*)
+          (*~f:(fun ~key ~data ->*)
+            (*printf "%s: " (Cnf.to_string key);*)
+            (*String.Map.iter data*)
+              (*~f:(fun ~key ~data ->*)
+                (*let _, t = data in*)
+                (*printf "%s: %s, " key (Term.to_string t)*)
+              (*);*)
+            (*printf "\n"*)
+          (*);*)
+        Cnf.Map.iter !assignment
+          ~f:(fun ~key ~data ->
+            let logic = Cnf.(logic_combined * key) in
+            let left_values = ref String.Map.empty in
+            String.Map.iter2 data r'
+              ~f:(fun ~key ~data ->
+                match data with
+                | `Both ((g, t), (g', t')) ->
+                  begin
+                    try
+                      cstrs := solve_senior (depth + 1) !cstrs (g, t) (g', t');
+                      add_bool_constr depth Cnf.(logic ==> (g ==> g'))
+                    with Errors.Unsatisfiability_Error _ ->
+                      add_bool_constr depth Cnf.(logic * ~-g)
+                  end
+                | `Left el ->
+                  left_values := String.Map.add !left_values ~key ~data:el
+                | `Right el -> ()
+              );
+            if not (String.Map.is_empty !left_values) then
+              result := Cnf.Map.add !result ~key:logic ~data:(Term.Choice(!left_values, None))
           );
         (* PROCESSING RIGHT TAIL VARIABLE *)
         let _ = match v' with
           | None ->
-            if not (String.Map.is_empty !left_values) then
-              String.Map.iter !left_values
+            if not (Cnf.Map.is_empty !result) then
+              Cnf.Map.iter !result
                 ~f:(fun ~key ~data ->
-                  let g, _ = data in
-                  add_bool_constr depth Cnf.(logic_combined ==> ~-g)
+                  let logic = key in
+                  match data with
+                  | Choice (map, None) ->
+                    String.Map.iter map
+                      ~f:(fun ~key ~data ->
+                        let g, _ = data in
+                        add_bool_constr depth Cnf.(logic_combined ==> logic ==> ~-g)
+                      )
+                  | _ -> assert false
                 )
           | Some s' ->
             (* possible values of the right tail variable *)
-            let bounds = bound_terms_exn depth !cstrs logic_combined (UpVar s') in
-            let result = ref (bound_terms_exn (depth+1) !cstrs logic_combined (Term.Choice(!left_values, None))) in
-            Cnf.Map.iter bounds
+            Cnf.Map.iter !result
               ~f:(fun ~key ~data ->
-                let logic = key in
-                match data with
-                | Choice (tail_map, None) ->
-                  begin
-                    (* eliminate labels that duplicate in the record body and the tail *)
-                    String.Map.iter2 r' tail_map
-                      ~f:(fun ~key ~data ->
-                        match data with
-                        | `Both ((g, _), (g', _)) ->
-                          add_bool_constr depth Cnf.(~-(logic * logic_combined * g * g'))
-                        | _ -> ()
-                      );
-                    (* compare with corresponding elements in the left term body *)
-                    let missing_elements = ref String.Map.empty in
-                    String.Map.iter2 !left_values tail_map
-                      ~f:(fun ~key ~data ->
-                        match data with
-                        | `Right _ -> ()
-                        | `Left data ->
-                          missing_elements := String.Map.add !missing_elements ~key ~data
-                        | `Both ((g, t), (g', t')) ->
-                          begin
-                            try
-                              cstrs := solve_senior (depth + 1) !cstrs (g, t) (g', t');
-                              add_bool_constr depth Cnf.(logic_combined ==> (logic ==> (g ==> g')))
-                            with Errors.Unsatisfiability_Error _ ->
-                              add_bool_constr depth Cnf.(~-(logic_combined * logic * g))
-                          end
-                      );
-                    let missing_elements' = ref Cnf.Map.empty in
-                    (* compare with corresponding elements in the right term tail variable *)
-                    match v with
-                    | None -> ()
-                    | Some s ->
-                      (* if [s] is not a choice, then we need to drop all the
-                         current values to [none] and to start computations
-                         again from the bottom of the semilattice *)
-                      let bounds = bound_terms_exn depth !cstrs logic_combined (UpVar s) in
-                      Cnf.Map.iter bounds
-                        ~f:(fun ~key ~data ->
-                          match data with
-                          | Choice (tail_map', None) ->
-                            let choice = ref String.Map.empty in
-                            String.Map.iter2 tail_map' tail_map
-                              ~f:(fun ~key ~data ->
-                                match data with
-                                | `Left _ -> ()
-                                | `Right data ->
-                                  choice := String.Map.add !choice ~key ~data
-                                | `Both ((g, t), (g', t')) ->
-                                  begin
-                                    try
-                                      cstrs := solve_senior (depth + 1) !cstrs (g, t) (g', t');
-                                      add_bool_constr depth Cnf.(logic_combined ==> (logic ==> (g ==> g')))
-                                    with Errors.Unsatisfiability_Error _ ->
-                                      add_bool_constr depth Cnf.(~-(logic_combined * logic * g))
-                                  end
-                              );
-                            missing_elements' := Cnf.Map.add !missing_elements' ~key ~data:!choice
-                          | _ -> ()
-                        );
-                      let value = Cnf.Map.fold !missing_elements' ~init:[(Cnf.make_true, String.Map.empty)]
-                                    ~f:(fun ~key ~data acc ->
-                                      let result = ref acc in
-                                      result := List.map ~f:(fun (l, m) -> Cnf.(l * key), m) !result;
-                                      String.Map.iter2 !missing_elements data
-                                        ~f:(fun ~key ~data ->
-                                          match data with
-                                          | `Left el
-                                          | `Right el ->
-                                            result := List.map ~f:(fun (cond, map) -> cond, String.Map.add map ~key ~data:el) !result
-                                          | `Both ((g, t), (g', t')) ->
-                                            let l = List.map !result
-                                                      ~f:(fun (cond, map) -> Cnf.(cond * ~-g'), String.Map.add map ~key ~data:(g, t)) in
-                                            let l' = List.map !result
-                                                       ~f:(fun (cond, map) -> Cnf.(cond * ~-g), String.Map.add map ~key ~data:(g', t')) in
-                                            result := l @ l'
-                                        );
-                                      !result
-                                    ) in
-                      let value = List.map value ~f:(fun (l, m) -> l, Choice (m, None)) in
-                      let map, logic = Term.cnf_map_of_alist value in
-                      add_bool_constr depth logic;
-                      result := map
-                  end
-                | _ ->
-                  add_bool_constr depth Cnf.(~-(logic * logic_combined))
-              );
-            cstrs := set_bound_exn (depth + 1) !cstrs s' !result in
-        (* PROCESSING LEFT TAIL VARIABLE *)
-        let _ = match v with
-          | None -> ()
-          | Some s ->
-            (* possible values of the right tail variable *)
-            (* if [s] is not a choice, then we need to drop all the current
-               values to [none] and to start computations again from the bottom
-               of the semilattice *)
-            let bounds = bound_terms_exn depth !cstrs logic_combined (UpVar s) in
-            Cnf.Map.iter bounds
-              ~f:(fun ~key ~data ->
-                let logic = key in
-                match data with
-                | Choice (tail_map, None) ->
-                  begin
-                    (* eliminate labels that duplicate in the record body and the tail *)
-                    String.Map.iter2 r tail_map
-                      ~f:(fun ~key ~data ->
-                        match data with
-                        | `Both ((g, _), (g', _)) ->
-                          add_bool_constr depth Cnf.(~-(logic * logic_combined * g * g'))
-                        | _ -> ()
-                      );
-                    (* seniority relation with terms to the right *)
-                    String.Map.iter2 tail_map r'
-                      ~f:(fun ~key ~data ->
-                        match data with
-                        | `Both ((g, t), (g', t')) ->
-                          begin
-                            try
-                              cstrs := solve_senior (depth + 1) !cstrs (g, t) (g', t');
-                              add_bool_constr depth Cnf.(logic_combined * (logic ==> (g ==> g')))
-                            with Errors.Unsatisfiability_Error _ ->
-                              add_bool_constr depth Cnf.(~-(logic_combined * logic * g))
-                          end
-                        | `Left (g, t) ->
-                          begin
-                            (* [key] label is in the tail variable of the left
-                               choice.  If there is a tail of the right term, we
-                               have to make sure [key] is included to the
-                               corresponding choice.  *)
-                            match v' with
-                            | None ->
-                              add_bool_constr depth Cnf.(~-(logic_combined * logic * g))
-                            | Some tv ->
-                              let bounds = bound_terms_exn depth !cstrs g t in
-                              let bounds = Cnf.Map.map bounds
-                                             ~f:(fun t -> Choice(String.Map.singleton key (g, t), None)) in
-                              cstrs := set_bound_exn (depth + 1) !cstrs tv bounds
-                          end
-                        | _ -> ()
-                      )
-                  end
-                | _ ->
-                  add_bool_constr depth Cnf.(~-(logic * logic_combined))
-              ) in
+                let bounds = bound_terms_exn (depth+1) constrs Cnf.(logic_combined * key) data in
+                cstrs := set_bound_exn (depth + 1) !cstrs s' bounds
+              )
+        in
         !cstrs
       end
     (* switch processing *)
@@ -1129,6 +1007,13 @@ let resolve_bound_constraints topo =
   let iter_counter = ref 1 in
   let constrs, bools = ref String.Map.empty, boolean_constraints in
   (* Set the initial upper bound, which is nil, for all term variables *)
+  String.Set.iter !Transform.initial_term_variables
+    ~f:(fun x ->
+      if String.is_prefix x ~prefix:"_" then
+        constrs := String.Map.add !constrs ~key:x ~data:(Cnf.Map.singleton Cnf.make_true Term.Nil)
+      else
+        constrs := String.Map.add !constrs ~key:x ~data:(Cnf.Map.singleton Cnf.make_true Term.none)
+    );
   (*let union =*)
   (*String.Set.union !Transform.initial_term_variables !Transform.additional_term_variables in*)
   (*String.Set.iter union*)

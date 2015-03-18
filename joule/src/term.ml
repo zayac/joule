@@ -507,4 +507,8 @@ let is_choice = function
   | Choice _ -> true
   | _ -> false
 
+let get_map_exn = function
+  | Choice (m, _) -> m
+  | _ -> assert false
+
 let is_up_var s = String.is_prefix s ~prefix:"^"
