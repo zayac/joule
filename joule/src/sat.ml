@@ -1,4 +1,3 @@
-
 open Core.Std
 
 type solution =
@@ -105,20 +104,42 @@ let solve set =
   | Solutions [] -> None
   | Solutions (hd :: tl) -> Some hd
 
-let solve_max set =
+let solve_max ?(verbose=false) set =
   match find_models set false with
   | Any -> Some String.Map.empty
   | Solutions [] -> None
   | Solutions (hd :: tl) ->
+    let counter = ref 1 in
+    let print_solution map =
+      printf "%d | " !counter;
+      String.Map.iter map
+        ~f:(fun ~key ~data ->
+          printf "%s " (if data then "true" else "false");
+        );
+      printf "\n";
+      counter := !counter + 1
+    in
+    let _ =
+      if verbose then
+        let _ = printf "\nList of SAT solutions:\n" in
+        let _ = String.Map.iter hd
+          ~f:(fun ~key ~data ->
+            printf "%s " key
+             )
+        in
+        let _ = printf "\n" in
+        print_solution hd
+    in
     let falses x =
-      (*let _ = printf "\n" in*)
       String.Map.fold x ~init:0
         ~f:(fun ~key ~data acc ->
-          (*let _ = printf "%s: %s, " key (if data then "true" else "false") in*)
           if not data then acc + 1 else acc
         ) in
     let count, result = List.fold tl ~init:((falses hd), hd)
       ~f:(fun (count, bools) el ->
+        let _ = if verbose then
+            print_solution el
+        in
         let count' = falses el in
         if count' > count then count', el
         else count, bools

@@ -3,6 +3,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <regex>
 
 extern std::map<std::string, std::set<std::string>> output_interfaces_names;
 
@@ -19,6 +20,17 @@ struct SalvoInfo {
     std::vector<std::string> param_types;
     std::set<std::string> flags;
 };
+
+std::pair<int, std::string> slice(const std::string &s) {
+    std::regex channel("_([[:digit:]]+)_(.*)");
+    std::smatch match;
+    std::string::size_type sz;
+    if (std::regex_search(s.begin(), s.end(), match, channel)) {
+        return make_pair(std::stoi(match[1], &sz), match[2]);
+    } else {
+        return make_pair(-1, s);
+    }
+}
 
 class ApiGen {
     std::map<int, std::set<VariantInfo>> variants;
@@ -115,7 +127,10 @@ public:
                 ss << cit->second.param_types[i] << " ";
                 ss << cit->second.param_names[i];
             }
-            ss << " " << prefix << "_DOWN_" << tail_name << "_decl) {\n";
+
+            std::pair<int, std::string> p = slice(cit->first);
+
+            ss << " " << prefix << "_DOWN_" << tail_name << "_" << p.second << "_decl) {\n";
             ss << "\tfor (const std::pair<int, std::string>& _p : std::vector<std::pair<int, std::string>>({";
             ss << " " << prefix << "_DOWN_" << cit->first << "_ochannels ";
             header_file << "#define " << prefix << "_DOWN_" << cit->first << "_ochannels\n";
@@ -129,7 +144,7 @@ public:
                     ss << ", ";
                 ss << cit->second.param_names[i];
             }
-            ss << " " << prefix << "_DOWN_" << tail_name << "_use);\n";
+            ss << " " << prefix << "_DOWN_" << tail_name << "_" << p.second << "_use);\n";
             ss << "\t\t_msg.setType(_p.second);\n";
             ss << "\t\toutput(_p.first, std::move(_msg));\n";
             ss << "\t}\n";

@@ -427,7 +427,7 @@ let simplify_map map =
 
 let rec set_bound_exn depth constrs var terms =
   Cnf.Map.iter terms ~f:(fun ~key ~data -> assert (Term.is_semiground data));
-  (*let terms = simplify_map terms in*)
+  let terms = simplify_map terms in
   let cstrs = ref constrs in
   let simplify t =
     let t = Term.canonize t in
@@ -743,16 +743,16 @@ let rec solve_senior depth constrs left right =
               end
             | _ -> ()
           );
-        (*Cnf.Map.iter !assignment*)
-          (*~f:(fun ~key ~data ->*)
-            (*printf "%s: " (Cnf.to_string key);*)
-            (*String.Map.iter data*)
-              (*~f:(fun ~key ~data ->*)
-                (*let _, t = data in*)
-                (*printf "%s: %s, " key (Term.to_string t)*)
-              (*);*)
-            (*printf "\n"*)
-          (*);*)
+        (*Cnf.Map.iter !assignment
+          ~f:(fun ~key ~data ->
+            printf "%s: " (Cnf.to_string key);
+            String.Map.iter data
+              ~f:(fun ~key ~data ->
+                let _, t = data in
+                printf "%s: %s, " key (Term.to_string t)
+              );
+            printf "\n"
+          );*)
         let result = ref Cnf.Map.empty in
         Cnf.Map.iter !assignment
           ~f:(fun ~key ~data ->
@@ -905,6 +905,7 @@ let rec solve_senior depth constrs left right =
                     String.Map.iter map
                       ~f:(fun ~key ~data ->
                         let g, _ = data in
+                        (*print_endline (Cnf.(to_string (logic_combined ==> logic ==> ~-g)));*)
                         add_bool_constr depth Cnf.(logic_combined ==> logic ==> ~-g)
                       )
                   | _ -> assert false
@@ -1100,7 +1101,7 @@ let solve_exn lst logic verbose limit =
       printf "Boolean constraints:\n  %s\n" Cnf.(to_string (simplify !boolean_constraints));
     end;
   try
-    match Sat.solve_max !boolean_constraints with
+    match Sat.solve_max ~verbose:!verbose_output !boolean_constraints with
     | None -> None
     | Some bool_map ->
       let union =

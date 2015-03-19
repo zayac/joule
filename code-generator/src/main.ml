@@ -40,6 +40,7 @@ let loop values_filename =
     String.Map.iter term_var_hash
       ~f:(fun ~key ~data ->
         let file_name, outc = create_or_open_file dirname key data in
+        printf "Generating code for term variable '%s' from '%s' file\n" key file_name;
         if not (String.Set.mem !set file_name) then
           begin
             Codegen.read_json_file file_name (String.concat [dirname; "/"; file_name; ".json"]);

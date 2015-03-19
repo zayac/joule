@@ -1,9 +1,10 @@
 #include "TransformComponent.h"
 #include <iostream>
 #include <random>
-#include <regex>
 
 static std::default_random_engine random_engine;
+
+std::pair<int, std::string> slice(const std::string &s);
 
 void FlowInheritanceHandler::enableCalVariables(FileID fid) {
     SourceLocation sl = Rewrite.getSourceMgr().getLocForStartOfFile(fid);
@@ -11,6 +12,7 @@ void FlowInheritanceHandler::enableCalVariables(FileID fid) {
                                  "#include \"" + short_file_name + "_" + macro_prefix + "variables.h\"\n");
     header_file.open(directory_path + "/" + short_file_name + "_" + macro_prefix + "variables.h", std::fstream::out);
 }
+
 
 inline std::string getCallExprName(const CallExpr* CE) {
     const FunctionDecl* FD = CE->getDirectCallee();
@@ -20,6 +22,7 @@ inline std::string getCallExprName(const CallExpr* CE) {
 void genDeclsForCallExprs(Rewriter &Rewrite) {
     for (const auto& el : output_interfaces_names) {
         std::string tail_name = "";
+
         // string concatenation
         for (auto it = el.second.begin(); it != el.second.end(); ++it) {
             //if (it != el.second.begin())
@@ -27,17 +30,18 @@ void genDeclsForCallExprs(Rewriter &Rewrite) {
             tail_name += *it;
         }
         for (const CallExpr* exp : output_interfaces_calls[el.first]) {
+            std::pair<int, std::string> pair = slice(exp->getDirectCallee()->getNameAsString());
             const Expr *e = exp->getArg(exp->getNumArgs() - 1);
-            Rewrite.InsertTextAfterToken(e->getLocEnd(), " " + short_file_name + "_DOWN_" + tail_name + "_use");
+            Rewrite.InsertTextAfterToken(e->getLocEnd(), " " + short_file_name + "_DOWN_" + tail_name + "_" +pair.second + "_use");
+            header_file << "#define " << short_file_name << "_DOWN_" << tail_name << "_" << pair.second << "_decl" << std::endl;
         }
         for (const FunctionDecl* decl : output_interfaces_decls[el.first]) {
             // tail variables
+            std::pair<int, std::string> pair = slice(decl->getNameAsString());
             const ParmVarDecl *p = decl->getParamDecl(decl->getNumParams() - 1);
-            Rewrite.InsertTextAfterToken(p->getLocEnd(), " " + short_file_name + "_DOWN_" + tail_name + "_decl");
+            Rewrite.InsertTextAfterToken(p->getLocEnd(), " " + short_file_name + "_DOWN_" + tail_name + "_" + pair.second + "_decl");
+            header_file << "#define " << short_file_name << "_DOWN_" << tail_name << "_" << pair.second << "_use" << std::endl;
         }
-
-        header_file << "#define " << short_file_name << "_DOWN_" << tail_name << "_decl" << std::endl;
-        header_file << "#define " << short_file_name << "_DOWN_" << tail_name << "_use" << std::endl;
     }
 }
 
@@ -105,17 +109,6 @@ static void findInterfaceClasses(const FunctionDecl* fd) {
     cacheInterfaceClass(fd->getReturnType());
     for (FunctionDecl::param_const_iterator pit = fd->param_begin(); pit != fd->param_end(); ++pit) {
         cacheInterfaceClass((*pit)->getOriginalType());
-    }
-}
-
-static std::pair<int, std::string> slice(const std::string &s) {
-    std::regex channel("_([[:digit:]]+)_(.*)");
-    std::smatch match;
-    std::string::size_type sz;
-    if (std::regex_search(s.begin(), s.end(), match, channel)) {
-        return make_pair(std::stoi(match[1], &sz), match[2]);
-    } else {
-        return make_pair(-1, s);
     }
 }
 

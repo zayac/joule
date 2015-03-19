@@ -154,12 +154,12 @@ void Derivator::genOutTermForChannel(std::ostream& ofile, int ch) const {
             }
             if (!set.empty()) {
                 std::string tail_var = accumulate(set.begin(), set.end(), std::string(""));
-                ofile << "| $_" << tail_var;
+                ofile << "| $_" << tail_var << "_" << it->second.name;
             }
             ofile << "}";
         }
     }
-    ofile << "| $^" << this->short_fname;
+    ofile << "| $^" << this->short_fname << "_in_" << ch;
     ofile << ":)";
 }
 
@@ -178,10 +178,10 @@ void Derivator::genInTerms(std::ostream& ofile) const {
                     ofile << ", ";
                 ofile << "\"" << rit->first << "\": " + term::toString(rit->second);
             }
-            ofile << "| $_" << vit->second.name;
+            ofile << "| $__" << vit->second.channel << "_" << vit->second.name;
             ofile << "}";
         }
-        ofile << "| $^" << this->short_fname;
+        ofile << "| $^" << this->short_fname << "_out_" << it->first;
         ofile << ":)\n";
     }
 }
@@ -198,22 +198,25 @@ void Derivator::genOutTerms(std::ostream& ofile) const {
 
 void Derivator::genConstraints(std::ostream& ofile) const {
     std::set<int> channels = getOutChannels();
-    std::set<std::string> cache;
     for (int ch : channels) {
         auto salvo_it = this->routing.find(ch);
         if (salvo_it != this->routing.end()) {
             for (auto it = salvo_it->second.begin(); it != salvo_it->second.end(); ++it) {
                 std::set<std::string> set = it->second.flags;
-                if (set.size() > 1) {
-                    std::string tail_var = accumulate(set.begin(), set.end(), std::string(""));
-                    if (cache.find(tail_var) == cache.end()) {
-                        for (auto fit = set.begin(); fit != set.end(); ++fit) {
-                            ofile << "$_" << *fit << " <= $_" << tail_var << ";" << std::endl;
-                            //if (fit != set.begin())
-                                //ofile << " ";
-                        }
-                        cache.emplace(tail_var);
-                    }
+                std::string tail_var = accumulate(set.begin(), set.end(), std::string(""));
+                for (auto fit = set.begin(); fit != set.end(); ++fit) {
+                    ofile << "$_" << *fit << " <= $_" << tail_var << "_" << it->second.name << ";" << std::endl;
+                }
+            }
+        }
+    }
+
+    for (auto vit = variants.begin(); vit != variants.end(); ++vit) {
+        for (auto it = vit->second.begin(); it != vit->second.end(); ++it) {
+            auto set_it = salvos_mapping.find(it->first);
+            if (set_it !=salvos_mapping.end()) {
+                for (auto sit = set_it->second.begin(); sit != set_it->second.end(); ++sit) {
+                    ofile << "$^" << this->short_fname << "_in_" << vit->first << " <= $^" << this->short_fname << "_out_" << sit->first << ";" << std::endl;
                 }
             }
         }
