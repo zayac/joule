@@ -159,7 +159,9 @@ void Derivator::genOutTermForChannel(std::ostream& ofile, int ch) const {
             ofile << "}";
         }
     }
-    ofile << "| $^" << this->short_fname << "_in_" << ch;
+    // inherit variants only to the first channel
+    if (ch == 1)
+        ofile << "| $^" << this->short_fname;
     ofile << ":)";
 }
 
@@ -181,7 +183,7 @@ void Derivator::genInTerms(std::ostream& ofile) const {
             ofile << "| $__" << vit->second.channel << "_" << vit->second.name;
             ofile << "}";
         }
-        ofile << "| $^" << this->short_fname << "_out_" << it->first;
+        ofile << "| $^" << this->short_fname;
         ofile << ":)\n";
     }
 }
@@ -203,21 +205,22 @@ void Derivator::genConstraints(std::ostream& ofile) const {
         if (salvo_it != this->routing.end()) {
             for (auto it = salvo_it->second.begin(); it != salvo_it->second.end(); ++it) {
                 std::set<std::string> set = it->second.flags;
-                std::string tail_var = accumulate(set.begin(), set.end(), std::string(""));
-                for (auto fit = set.begin(); fit != set.end(); ++fit) {
-                    ofile << "$_" << *fit << " <= $_" << tail_var << "_" << it->second.name << ";" << std::endl;
+                if (set.size() > 1) {
+                    std::string tail_var = accumulate(set.begin(), set.end(), std::string(""));
+                    for (auto fit = set.begin(); fit != set.end(); ++fit) {
+                        ofile << "$_" << *fit << " <= $_" << tail_var << "_" << it->second.name << ";" << std::endl;
+                    }
                 }
             }
         }
     }
 
-    for (auto vit = variants.begin(); vit != variants.end(); ++vit) {
-        for (auto it = vit->second.begin(); it != vit->second.end(); ++it) {
-            auto set_it = salvos_mapping.find(it->first);
-            if (set_it !=salvos_mapping.end()) {
-                for (auto sit = set_it->second.begin(); sit != set_it->second.end(); ++sit) {
-                    ofile << "$^" << this->short_fname << "_in_" << vit->first << " <= $^" << this->short_fname << "_out_" << sit->first << ";" << std::endl;
-                }
+    for (auto ch_it = routing.begin(); ch_it != routing.end(); ++ch_it) {
+        for (auto sit = ch_it->second.begin(); sit != ch_it->second.end(); ++sit) {
+            RoutedSalvo salvo = sit->second;
+            std::string tail_var = accumulate(salvo.flags.begin(), salvo.flags.end(), std::string(""));
+            for (auto salvo_it = salvo.flags.begin(); salvo_it != salvo.flags.end(); ++salvo_it) {
+                ofile << "$_" << *salvo_it << " <= $_" << tail_var << "_" << salvo.name << ";" << std::endl;
             }
         }
     }

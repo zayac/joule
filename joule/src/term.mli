@@ -75,7 +75,7 @@ val canonize_switch : t Logic.Map.t -> t Logic.Map.t * Logic.Set.t
 val to_wff : bool String.Map.t -> t -> t
 
 (** Finds a join term for two terms *)
-val join : t -> t -> (t * Cnf.Set.t) option
+val join : t -> t -> (t * Cnf.t) option
 
 (** [cnf_map_of_alist lst] is used to construct a map of Cnf->Term key-value
     pairs in a secure manner: it resolves label conflicts by generating
