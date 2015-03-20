@@ -225,17 +225,21 @@ let generate_from_terms outc file_name name t =
         end
     end
   | Choice (head, None) ->
-    let more_than_one = ref false in
-    let args = String.Map.fold head ~init:""
-      ~f:(fun ~key ~data acc ->
-        let g, t = data in
-        if !more_than_one then
-          let _ = more_than_one := true in
-          String.concat [acc; ", "; term_to_type t; " "; dequotize key]
-        else
-          String.concat [acc; term_to_type t; " "; dequotize key]
-      ) in
-    fprintf outc "variant_message %s(%s);\n" name args
+    fprintf outc "#define %s_UP_%s" file_name file_name;
+    if String.Map.is_empty head then
+      fprintf outc "\n"
+    else
+      begin
+        fprintf outc " do {\\\n";
+        String.Map.iter head
+          ~f:(fun ~key ~data ->
+            fprintf outc "\tif (_msg.getType() == %s) {\\\n" key;
+            fprintf outc "\t\toutput(1, std::move(_msg));\\\n";
+            fprintf outc "\t\treturn;\\\n";
+            fprintf outc "\t}\\\n"
+          );
+        fprintf outc "} while (0);\n"
+      end
   | Symbol _ -> ()
   | _ -> raise (WrongFormat ("unexpected format of a term " ^ (Term.to_string t)))
 

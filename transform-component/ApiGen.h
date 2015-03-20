@@ -97,6 +97,11 @@ public:
                         << "\t}\n"
                         << "#endif\n";
             }
+            // inherit variants from the first channel
+            if (cit->first == 1) {
+                ss << "\t" << prefix << "_UP_" << prefix << std::endl;
+                header_file << "#define " << prefix << "_UP_" << prefix << std::endl;
+            }
             ss << "}\n";
         }
         return ss.str();
