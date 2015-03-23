@@ -12,6 +12,7 @@ private:
     int c;
 public:
     int b;
+    double f();
     AClass(const AClass& cl) {}
     AClass() {
         a = 1;

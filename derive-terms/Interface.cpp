@@ -8,6 +8,7 @@ static const std::string self = "\%self\%";
 
 bool isValidType(const QualType& ty) {
     const QualType cty = ty.getCanonicalType();
+    //cty->dump();
     if ((cty->isPointerType() && cty.isConstQualified()) || cty->isReferenceType())
         return isValidType(cty->getPointeeType());
     else if (cty->isBuiltinType()) {

@@ -80,6 +80,8 @@ static void genInterfaceClassMatchers(Rewriter &Rewrite) {
 
 
         std::ostringstream ss;
+        if (class_fields[crd->getNameAsString()].empty())
+            ss << "\n#if defined(CAL_FI_HIDE_CLASSES)\n";
         ss << "\n\ttemplate<class Archive>\n";
         ss << "\tvoid serialize(Archive& archive) {\n";
         ss << "\t\tarchive(";
@@ -90,6 +92,8 @@ static void genInterfaceClassMatchers(Rewriter &Rewrite) {
         }
         ss << " " << short_file_name << "_DOWN_class_" << crd->getNameAsString() << "_fields );\n";
         ss << "\t}\n";
+        if (class_fields[crd->getNameAsString()].empty())
+            ss << "#endif\n";
         Rewrite.InsertTextAfter(crd->getLocEnd().getLocWithOffset(-1), ss.str());
         header_file << "#define " << short_file_name << "_DOWN_class_" << crd->getNameAsString() << "_fields\n";
 

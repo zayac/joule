@@ -1,10 +1,15 @@
 #include "cal.h"
 
-message _1_loop(std::vector<std::vector<double>> img, std::vector<std::vector<double>> old_centers_v, int K, double epsilon);
+class Distance {
+public:
+    double norm(const float * const a, const float * const b, int dims) const;
+};
+
+message _1_loop(std::vector<std::vector<double>> img, std::vector<std::vector<double>> old_centers_v, int K, double epsilon, Distance D);
 message result(std::vector<std::vector<double>> centers);
 message error(std::string msg);
 
-variant _1_kMeans(std::vector<std::vector<double>> img, std::vector<std::vector<double>> old_centers_v, int K, double epsilon) {
+variant _1_kMeans(std::vector<std::vector<double>> img, std::vector<std::vector<double>> old_centers_v, int K, double epsilon, Distance D) {
     cv::Mat centers(cv::Scalar(0)), old_centers(old_centers_v);
     cv::Mat data0(img);
     bool isrow = data0.rows == 1 && data0.channels() > 1;
@@ -46,7 +51,7 @@ variant _1_kMeans(std::vector<std::vector<double>> img, std::vector<std::vector<
 
         for (int i = 0; i < N; ++i) {
             sample = data.ptr<float>(i);
-            double dist = cv::normL2Sqr_(sample, _old_center, dims);
+            double dist = D.norm(sample, _old_center, dims);
 
             if (max_dist <= dist) {
                 max_dist = dist;
@@ -88,7 +93,7 @@ variant _1_kMeans(std::vector<std::vector<double>> img, std::vector<std::vector<
     if (max_center_shift <= epsilon) {
         result(_centers);
     } else {
-        _1_loop(img, _centers, K, epsilon);
+        _1_loop(img, _centers, K, epsilon, D);
     }
 }
 
