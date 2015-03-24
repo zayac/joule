@@ -2,7 +2,7 @@
 
 class Distance {
 public:
-    double norm(const float * const a, const float * const b, int dims) const;
+    double norm(const float * const a, const float * const b, int dims) const volatile {}
 };
 
 message _1_loop(std::vector<std::vector<double>> img, std::vector<std::vector<double>> old_centers_v, int K, double epsilon, Distance D);
