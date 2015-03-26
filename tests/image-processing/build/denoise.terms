@@ -1,0 +1,9 @@
+/*
+$__1_denoise <= $__1_denoise_send_img;
+$__1_denoise <= $__1_denoise_error;
+*/
+IN
+	1: (: denoise(f_denoise__1_denoise): {"img": "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>", "kind": "std::basic_string<char, struct std::char_traits<char>, class std::allocator<char>>"| $__1_denoise}| $^denoise:)
+OUT
+	1: (:initKMeans(f_denoise__1_denoise): {"img": "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>"| $__1_denoise_send_img}| $^denoise:)
+	2: (:error(f_denoise__1_denoise): {"msg": "std::basic_string<char, struct std::char_traits<char>, class std::allocator<char>>"| $__1_denoise_error}:)

@@ -1,0 +1,9 @@
+/*
+$__1_initKMeans <= $__1_initKMeans_kMeans;
+$__1_initKMeans <= $__1_initKMeans_error;
+*/
+IN
+	1: (: initKMeans(f_initKMeans__1_initKMeans): {"K": "int", "img": "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>"| $__1_initKMeans}| $^initKMeans:)
+OUT
+	1: (:kMeans(f_initKMeans__1_initKMeans): {"K": "int", "epsilon": "double", "img": "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>", "old_centers_v": "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>"| $__1_initKMeans_kMeans}| $^initKMeans:)
+	2: (:error(f_initKMeans__1_initKMeans): {"msg": "std::basic_string<char, struct std::char_traits<char>, class std::allocator<char>>"| $__1_initKMeans_error}:)

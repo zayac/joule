@@ -1,0 +1,11 @@
+/*
+$__1_kMeans <= $__1_kMeans_loop;
+$__1_kMeans <= $__1_kMeans_result;
+$__1_kMeans <= $__1_kMeans_error;
+*/
+IN
+	1: (: kMeans(f_kMeans__1_kMeans): {"K": "int", "epsilon": "double", "img": "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>", "old_centers_v": "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>"| $__1_kMeans}| $^kMeans:)
+OUT
+	1: (:kMeans(f_kMeans__1_kMeans): {"K": "int", "epsilon": "double", "img": "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>", "old_centers_v": "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>"| $__1_kMeans_loop}| $^kMeans:)
+	2: (:result(f_kMeans__1_kMeans): {"centers": "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>"| $__1_kMeans_result}:)
+	3: (:error(f_kMeans__1_kMeans): {"msg": "std::basic_string<char, struct std::char_traits<char>, class std::allocator<char>>"| $__1_kMeans_error}:)
