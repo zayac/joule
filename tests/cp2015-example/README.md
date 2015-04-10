@@ -1,9 +1,14 @@
+#MDL / CSP-KPN demo
+
+##Image segmentation algorithm based on k-means clustering 
+
 This is an image segmentation based on k-means clustering algorithm described
 as a Kahn Process Network.  The example demonstrates interface specification
 capabilities of the Message Definition Language (MDL).  It is used to test an
 algorithm that solves a CSP with constraints formulated in the MDL.  It
 provides all files to test a full stack of developed tools that in order
 perform:
+
 1. Transform the source files of components stored in `.cpp` files.  The
    transformed sources represent an original code extended with macro
    variables, so the components can be configured specifically for the context
