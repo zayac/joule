@@ -1,5 +1,5 @@
 {
 	"salvos": [	{ "name": "_2_error", "mapping": [ { "channel": 2, "variant": "error" }] },
-	{ "name": "send_img", "mapping": [ { "channel": 1, "variant": "initKMeans" }] }],
+	{ "name": "send_img", "mapping": [ { "channel": 1, "variant": "init" }] }],
 	"variants": [{ "name": "_1_denoise", "arguments": 2}]
 }

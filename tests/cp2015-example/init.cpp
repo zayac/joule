@@ -11,7 +11,7 @@ static void generateRandomCenter(const std::vector<cv::Vec2f>& box, float* cente
         center[j] = ((float)rand()*(1.f+margin*2.f)-margin)*(box[j][1] - box[j][0]) + box[j][0];
 }
 
-variant _1_initKMeans(std::vector<std::vector<double>> img, int K) {
+variant _1_init(std::vector<std::vector<double>> img, int K) {
     cv::Mat data0(img);
     bool isrow = data0.rows == 1 && data0.channels() > 1;
     int N = !isrow ? data0.rows : data0.cols;
