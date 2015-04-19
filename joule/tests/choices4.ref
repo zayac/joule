@@ -1,4 +1,0 @@
-b = false
-c = false
-
-$^b = (::)

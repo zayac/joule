@@ -1,8 +1,0 @@
-a = true
-b = false
-c = false
-d = true
-e = false
-
-$_x = nil
-$_y = nil

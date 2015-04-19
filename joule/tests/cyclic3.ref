@@ -1,7 +1,0 @@
-q = false
-
-$_u = [int]
-$_w = int
-$_x = nil
-$_y = [int]
-$_z = [nil, int]
