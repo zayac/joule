@@ -35,8 +35,8 @@ sh run.sh build tests/image-processing/image-processing.netlist
 
 Below we briefly overview files used in the example:
 
-* `example.netlist` file specifies the connections between components including
-  channel names.  In the example the names of components are `read`,
+* `image-processing.netlist` file specifies the connections between components
+  including channel names.  In the example the names of components are `read`,
   `denoise`, `init` and `kMeans`;
 * `*.cpp` files are the original implementations of the components;
 * `cal.h` is a header file that must be included in every component.  It
