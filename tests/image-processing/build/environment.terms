@@ -1,5 +1,0 @@
-IN
-    1: (:result(f_kMeans__1_kMeans): {"centers": "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>"} :)
-    2: (: error: {msg: "std::basic_string<char, struct std::char_traits<char>, class std::allocator<char>>"} :)
-OUT
-    1: (: read_color: {fname: "std::basic_string<char, struct std::char_traits<char>, class std::allocator<char>>", K: "int", depth: "int"}, initKMeans: {"K": "int", "img": "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>" } :)

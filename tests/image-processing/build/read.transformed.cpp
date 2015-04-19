@@ -3,8 +3,13 @@
 #include "cal.h"
 
 
-#if !defined(f__1_read_color) || !defined(f__1_read_grayscale) || !defined(f__1_read_unchanged)
-message send_img(std::vector<std::vector<double>> img, std::string kind read_DOWN__1_read_color_1_read_grayscale_1_read_unchanged_send_img_decl);
+#if !defined(f__1_read_color) || !defined(f__1_read_unchanged)
+message send_color(std::vector<std::vector<double>> img read_DOWN__1_read_color_1_read_unchanged_send_color_decl);
+#endif
+
+
+#if !defined(f__1_read_grayscale)
+message send_grayscale(std::vector<std::vector<double>> img read_DOWN__1_read_grayscale_send_grayscale_decl);
 #endif
 
 
@@ -19,7 +24,7 @@ variant _1_read_color(std::string fname read_DOWN__1_read_color_decl) {
     if(!image.data)
         _2_error("Could not open or find the image" read_DOWN__1_read_color_1_read_grayscale_1_read_unchanged_error_use);
     else {
-        send_img(image, "color" read_DOWN__1_read_color_1_read_grayscale_1_read_unchanged_send_img_use);
+        send_color(image read_DOWN__1_read_color_1_read_unchanged_send_color_use);
     }
 }
 #endif
@@ -31,7 +36,7 @@ variant _1_read_grayscale(std::string fname read_DOWN__1_read_grayscale_decl) {
     if(!image.data)
         _2_error("Could not open or find the image" read_DOWN__1_read_color_1_read_grayscale_1_read_unchanged_error_use);
     else {
-        send_img(image, "grayscale" read_DOWN__1_read_color_1_read_grayscale_1_read_unchanged_send_img_use);
+        send_grayscale(image read_DOWN__1_read_grayscale_send_grayscale_use);
     }
 }
 #endif
@@ -43,7 +48,7 @@ variant _1_read_unchanged(std::string fname read_DOWN__1_read_unchanged_decl) {
     if(!image.data)
         _2_error("Could not open or find the image" read_DOWN__1_read_color_1_read_grayscale_1_read_unchanged_error_use);
     else {
-        send_img(image, "color" read_DOWN__1_read_color_1_read_grayscale_1_read_unchanged_send_img_use);
+        send_color(image read_DOWN__1_read_color_1_read_unchanged_send_color_use);
     }
 }
 #endif
@@ -91,12 +96,24 @@ message _2_error(std::string msg read_DOWN__1_read_color_1_read_grayscale_1_read
 }
 #endif
 
-#if !defined(f_read__1_read_color) || !defined(f_read__1_read_grayscale) || !defined(f_read__1_read_unchanged)
-message send_img(std::vector<std::vector<double> > img, std::string kind read_DOWN__1_read_color_1_read_grayscale_1_read_unchanged_send_img_decl) {
-	for (const std::pair<int, std::string>& _p : std::vector<std::pair<int, std::string>>({ read_DOWN_send_img_ochannels })) {
+#if !defined(f_read__1_read_color) || !defined(f_read__1_read_unchanged)
+message send_color(std::vector<std::vector<double> > img read_DOWN__1_read_color_1_read_unchanged_send_color_decl) {
+	for (const std::pair<int, std::string>& _p : std::vector<std::pair<int, std::string>>({ read_DOWN_send_color_ochannels })) {
 		Message _msg;
 		cereal::BinaryOutputArchive oarchive(_msg.ss);
-		oarchive(img, kind read_DOWN__1_read_color_1_read_grayscale_1_read_unchanged_send_img_use);
+		oarchive(img read_DOWN__1_read_color_1_read_unchanged_send_color_use);
+		_msg.setType(_p.second);
+		output(_p.first, std::move(_msg));
+	}
+}
+#endif
+
+#if !defined(f_read__1_read_grayscale)
+message send_grayscale(std::vector<std::vector<double> > img read_DOWN__1_read_grayscale_send_grayscale_decl) {
+	for (const std::pair<int, std::string>& _p : std::vector<std::pair<int, std::string>>({ read_DOWN_send_grayscale_ochannels })) {
+		Message _msg;
+		cereal::BinaryOutputArchive oarchive(_msg.ss);
+		oarchive(img read_DOWN__1_read_grayscale_send_grayscale_use);
 		_msg.setType(_p.second);
 		output(_p.first, std::move(_msg));
 	}

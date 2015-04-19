@@ -1,5 +1,6 @@
 {
 	"salvos": [	{ "name": "_2_error", "mapping": [ { "channel": 2, "variant": "error" }] },
-	{ "name": "send_img", "mapping": [ { "channel": 1, "variant": "denoise" }] }],
+	{ "name": "send_color", "mapping": [ { "channel": 1, "variant": "denoise_color" }] },
+	{ "name": "send_grayscale", "mapping": [ { "channel": 1, "variant": "denoise_grayscale" }] }],
 	"variants": [{ "name": "_1_read_color", "arguments": 1}, { "name": "_1_read_grayscale", "arguments": 1}, { "name": "_1_read_unchanged", "arguments": 1}]
 }

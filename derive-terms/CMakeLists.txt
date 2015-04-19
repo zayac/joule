@@ -9,7 +9,6 @@ add_clang_executable(derive-terms
   CalTerm.cpp
   Shell.cpp
   Derivator.cpp
-  Variant.cpp
   )
 target_link_libraries(derive-terms
   clangTooling

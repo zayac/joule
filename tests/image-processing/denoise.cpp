@@ -3,15 +3,21 @@
 message send_img(std::vector<std::vector<double>> img);
 message _2_error(std::string msg);
 
-variant _1_denoise(std::vector<std::vector<double>> img, std::string kind) {
+variant _1_denoise_color(std::vector<std::vector<double>> img) {
     cv::Mat result;
-    if (kind == "grayscale")
-        cv::fastNlMeansDenoising(img, result);
-    else if (kind == "color")
-        cv::fastNlMeansDenoisingColored(img, result);
-    else {
-        _2_error("Unexpected image format");
-    }
-    send_img(result);
+    cv::fastNlMeansDenoisingColored(img, result);
+    if(result.empty())
+        _2_error("error");
+    else
+        send_img(result);
+}
+
+variant _1_denoise_grayscale(std::vector<std::vector<double>> img) {
+    cv::Mat result;
+    cv::fastNlMeansDenoising(img, result);
+    if(result.empty())
+        _2_error("error");
+    else
+        send_img(result);
 }
 

@@ -30,7 +30,7 @@ The tools are executed (after they are built) using `run.sh` script from the
 repository root directory using the command:
 
 ```
-sh run.sh build tests/cp2015-example/example.netlist
+sh run.sh build tests/image-processing/image-processing.netlist
 ```
 
 Below we briefly overview files used in the example:
