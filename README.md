@@ -57,9 +57,9 @@ The tools generate the following files that we keep in 'build' directory:
   1 described above;
 * `*.terms` store the interface of the components;
 * `*.json` store auxiliary information that is required during code generation;
-* `example.constraints` is an input for the CSP-KPN algorithm that contains the
+* `image-processing.constraints` is an input for the CSP-KPN algorithm that contains the
   constraints for the components;
-* `example.solution` is a solution of the CSP-KPN algorithm;
+* `image-processing.solution` is a solution of the CSP-KPN algorithm;
 * `*_CAL_FI_variables.h` are files that contain generated macros definitions.
   They are generated based on the solution of the CSP-KPN and fully configure
   the components for the specific context.
