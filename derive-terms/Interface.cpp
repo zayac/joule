@@ -111,6 +111,7 @@ std::string typeToString(const QualType& ty, bool global_object_allowed) {
         return getNamespace(record->getDeclContext()) + "::" + classDeclOrTemplate(record);
     } else {
         std::cerr << "unsupported type" << std::endl;
+        //cty->dump();
         exit(1);
     }
 
@@ -145,7 +146,9 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
     } else if (cty->isReferenceType()) {
         QualType deref = cty->getPointeeType();
         std::string s = ty.getAsString();
+        std::cout << s << " " << deref.getAsString() << std::endl;
         if (s.substr(0, s.size() - 2) == deref.getAsString()) {
+            std::cout << "hello" << std::endl;
             std::vector<std::unique_ptr<Term>> tup;
             tup.push_back(make_symbol(self));
             tup.push_back(make_symbol("&"));
@@ -165,7 +168,7 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
     } else if (cty->isBuiltinType()) { // builtin types are always canonical
         return std::unique_ptr<Term>(new Symbol(cty.getCanonicalType().getAsString()));
     /* Class declarations */
-    } else if (cty->isClassType()) {
+    } else if (cty->isClassType() || cty->isStructureType()) {
         const CXXRecordDecl *record = cty->getAsCXXRecordDecl();
         //if (isa<ClassTemplateSpecializationDecl>(*record))
             //std::cout << classDeclOrTemplate(record) << std::endl;
@@ -192,6 +195,7 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
         }
     } else {
         std::cerr << "unsupported type" << std::endl;
+        cty->dump();
         exit(1);
     }
 }
@@ -296,6 +300,7 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
             if (isValidType(par.getOriginalType())) {
                 method_name += typeToString(par.getOriginalType(), false);
             } else {
+                par.getOriginalType()->dump();
                 all_parameters_valid = false;
                 break;
             }

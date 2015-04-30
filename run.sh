@@ -1,11 +1,10 @@
 #!/bin/sh
 
-BIN_DIR=.
-DERIVE_BIN=derive-terms/derive-terms
-TRANSFORM_COMP_BIN=transform-component/transform-component
-CONSTRAINT_GEN_BIN=constraint-generator/main.native
-SOLVER=joule/joule.native
-CODE_GENERATOR=code-generator/main.native
+DERIVE_BIN=/Users/pzv/code/clang-llvm/llvm/build/bin/derive-terms
+TRANSFORM_COMP_BIN=/Users/pzv/code/clang-llvm/llvm/build/bin/transform-component
+CONSTRAINT_GEN_BIN=./constraint-generator/main.native
+SOLVER=./joule/joule.native
+CODE_GENERATOR=./code-generator/main.native
 
 dir=""
 filename=""
@@ -52,20 +51,20 @@ build_tool () {
     for file in ${unique_files[@]}
     do
         echo "Transforming source file \"$file.cpp\"..."
-        test $BIN_DIR/$TRANSFORM_COMP_BIN $dir/$file.cpp -- -stdlib=libc++ -std=c++11 -I/usr/local/include -I/usr/include -I/usr/local/Cellar/gcc/4.9.2_1/include/c++/4.9.2 -I/usr/local/Cellar/gcc/4.9.2_1/include/c++/4.9.2/x86_64-apple-darwin14.0.0
+        test $TRANSFORM_COMP_BIN $dir/$file.cpp -- -stdlib=libc++ -std=c++11 -I/usr/local/include -I/usr/include -I/usr/local/Cellar/gcc/4.9.2_1/include/c++/4.9.2 -I/usr/local/Cellar/gcc/4.9.2_1/include/c++/4.9.2/x86_64-apple-darwin14.0.0
         echo "Deriving interface from transformed source file \"$file.transformed.cpp\"..."
-        test $BIN_DIR/$DERIVE_BIN $dir/$file.transformed.cpp -- -stdlib=libc++ -std=c++11 -I/usr/local/include -I/usr/include -I/usr/local/Cellar/gcc/4.9.2_1/include/c++/4.9.2 -I/usr/local/Cellar/gcc/4.9.2_1/include/c++/4.9.2/x86_64-apple-darwin14.0.0
+        test $DERIVE_BIN $dir/$file.transformed.cpp -- -stdlib=libc++ -std=c++11 -I/usr/local/include -I/usr/include -I/usr/local/Cellar/gcc/4.9.2_1/include/c++/4.9.2 -I/usr/local/Cellar/gcc/4.9.2_1/include/c++/4.9.2/x86_64-apple-darwin14.0.0
     done
     echo "Deriving constraints..."
-    test $BIN_DIR/$CONSTRAINT_GEN_BIN $filename
+    test $CONSTRAINT_GEN_BIN $filename
     echo "Solving constraints in \"${filename%.*}.constraints\"..."
-    test $BIN_DIR/$SOLVER ${filename%.*}.constraints | tee ${filename%.*}.solution
+    test $SOLVER ${filename%.*}.constraints | tee ${filename%.*}.solution
     if grep -q "$no_solution_string" "${filename%.*}.solution"; then
         echo "Error: constraint resolution failed. Cannot generate code"
         exit 1
     else
         echo "Generating code for the solution \"${filename%.*}.solution\"..."
-        $BIN_DIR/$CODE_GENERATOR ${filename%.*}.solution
+        $CODE_GENERATOR ${filename%.*}.solution
     fi
 }
 

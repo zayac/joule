@@ -12,5 +12,7 @@ val print_salvo_routing: Core.Std.Out_channel.t -> string -> unit
 
 (*val term_to_cpp_placeholders : string -> Core.Std.Out_channel.t -> unit*)
 
+val create_class_decl : string -> (Cnf.t * Term.t) Core.Std.String.Map.t -> string
+
 val generate_from_terms : Core.Std.Out_channel.t -> string -> string -> Term.t -> unit
 val generate_from_bools : Core.Std.Out_channel.t -> string -> bool -> unit

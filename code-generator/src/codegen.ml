@@ -9,17 +9,99 @@ let salvos_mapping = ref String.Map.empty
 
 let variant_args = ref String.Map.empty
 
+let inherited_classes = ref String.Map.empty
+let generated_classes = ref String.Map.empty
+
 let dequotize s =
   if Poly.(s.[0] = '"') && Poly.(s.[String.length s - 1] = '"') then
     String.sub s 1 (String.length s - 2)
   else
     s
 
-let term_to_type t =
+let field_to_string name = function
+  | Symbol s ->
+    String.concat [s; " "; dequotize name; ";\n"]
+  | _ -> raise (WrongFormat "unexpected format of a field")
+
+let gen_serialize_method fields =
+  let fields = List.map ~f:dequotize fields in
+  let body =
+    if Poly.(List.length fields > 0) then
+      sprintf "\t\tar(%s);" (String.concat ~sep:", " fields)
+    else
+      ""
+  in
+  sprintf "\n\ttemplate<class Archive>
+\tvoid serialize(Archive & ar)
+\t{
+%s
+\t}\n" body
+
+let get_method_type_from_term t =
+  match t with
+  | Symbol hash
+  | Tuple [Symbol "override"; Symbol hash] ->
+    None, hash
+  | Tuple [Symbol ret; Tuple [Symbol "override"; Symbol hash]]
+  | Tuple [Symbol ret; Symbol hash] ->
+    Some ret, hash
+  | _ -> raise (WrongFormat ("unexpected format of method body: " ^ (Term.to_string t)))
+
+let method_to_string cl name t =
+  let name = dequotize name in
+  let header = String.substr_replace_all name ~pattern:"%self%" ~with_:cl in
+  let ret, hash = get_method_type_from_term t in
+  match String.Map.find !method_body_hash hash with
+  | Some value ->
+    let params, body = value in
+    let params, body = List.map ~f:dequotize params, dequotize body in
+    let index = ref 0 in
+    let ss = String.fold header ~init:""
+                ~f:(fun acc el ->
+                  if Poly.(el = ',') then
+                    let _ = index := !index + 1 in
+                    String.concat [acc; " "; List.nth_exn params (!index - 1); ","]
+                  else if Poly.(el = ')' && List.length params > 0) then
+                    String.concat [acc; " "; List.nth_exn params !index; ")"]
+                  else
+                    acc ^ (String.make 1 el)) in
+    String.concat [Option.value_map ~default:"" ~f:(fun x -> x ^ " ") ret; ss; " "; body; "\n"]
+  | None -> raise (WrongFormat ("cannot find definition for a method with hash value " ^ hash))
+
+let rec term_to_type t =
   match t with
   | Nil -> "const void *"
   | Symbol s -> dequotize s
+  | Record (r, None) ->
+    let code = create_class_decl "dummy" r in
+    let name = sprintf "class_%d" (String.hash code) in
+    let code = create_class_decl name r in
+    inherited_classes := String.Map.add !inherited_classes ~key:name ~data:code;
+    name
   | _ -> raise (WrongFormat ("unexpected format of a type: " ^ (Term.to_string t)))
+
+and create_class_decl name map =
+  let fields = ref String.Map.empty in
+  let methods = ref String.Map.empty in
+  String.Map.iter map
+    ~f:(fun ~key ~data ->
+      let _, data = data in
+      if String.contains key '(' then
+        methods := String.Map.add !methods ~key ~data
+      else
+        fields := String.Map.add !fields ~key ~data
+    );
+  let cl_start = String.concat ["struct "; name; "{\n"] in
+  let field_s = String.Map.fold !fields ~init:[]
+                  ~f:(fun ~key ~data acc ->
+                    acc @ ["\t"; field_to_string key data]
+                  ) in
+  let fl = String.Map.keys !fields in
+  let methods_s = String.Map.fold !methods ~init:[]
+                  ~f:(fun ~key ~data acc ->
+                    acc @ ["\t"; method_to_string name key data]
+                  ) in
+  String.concat (cl_start :: field_s @ methods_s @ [gen_serialize_method fl; "};\n"])
 
 let number_of_elements term =
   match term with
@@ -93,72 +175,6 @@ let term_to_cpp_macro_variants outc file variant term =
         fprintf outc "#define %s_DOWN_%s_types %s\n" file variant (term_to_cpp_macro_types term)
       end
 
-let field_to_string name = function
-  | Symbol s ->
-    String.concat [s; " "; dequotize name; ";\n"]
-  | _ -> raise (WrongFormat "unexpected format of a field")
-
-let get_method_type_from_term t =
-  match t with
-  | Symbol hash
-  | Tuple [Symbol "override"; Symbol hash] ->
-    None, hash
-  | Tuple [Symbol ret; Tuple [Symbol "override"; Symbol hash]]
-  | Tuple [Symbol ret; Symbol hash] ->
-    Some ret, hash
-  | _ -> raise (WrongFormat ("unexpected format of method body: " ^ (Term.to_string t)))
-
-let method_to_string cl name t =
-  let name = dequotize name in
-  let header = String.substr_replace_all name ~pattern:"%self%" ~with_:cl in
-  let ret, hash = get_method_type_from_term t in
-  match String.Map.find !method_body_hash hash with
-  | Some value ->
-    let params, body = value in
-    let params, body = List.map ~f:dequotize params, dequotize body in
-    let index = ref 0 in
-    let ss = String.fold header ~init:""
-                ~f:(fun acc el ->
-                  if Poly.(el = ',') then
-                    let _ = index := !index + 1 in
-                    String.concat [acc; " "; List.nth_exn params (!index - 1); ","]
-                  else if Poly.(el = ')' && List.length params > 0) then
-                    String.concat [acc; " "; List.nth_exn params !index; ")"]
-                  else
-                    acc ^ (String.make 1 el)) in
-    String.concat [Option.value_map ~default:"" ~f:(fun x -> x ^ " ") ret; ss; " "; body; "\n"]
-  | None -> raise (WrongFormat ("cannot find definition for a method with hash value " ^ hash))
-
-let gen_serialize_method fields =
-  let fields = List.map ~f:dequotize fields in
-  sprintf "\n\ttemplate<class Archive>
-\tvoid serialize(Archive & ar)
-\t{
-\t\tar(%s);
-\t}\n" (String.concat ~sep:", " fields)
-
-let create_class_decl name map =
-  let fields = ref String.Map.empty in
-  let methods = ref String.Map.empty in
-  String.Map.iter map
-    ~f:(fun ~key ~data ->
-      let _, data = data in
-      if String.contains key '(' then
-        methods := String.Map.add !methods ~key ~data
-      else
-        fields := String.Map.add !fields ~key ~data
-    );
-  let cl_start = String.concat ["struct "; name; "{\n"] in
-  let field_s = String.Map.fold !fields ~init:[]
-                  ~f:(fun ~key ~data acc ->
-                    acc @ ["\t"; field_to_string key data]
-                  ) in
-  let fl = String.Map.keys !fields in
-  let methods_s = String.Map.fold !methods ~init:[]
-                  ~f:(fun ~key ~data acc ->
-                    acc @ ["\t"; method_to_string name key data]
-                  ) in
-  String.concat (cl_start :: field_s @ methods_s @ [gen_serialize_method fl; "};\n"])
 
 let open_code_hash_file dirname =
   try
@@ -205,43 +221,60 @@ let print_salvo_routing outc file_name =
     )
 
 let generate_from_terms outc file_name name t =
-  match t with
-  | Nil ->
-    fprintf outc "#define %s_DOWN_%s_decl %s\n" file_name name (term_to_cpp_macro_decl t);
-    fprintf outc "#define %s_DOWN_%s_use %s\n" file_name name (term_to_cpp_macro_use t);
-    term_to_cpp_macro_variants outc file_name name t
-  | Record (map, None) ->
-    begin
-      let index = String.substr_index name ~pattern:"DOWN_class_" in
-      match index with
-      | Some i ->
-        (*let short_name = String.drop_prefix name i in*)
-        fprintf outc "%s" (create_class_decl name map)
-      | None ->
-        begin
-          fprintf outc "#define %s_DOWN_%s_decl %s\n" file_name name (term_to_cpp_macro_decl t);
-          fprintf outc "#define %s_DOWN_%s_use %s\n" file_name name (term_to_cpp_macro_use t);
-          term_to_cpp_macro_variants outc file_name name t
-        end
-    end
-  | Choice (head, None) ->
-    fprintf outc "#define %s_UP_%s" file_name file_name;
-    if String.Map.is_empty head then
-      fprintf outc "\n"
-    else
+  (*let _ = inherited_classes := String.Map.empty in*)
+  let _ =
+    match t with
+    | Nil ->
+      fprintf outc "#define %s_DOWN_%s_decl %s\n" file_name name (term_to_cpp_macro_decl t);
+      fprintf outc "#define %s_DOWN_%s_use %s\n" file_name name (term_to_cpp_macro_use t);
+      term_to_cpp_macro_variants outc file_name name t
+    | Record (map, None) ->
       begin
-        fprintf outc " do {\\\n";
-        String.Map.iter head
-          ~f:(fun ~key ~data ->
-            fprintf outc "\tif (_msg.getType() == %s) {\\\n" key;
-            fprintf outc "\t\toutput(1, std::move(_msg));\\\n";
-            fprintf outc "\t\treturn;\\\n";
-            fprintf outc "\t}\\\n"
-          );
-        fprintf outc "} while (0);\n"
+        let index = String.substr_index name ~pattern:"DOWN_class_" in
+        match index with
+        | Some _ ->
+          (*let short_name = String.drop_prefix name i in*)
+          fprintf outc "%s" (create_class_decl name map)
+        | None ->
+          begin
+            fprintf outc "#define %s_DOWN_%s_decl %s\n" file_name name (term_to_cpp_macro_decl t);
+            fprintf outc "#define %s_DOWN_%s_use %s\n" file_name name (term_to_cpp_macro_use t);
+            term_to_cpp_macro_variants outc file_name name t
+          end
       end
-  | Symbol _ -> ()
-  | _ -> raise (WrongFormat ("unexpected format of a term " ^ (Term.to_string t)))
+    | Choice (head, None) ->
+      fprintf outc "#define %s_UP_%s" file_name file_name;
+      if String.Map.is_empty head then
+        fprintf outc "\n"
+      else
+        begin
+          fprintf outc " do {\\\n";
+          String.Map.iter head
+            ~f:(fun ~key ~data ->
+              fprintf outc "\tif (_msg.getType() == %s) {\\\n" key;
+              fprintf outc "\t\toutput(1, std::move(_msg));\\\n";
+              fprintf outc "\t\treturn;\\\n";
+              fprintf outc "\t}\\\n"
+            );
+          fprintf outc "} while (0);\n"
+        end
+    | Symbol _ -> ()
+    | _ -> raise (WrongFormat ("unexpected format of a term " ^ (Term.to_string t)))
+  in
+  let set =
+    match String.Map.find !generated_classes file_name with
+    | None -> ref String.Set.empty
+    | Some s -> ref s
+  in
+  String.Map.iter !inherited_classes
+    ~f:(fun ~key ~data ->
+      if not (String.Set.mem !set key) then
+      begin
+        fprintf outc "%s\n" data;
+        set := String.Set.add !set key
+      end
+    );
+  generated_classes := String.Map.add !generated_classes ~key:file_name ~data:!set
 
 let generate_from_bools outc name value =
   match value with
