@@ -59,6 +59,10 @@ val is_ground : t -> bool
     form. Terms with variables [Var s] are not reduced. *)
 val canonize : t -> t
 
+(** [equivalent_exn t1 t2] determines whether [t1] is the same as [t2].  The
+    return value is a set of constraints when it holds. *)
+val equivalent_exn : t -> t -> Cnf.t option
+
 (** [seniority t t'] compares two ground terms using the seniority relation.
     Throws an exception if one of the terms is not ground. *)
 val seniority_exn : t -> t -> int

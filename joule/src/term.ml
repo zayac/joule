@@ -262,6 +262,71 @@ let rec is_ground = function
     ~f:(fun ~key ~data acc ->
       if Cnf.is_false key then acc else acc && is_ground data) x
 
+let rec equivalent_exn t1 t2 =
+  match t1, t2 with
+  | t1, t2 when t1 = t2 -> Some Cnf.make_true
+  | Symbol s, Symbol s' ->
+    begin
+      match String.equal s s' with
+      | true -> Some Cnf.make_true
+      | false -> None
+    end
+  | OrdinalInt i, OrdinalInt i'
+  | NominalInt i, NominalInt i' ->
+    begin
+      match Int.equal i i' with
+      | true -> Some Cnf.make_true
+      | false -> None
+    end
+  | Symbol _, Tuple [Symbol "override"; Symbol _] -> Some Cnf.make_true
+  | Tuple x, Tuple x'
+  | List (x, None), List (x', None) ->
+    begin
+      match List.zip x x' with
+      | Some l ->
+        List.fold l ~init:(Some Cnf.make_true)
+          ~f:(fun acc (t, t') ->
+            match acc with
+            | Some old_cnf ->
+              begin
+                match equivalent_exn t t' with
+                | Some cnf -> Some Cnf.(old_cnf * cnf)
+                | None -> None
+              end
+            | None -> None
+          )
+      | None -> None
+    end
+  | Choice (map, None), Choice (map', None)
+  | Record (map, None), Record (map', None) ->
+    begin
+      let ret = ref (Some Cnf.make_true) in
+      String.Map.iter2 map map'
+        ~f:(fun ~key ~data ->
+          match data with
+          | `Left (g, t)
+          | `Right (g, t) ->
+            ret := None
+          | `Both ((g, t), (g', t')) ->
+            begin
+              match equivalent_exn t t' with
+              | Some cnf ->
+                begin
+                  match !ret with
+                  | Some cnf_old ->
+                    ret := Some Cnf.(cnf_old * ((g * g') ==> cnf))
+                  | None -> ()
+                end
+              | None ->
+                ret := None
+            end
+          | _ -> ()
+        );
+      !ret
+    end
+  | _ ->
+    None
+
 let rec seniority_exn t1 t2 =
   try
     let seniority_lists_exn l l' =

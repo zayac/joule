@@ -728,7 +728,8 @@ let rec solve_senior depth constrs left right =
                         opt := opt1 @ opt2;
                         (* since term comparison can be done only for ground
                            terms, we need to get ground values and for all pairs
-                           check whether the ground terms are equal *)
+                           check whether the ground terms are equal.
+                           [b] --- body, [b'] --- variable *)
                         let b = bound_terms_exn (depth+1) !cstrs Cnf.(logic_combined * g * g') t in
                         let b' = bound_terms_exn (depth+1) !cstrs Cnf.(logic_combined * g * g') t' in
                         let opt3 = ref [] in
@@ -738,15 +739,16 @@ let rec solve_senior depth constrs left right =
                             Cnf.Map.iter b'
                               ~f:(fun ~key ~data ->
                                 let gl', gt' = key, data in
-                                if Term.(gt = gt') then
+                                match Term.equivalent_exn gt' gt with
+                                | Some cnf ->
                                   begin
                                     let lst = List.map !opt
                                                 ~f:(fun (l, map) ->
-                                                  Cnf.(l * gl * gl'), String.Map.add map ~key:condition ~data:(Cnf.(g * g'), gt)
+                                                  Cnf.(l * gl * gl' * cnf), String.Map.add map ~key:condition ~data:(Cnf.(g * g' * cnf), gt)
                                                 ) in
                                     opt3 := !opt3 @ lst
                                   end
-                                else
+                                | None ->
                                   add_bool_constr (depth+1) Cnf.(logic ==> ~-(gl * gl'))
                               )
                           );
@@ -827,7 +829,7 @@ let rec solve_senior depth constrs left right =
                     String.Map.iter map
                       ~f:(fun ~key ~data ->
                         let g, _ = data in
-                        add_bool_constr depth Cnf.(logic_combined ==> logic ==> ~-g)
+                        add_bool_constr depth Cnf.(logic_combined ==> (logic ==> ~-g))
                       )
                   | _ -> assert false
                 )
@@ -884,7 +886,8 @@ let rec solve_senior depth constrs left right =
                         opt := opt1 @ opt2;
                         (* since term comparison can be done only for ground
                            terms, we need to get ground values and for all pairs
-                           check whether the ground terms are equal *)
+                           check whether the ground terms are equal.
+                            [b] --- body, [b'] --- variable *)
                         let b = bound_terms_exn (depth+1) !cstrs Cnf.(logic_combined * g * g') t in
                         let b' = bound_terms_exn (depth+1) !cstrs Cnf.(logic_combined * g * g') t' in
                         let opt3 = ref [] in
@@ -894,15 +897,17 @@ let rec solve_senior depth constrs left right =
                             Cnf.Map.iter b'
                               ~f:(fun ~key ~data ->
                                 let gl', gt' = key, data in
-                                if Term.(gt = gt') then
+
+                                match Term.equivalent_exn gt' gt with
+                                | Some cnf ->
                                   begin
                                     let lst = List.map !opt
                                                 ~f:(fun (l, map) ->
-                                                  Cnf.(l * gl * gl'), String.Map.add map ~key:condition ~data:(Cnf.(g * g'), gt)
+                                                  Cnf.(l * gl * gl' * cnf), String.Map.add map ~key:condition ~data:(Cnf.(g * g' * cnf), gt)
                                                 ) in
                                     opt3 := !opt3 @ lst
                                   end
-                                else
+                                | None ->
                                   add_bool_constr (depth+1) Cnf.(logic ==> ~-(gl * gl'))
                               )
                           );
@@ -969,8 +974,7 @@ let rec solve_senior depth constrs left right =
                     String.Map.iter map
                       ~f:(fun ~key ~data ->
                         let g, _ = data in
-                        (*print_endline (Cnf.(to_string (logic_combined ==> logic ==> ~-g)));*)
-                        add_bool_constr depth Cnf.(logic_combined ==> logic ==> ~-g)
+                        add_bool_constr depth Cnf.(logic_combined ==> (logic ==> ~-g))
                       )
                   | _ -> assert false
                 )
