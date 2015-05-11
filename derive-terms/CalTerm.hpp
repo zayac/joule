@@ -35,7 +35,9 @@ struct TermComparator {
                      const std::pair<std::unique_ptr<term::Term>, std::unique_ptr<term::Term>>&) const;
 };
 
-struct Nil : Term {};
+struct Nil : Term {
+	explicit Nil() : Term(TTNil) {}
+};
 
 struct OrdinalInt : Term {
 	int value;
@@ -108,6 +110,10 @@ struct DownVar : Term {
 
 inline std::unique_ptr<Term> make_symbol(const std::string &s) {
 	return std::unique_ptr<Term>(new Symbol(s));
+}
+
+inline std::unique_ptr<Term> make_nil() {
+	return std::unique_ptr<Term>(new Nil());
 }
 
 inline std::unique_ptr<Term> make_var(const std::string &s) {

@@ -279,6 +279,7 @@ let rec equivalent_exn t1 t2 =
       | false -> None
     end
   | Symbol _, Tuple [Symbol "override"; Symbol _] -> Some Cnf.make_true
+  | Symbol _, Tuple [Symbol "declaration"; Symbol _] -> Some Cnf.make_true
   | Tuple x, Tuple x'
   | List (x, None), List (x', None) ->
     begin

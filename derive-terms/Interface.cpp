@@ -1,10 +1,26 @@
 #include "Interface.hpp"
 #include <functional>
 #include <sstream>
+#include <random>
 
 namespace interface {
 
-static const std::string self = "\%self\%";
+static const    std::string self = "\%self\%";
+
+static std::default_random_engine random_engine;
+static std::string gen_random(const int len) {
+    static const char alphanum[] =
+            "0123456789"
+                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                    "abcdefghijklmnopqrstuvwxyz";
+    static std::uniform_int_distribution<int> uniform_dist(0, sizeof(alphanum)-2);
+
+    std::string s(len, 0);
+    for (int i = 0; i < len; ++i) {
+        s[i] = alphanum[uniform_dist(random_engine)];
+    }
+    return s;
+}
 
 bool isValidType(const QualType& ty) {
     const QualType cty = ty.getCanonicalType();
@@ -317,8 +333,7 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
             exit(1);
         }
 
-        //if (method_name == RD->getNameAsString() || method_name[0] == '~') 
-
+        //if (method_name == RD->getNameAsString() || method_name[0] == '~')
         if (mit->doesThisDeclarationHaveABody()) {
             std::string body = getStmtAsString(mit->getBody());
 
@@ -362,8 +377,19 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
         } else {
             std::vector<std::unique_ptr<term::Term>> tup;
             tup.emplace_back(typeToTerm(mit->getReturnType(), it));
-            tup.emplace_back(term::make_var("code_" + method_name));
-
+            std::string code_term;
+            std::size_t found = method_name.find_first_of("(");
+            if (found != std::string::npos)
+                code_term = "code_" + method_name.substr(0, found) + "_" + gen_random(5);
+            else
+                code_term = "code_" + method_name + "_" + gen_random(5);
+            /* 'code_...' represents a symbol that is syntactically equal to the variable
+             * that must carry the code for the method */
+            std::vector<std::unique_ptr<term::Term>> declaration_tuple;
+            declaration_tuple.emplace_back(term::make_symbol("declaration"));
+            declaration_tuple.emplace_back(term::make_symbol(code_term));
+            tup.emplace_back(std::unique_ptr<term::Term>(new term::Tuple(declaration_tuple)));
+            constraints.insert(make_pair(term::make_var(code_term), term::make_nil()));
             class_repr[method_name] = std::unique_ptr<term::Term>(new term::Tuple(tup));
         }
 
