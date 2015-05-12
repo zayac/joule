@@ -529,6 +529,10 @@ let rec solve_senior depth constrs left right =
     (* extra rule for overriding class member functions *)
     | _, Tuple [Symbol "override"; _] ->
       constrs
+    | Tuple [Symbol "declaration"; Symbol s], Tuple [Symbol "declaration"; Symbol s'] ->
+      let leftm = bound_terms_exn depth constrs logic_combined (DownVar s) in
+      set_bound_exn (depth+1) constrs ("_" ^ s') leftm
+    | Tuple [Symbol "override"; _], Tuple [Symbol "declaration"; Symbol s]
     | Symbol _, Tuple [Symbol "declaration"; Symbol s] ->
       let leftm = bound_terms_exn depth constrs logic_combined term_left in
       set_bound_exn (depth+1) constrs ("_" ^ s) leftm

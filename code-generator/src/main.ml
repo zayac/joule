@@ -37,6 +37,12 @@ let loop values_filename =
   let _ = Codegen.open_code_hash_file dirname in
   try
     let set = ref String.Set.empty in
+    (* fill 'methods_variables' hash with variables representing body of methods *)
+    String.Map.iter term_var_hash
+      ~f:(fun ~key ~data ->
+        if String.is_prefix key ~prefix:"method_body_code_" then
+          methods_variables := String.Map.add !methods_variables (String.concat ["\""; key; "\""]) data
+      );
     String.Map.iter term_var_hash
       ~f:(fun ~key ~data ->
         let file_name, outc = create_or_open_file dirname key data in

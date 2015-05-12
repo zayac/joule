@@ -349,7 +349,6 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
 
             std::string hash = "hash_" + ss.str();
             method_body[hash] = make_pair(param_names, body);
-
             //std::vector<std::unique_ptr<term::Term>> tup;
             //tup.emplace_back(term::make_symbol(typeToString(mit->getReturnType(), false)));
 
@@ -380,9 +379,9 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
             std::string code_term;
             std::size_t found = method_name.find_first_of("(");
             if (found != std::string::npos)
-                code_term = "code_" + method_name.substr(0, found) + "_" + gen_random(5);
+                code_term = "method_body_code_" + method_name.substr(0, found) + "_" + gen_random(5);
             else
-                code_term = "code_" + method_name + "_" + gen_random(5);
+                code_term = "method_body_code_" + method_name + "_" + gen_random(5);
             /* 'code_...' represents a symbol that is syntactically equal to the variable
              * that must carry the code for the method */
             std::vector<std::unique_ptr<term::Term>> declaration_tuple;

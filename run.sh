@@ -28,7 +28,7 @@ clean_tool() {
     rm -f $dir/*.constraints $dir/*.solution
     rm -f $dir/*.json
     rm -f $dir/*CAL_FI_variables.h
-    rm -f $dir/code-hash
+    #rm -f $dir/code-hash
 }
 
 build_tool () {

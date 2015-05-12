@@ -309,19 +309,16 @@ let rec equivalent_exn t1 t2 =
           | `Right (g, t) ->
             ret := None
           | `Both ((g, t), (g', t')) ->
-            begin
-              match equivalent_exn t t' with
-              | Some cnf ->
-                begin
-                  match !ret with
-                  | Some cnf_old ->
-                    ret := Some Cnf.(cnf_old * ((g * g') ==> cnf))
-                  | None -> ()
-                end
-              | None ->
-                ret := None
-            end
-          | _ -> ()
+            match equivalent_exn t t' with
+            | Some cnf ->
+              begin
+                match !ret with
+                | Some cnf_old ->
+                  ret := Some Cnf.(cnf_old * ((g * g') ==> cnf))
+                | None -> ()
+              end
+            | None ->
+              ret := None
         );
       !ret
     end

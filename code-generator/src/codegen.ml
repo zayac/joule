@@ -5,6 +5,8 @@ exception WrongFormat of string
 
 let method_body_hash = ref String.Map.empty
 
+let methods_variables = ref String.Map.empty
+
 let salvos_mapping = ref String.Map.empty
 
 let variant_args = ref String.Map.empty
@@ -37,7 +39,7 @@ let gen_serialize_method fields =
 %s
 \t}\n" body
 
-let get_method_type_from_term t =
+let rec get_method_type_from_term t =
   match t with
   | Symbol hash
   | Tuple [Symbol "override"; Symbol hash] ->
@@ -45,6 +47,8 @@ let get_method_type_from_term t =
   | Tuple [Symbol ret; Tuple [Symbol "override"; Symbol hash]]
   | Tuple [Symbol ret; Symbol hash] ->
     Some ret, hash
+  | Tuple [Symbol ret; Tuple [Symbol "declaration"; Symbol var_name]] ->
+    get_method_type_from_term (Tuple [Symbol ret; String.Map.find_exn !methods_variables var_name])
   | _ -> raise (WrongFormat ("unexpected format of method body: " ^ (Term.to_string t)))
 
 let method_to_string cl name t =
