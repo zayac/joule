@@ -71,16 +71,16 @@ term:
       let open Core.Std in
       Term.Choice (String.Map.empty, None)
     }
-  | LBRACE RBRACE { Term.Nil }
-  | LBRACKET RBRACKET { Term.Nil }
   | LANGULAR separated_nonempty_list(COMMA, switch_entry) RANGULAR
     {
       Util.switch_of_alist_exn $2 bool_constrs
     }
-  | LSMILE separated_nonempty_list(COMMA, rec_entry) rec_list_tail_choice? RSMILE
+  | LSMILE separated_nonempty_list(COMMA, choice_entry) rec_list_tail_choice? RSMILE
     {
       Term.Choice (Util.map_of_alist_exn $2 bool_constrs, $3)
     }
+  | LBRACE RBRACE { Term.Nil }
+  | LBRACKET RBRACKET { Term.Nil }
   | LBRACE separated_nonempty_list(COMMA, rec_entry) rec_list_tail? RBRACE
     {
       Term.Record (Util.map_of_alist_exn $2 bool_constrs, $3)
@@ -106,10 +106,27 @@ rec_entry:
     {
       Errors.parse_error "invalid record entry" $startpos $endpos
     }
+    
+choice_entry:
+  | label guard? COLON term
+    {
+      let t = match $2 with
+      | None -> Logic.True
+      | Some x -> x in
+      $1, (t, $4)
+    }
+  | error
+    {
+      Errors.parse_error "invalid choice entry" $startpos $endpos
+    }
 
 label:
   | ID { Core.Std.String.concat ["\""; $1; "\""] }
   | STRING { Core.Std.String.concat ["\""; $1; "\""] }
+  | error
+    {
+      Errors.parse_error "invalid label" $startpos $endpos
+    }
 
 guard:
   | LPAREN logical_term RPAREN { $2 }
@@ -121,6 +138,10 @@ guard:
   | LPAREN AND logical_term logical_term+ RPAREN
     {
       Core.Std.List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a * b))
+    }
+  | error
+    {
+      Errors.parse_error "invalid guard" $startpos $endpos
     }
 
 logical_term:

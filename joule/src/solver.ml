@@ -525,17 +525,8 @@ let rec solve_senior depth constrs left right =
     (Constr.to_string (term_left, term_right));
   try
     match term_left, term_right with
-    | _, Nil
-    (* extra rule for overriding class member functions *)
-    | _, Tuple [Symbol "override"; _] ->
+    | _, Nil ->
       constrs
-    | Tuple [Symbol "declaration"; Symbol s], Tuple [Symbol "declaration"; Symbol s'] ->
-      let leftm = bound_terms_exn depth constrs logic_combined (DownVar s) in
-      set_bound_exn (depth+1) constrs ("_" ^ s') leftm
-    | Tuple [Symbol "override"; _], Tuple [Symbol "declaration"; Symbol s]
-    | Symbol _, Tuple [Symbol "declaration"; Symbol s] ->
-      let leftm = bound_terms_exn depth constrs logic_combined term_left in
-      set_bound_exn (depth+1) constrs ("_" ^ s) leftm
     | UpVar s, UpVar s' ->
       let leftm = bound_terms_exn depth constrs logic_combined term_left in
       set_bound_exn (depth + 1) constrs s' leftm
@@ -904,13 +895,12 @@ let rec solve_senior depth constrs left right =
                             Cnf.Map.iter b'
                               ~f:(fun ~key ~data ->
                                 let gl', gt' = key, data in
-
-                                match Term.equivalent_exn gt' gt with
-                                | Some cnf ->
+                                match Term.join gt' gt with
+                                | Some (join_term, cnf) ->
                                   begin
                                     let lst = List.map !opt
                                                 ~f:(fun (l, map) ->
-                                                  Cnf.(l * gl * gl' * cnf), String.Map.add map ~key:condition ~data:(Cnf.(g * g' * cnf), gt)
+                                                  Cnf.(l * gl * gl' * cnf), String.Map.add map ~key:condition ~data:(Cnf.(g * g' * cnf), join_term)
                                                 ) in
                                     opt3 := !opt3 @ lst
                                   end

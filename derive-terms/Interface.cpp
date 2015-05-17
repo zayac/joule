@@ -203,9 +203,14 @@ std::unique_ptr<term::Term> typeToTerm(const QualType& ty, enum InterfaceType it
             * a term variable and generate auxiliary constraint */
             if (cached_classes.find(record->getNameAsString()) == cached_classes.end()) {
                 cached_classes.insert(record->getNameAsString());
-                constraints.insert(make_pair(make_var(classDeclOrTemplate(record)), classDeclToTerm(record, it)));
+                cached_classes.insert(record->getNameAsString());
+                constraints.insert(make_pair(make_var(classDeclOrTemplate(record) + "_in"), classDeclToTerm(record, TInputInterface)));
+                constraints.insert(make_pair(make_var(classDeclOrTemplate(record) + "_out"), classDeclToTerm(record, TOutputInterface)));
             }
-            return make_var(classDeclOrTemplate(record));
+            if (it == TInputInterface)
+                return make_var(classDeclOrTemplate(record) + "_in");
+            else
+                return make_var(classDeclOrTemplate(record) + "_out");
         } else {
             return classDeclToTerm(record, it);
         }
@@ -296,6 +301,9 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
         if (mit->isImplicit())
             continue;
 
+        if (mit->isVolatile() && it == TInputInterface)
+            continue;
+
         std::string method_name = mit->getDeclName().getAsString();
         if (method_name == RD->getNameAsString())
             method_name = self;
@@ -340,28 +348,21 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
             std::stringstream ss;
             ss << std::hash<std::string>()(body);
 
-            /*std::string param_string = "";
-            for (auto it = param_names.begin(); it != param_names.end(); ++it) {
-                if (it != param_names.begin())
-                    param_string += ",";
-                param_string += *it;
-            }*/
-
             std::string hash = "hash_" + ss.str();
-            method_body[hash] = make_pair(param_names, body);
-            //std::vector<std::unique_ptr<term::Term>> tup;
-            //tup.emplace_back(term::make_symbol(typeToString(mit->getReturnType(), false)));
 
             std::unique_ptr<term::Term> code_term;
+            // override
             if (mit->isVolatile()) {
-                std::vector<std::unique_ptr<term::Term>> override_tuple;
-                override_tuple.emplace_back(term::make_symbol("override"));
-                override_tuple.emplace_back(term::make_symbol(hash));
-                code_term = std::unique_ptr<term::Term>(new term::Tuple(override_tuple));
-                //tup.emplace_back(std::unique_ptr<term::Term>(new term::Tuple(override_tuple)));
-            } else
-                code_term = term::make_symbol(hash);
-                //tup.emplace_back(term::make_symbol(hash));
+                std::map<std::string, std::unique_ptr<term::Term>> map;
+                map["code"] = term::make_symbol(hash);
+                code_term = std::unique_ptr<term::Term>(new term::Choice(map));
+            } else {
+                std::map<std::string, std::unique_ptr<term::Term>> map;
+                map["code"] = term::make_symbol(hash);
+                code_term = std::unique_ptr<term::Term>(new term::Choice(map));
+            }
+
+            method_body[hash] = make_pair(param_names, body);
 
             auto prefix = std::mismatch(self.begin(), self.end(), method_name.begin());
             if (prefix.first == self.end() || method_name[0] == '~') {
@@ -372,23 +373,16 @@ std::unique_ptr<term::Term> classDeclToTerm(const CXXRecordDecl *RD, enum Interf
                 tup.emplace_back(std::move(code_term));
                 class_repr[method_name] = std::unique_ptr<term::Term>(new term::Tuple(tup));
             }
-
         } else {
             std::vector<std::unique_ptr<term::Term>> tup;
             tup.emplace_back(typeToTerm(mit->getReturnType(), it));
             std::string code_term;
             std::size_t found = method_name.find_first_of("(");
             if (found != std::string::npos)
-                code_term = "method_body_code_" + method_name.substr(0, found) + "_" + gen_random(5);
+                code_term = "method_body_code_" + method_name.substr(0, found);
             else
-                code_term = "method_body_code_" + method_name + "_" + gen_random(5);
-            /* 'code_...' represents a symbol that is syntactically equal to the variable
-             * that must carry the code for the method */
-            std::vector<std::unique_ptr<term::Term>> declaration_tuple;
-            declaration_tuple.emplace_back(term::make_symbol("declaration"));
-            declaration_tuple.emplace_back(term::make_symbol(code_term));
-            tup.emplace_back(std::unique_ptr<term::Term>(new term::Tuple(declaration_tuple)));
-            constraints.insert(make_pair(term::make_var(code_term), term::make_nil()));
+                code_term = "method_body_code_" + method_name;
+            tup.emplace_back(std::unique_ptr<term::Term>(new term::UpVar(code_term)));
             class_repr[method_name] = std::unique_ptr<term::Term>(new term::Tuple(tup));
         }
 

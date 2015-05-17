@@ -41,14 +41,13 @@ let gen_serialize_method fields =
 
 let rec get_method_type_from_term t =
   match t with
-  | Symbol hash
-  | Tuple [Symbol "override"; Symbol hash] ->
-    None, hash
-  | Tuple [Symbol ret; Tuple [Symbol "override"; Symbol hash]]
-  | Tuple [Symbol ret; Symbol hash] ->
-    Some ret, hash
-  | Tuple [Symbol ret; Tuple [Symbol "declaration"; Symbol var_name]] ->
-    get_method_type_from_term (Tuple [Symbol ret; String.Map.find_exn !methods_variables var_name])
+  | Tuple [Symbol ret; Choice (map, None)] ->
+    begin
+      match String.Map.find map "\"code\"" with
+      | Some (cnf, Symbol s) when Cnf.equal cnf Cnf.make_true -> Some ret, s
+      (*| Some (cnf, Nil) when Cnf.equal cnf Cnf.make_true -> Some ret, ""*)
+      | _ -> raise (WrongFormat ("unexpected format of method body: " ^ (Term.to_string t)))
+    end
   | _ -> raise (WrongFormat ("unexpected format of method body: " ^ (Term.to_string t)))
 
 let method_to_string cl name t =
@@ -74,7 +73,7 @@ let method_to_string cl name t =
 
 let rec term_to_type t =
   match t with
-  | Nil -> "const void *"
+  | Nil -> "size_t" (* dummy type *)
   | Symbol s -> dequotize s
   | Record (r, None) ->
     let code = create_class_decl "dummy" r in
@@ -237,8 +236,12 @@ let generate_from_terms outc file_name name t =
         let index = String.substr_index name ~pattern:"DOWN_class_" in
         match index with
         | Some _ ->
-          (*let short_name = String.drop_prefix name i in*)
-          fprintf outc "%s" (create_class_decl name map)
+          begin
+            match String.chop_suffix name ~suffix:"_out" with
+            | Some s ->
+              fprintf outc "%s" (create_class_decl s map)
+            | None -> ()
+          end
         | None ->
           begin
             fprintf outc "#define %s_DOWN_%s_decl %s\n" file_name name (term_to_cpp_macro_decl t);
