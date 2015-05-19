@@ -67,6 +67,7 @@ let rec to_string t =
       when SM.for_all x ~f:(fun (l, _) -> Cnf.is_false l) -> "nil"
   | Record (x, tail) -> print_dict x tail "{" "}"
   | Choice (x, None) when SM.is_empty x -> "none"
+  | Choice (x, None) when SM.for_all x ~f:(fun (g, _) -> Cnf.is_false g) -> "none"
   | Choice (x, tail) -> print_dict x  tail "(:" ":)"
   | UpVar x
   | DownVar x -> "$" ^ x
@@ -413,65 +414,103 @@ let rec to_wff bools term =
   let transform map =
     String.Map.map 
       ~f:(fun (logic, data) ->
-        Cnf.(from_logic (evaluate bools logic)), data
+        Cnf.(from_logic (evaluate bools logic)), (to_wff bools data)
       ) map in
   match term with
   | Record (map, v) -> Record (transform map, v)
   | Choice (map, v) -> Choice (transform map, v)
   | List (x, v) -> List (List.map ~f:(to_wff bools) x, v)
   | Tuple x -> Tuple (List.map ~f:(to_wff bools) x)
+  | Switch x ->
+    begin
+      let ret =
+        Cnf.Map.fold x ~init:None
+          ~f:(fun ~key ~data result ->
+            match result with
+            | None when Logic.equal Cnf.(evaluate bools key) Logic.True ->
+              Some (to_wff bools data)
+            | x -> x
+          )
+      in
+      match ret with
+      | Some x -> x
+      | None -> term
+    end
   | x -> x
+
+let reduce_switch s =
+  if Int.(Cnf.Map.length s = 1) then
+    let _, data = List.hd_exn (Cnf.Map.to_alist s) in
+    data
+  else
+    match Cnf.Map.find s Cnf.make_true with
+    | Some x -> x
+    | None -> (* fold switches *)
+      let result =
+        Cnf.Map.fold s ~init:Cnf.Map.empty
+          ~f:(fun ~key ~data acc ->
+            let logic = key in
+            match data with
+            | Switch s' ->
+              Cnf.Map.fold s' ~init:acc
+                ~f:(fun ~key ~data acc ->
+                  if not Cnf.(is_false (key * logic)) then
+                    Cnf.Map.add acc ~key:Cnf.(key * logic) ~data
+                  else
+                    acc
+                )
+            | _ ->
+              Cnf.Map.add acc ~key ~data
+          )
+      in
+      Switch result
 
 let rec join t t' =
   let join_lst l l' =
-    let s = ref Cnf.make_true in
     List.map2_exn l l'
       ~f:(fun t t' ->
         match join t t' with
         | None -> raise (Incomparable_Terms (t, t'))
-        | Some (jt, c) ->
-          s := Cnf.(!s * c);
-          jt
-      ), !s in
+        | Some jt -> jt
+      )
+  in
   match t, t' with
   | UpVar _, _ -> raise (Non_Ground t)
   | DownVar _, _ -> raise (Non_Ground t)
   | _, UpVar _ -> raise (Non_Ground t')
   | _, DownVar _ -> raise (Non_Ground t')
-  | Symbol _, Tuple [Symbol "override"; t]
-  | Tuple [Symbol "override"; t], Symbol _ -> Some (Tuple [Symbol "override"; t], Cnf.make_true)
   | Choice _, Nil
-  | Nil, Choice _ -> Some (Nil, Cnf.make_true)
+  | Nil, Choice _ -> Some Nil
   | t, Nil
-  | Nil, t -> Some (t, Cnf.make_true)
-  | Symbol s, Symbol s' when Poly.(s = s') -> Some (Symbol s, Cnf.make_true)
+  | Nil, t -> Some t
+  | Symbol s, Symbol s' when Poly.(s = s') -> Some (Symbol s)
   | OrdinalInt i, OrdinalInt i' ->
-    Some (OrdinalInt (Pervasives.min i i'), Cnf.make_true)
+    Some (OrdinalInt (Pervasives.min i i'))
   | NominalInt i, NominalInt i' when Poly.(i = i') ->
-    Some (NominalInt i, Cnf.make_true)
+    Some (NominalInt i)
   | Tuple l, Tuple l' when Poly.(List.length l = List.length l') ->
     begin
       try
-        let lst, s = join_lst l l' in
-        Some (Tuple lst, s)
+        let lst = join_lst l l' in
+        Some (Tuple lst)
       with Incomparable_Terms (t, t') -> None
     end
   | List (l, None), List (l', None) ->
     begin
       try
         if Poly.(List.length l = List.length l') then
-          let lst, s = join_lst l l' in
-          Some (List (lst, None), s)
+          let lst = join_lst l l' in
+          Some (List (lst, None))
         else if Poly.(List.length l > List.length l') then
           let reduced = List.take l (List.length l') in
-          let lst, s = join_lst reduced l' in
+          let lst = join_lst reduced l' in
           let lst' = lst @ (List.drop l (List.length l')) in
-            Some (List (lst', None), s)
+            Some (List (lst', None))
         else
           let reduced = List.take l' (List.length l) in
-          let lst, s = join_lst reduced l in
+          let lst = join_lst reduced l in
           let lst' = lst @ (List.drop l' (List.length l)) in
-            Some (List (lst', None), s)
+            Some (List (lst', None))
       with Incomparable_Terms (t, t') -> None
     end
   | List (_, Some _), _ -> raise (Non_Ground t')
@@ -479,20 +518,29 @@ let rec join t t' =
   | Record (map, None), Record (map', None) ->
     begin
       try
-        let s = ref Cnf.make_true in
         let join_map = String.Map.merge map map' ~f:(fun ~key data ->
           match data with
           | `Left v
-          | `Right v -> Some v
+          | `Right v -> (* None *) Some v
           | `Both ((l, t), (l', t')) ->
             begin
+              let map = ref Cnf.Map.empty in
+              if not Cnf.(is_false (l * ~-l')) then
+                map := Cnf.Map.add !map ~key:Cnf.(l * ~-l') ~data:t;
+              if not Cnf.(is_false (~-l * l')) then
+                map := Cnf.Map.add !map ~key:Cnf.(~-l * l') ~data:t';
               match join t t' with
-              | None -> raise (Incomparable_Terms (t, t'))
-              | Some (jt, c) ->
-                s := Cnf.(!s * c);
-                Some (Cnf.(l + l'), jt)
-            end) in
-        Some (Record (join_map, None), !s)
+              | None ->
+                Some (Cnf.((l + l') * ~-(l * l')), reduce_switch !map)
+              | Some jt ->
+                begin
+                  if not Cnf.(is_false (l * l')) then
+                    map := Cnf.Map.add !map ~key:Cnf.(l * l') ~data:jt;
+                  Some (Cnf.(l + l'), reduce_switch !map)
+                end
+            end)
+        in
+        Some (Record (join_map, None))
       with Incomparable_Terms (t, t') -> None
     end
   | Record (_, Some _), _ -> raise (Non_Ground t')
@@ -500,24 +548,70 @@ let rec join t t' =
   | Choice (map, None), Choice (map', None) ->
     begin
       try
-        let s = ref Cnf.make_true in
         let join_map = String.Map.merge map map' ~f:(fun ~key data ->
           match data with
           | `Left v
           | `Right v -> (* None *) Some v
           | `Both ((l, t), (l', t')) ->
             begin
+              let map = ref Cnf.Map.empty in
+              if not Cnf.(is_false (l * ~-l')) then
+                map := Cnf.Map.add !map ~key:Cnf.(l * ~-l') ~data:t;
+              if not Cnf.(is_false (~-l * l')) then
+                map := Cnf.Map.add !map ~key:Cnf.(~-l * l') ~data:t';
               match join t t' with
-              | None -> raise (Incomparable_Terms (t, t'))
-              | Some (jt, c) ->
-                s := Cnf.(!s * c);
-                Some (Cnf.(l * l'), jt)
-            end) in
-        Some (Choice (join_map, None), !s)
+              | None ->
+                Some (Cnf.((l + l') * ~-(l * l')), reduce_switch !map)
+              | Some jt ->
+                begin
+                  if not Cnf.(is_false (l * l')) then
+                    map := Cnf.Map.add !map ~key:Cnf.(l * l') ~data:jt;
+                  Some (Cnf.(l + l'), reduce_switch !map)
+                end
+            end)
+        in
+        Some (Choice (join_map, None))
       with Incomparable_Terms (t, t') -> None
     end
   | Choice (_, Some _), _ -> raise (Non_Ground t')
   | _, Choice (_, Some _) -> raise (Non_Ground t)
+  | Switch s, Switch s' ->
+    begin
+      let map = ref Cnf.Map.empty in
+      Cnf.Map.iter s
+        ~f:(fun ~key ~data ->
+          let l, t = key, data in
+          Cnf.Map.iter s'
+            ~f:(fun ~key ~data ->
+              let l', t' = key, data in
+              if not Cnf.(is_false (l * ~-l')) then
+                map := Cnf.Map.add !map ~key:Cnf.(l * ~-l') ~data:t;
+              if not Cnf.(is_false (~-l * l')) then
+                map := Cnf.Map.add !map ~key:Cnf.(~-l * l') ~data:t';
+              match join t t' with
+              | None -> ()
+              | Some jt ->
+                if not Cnf.(is_false (l * l')) then
+                  map := Cnf.Map.add !map ~key:Cnf.(l * l') ~data:jt
+            )
+        );
+      Some (reduce_switch !map)
+    end
+  | Switch s, t
+  | t, Switch s ->
+    begin
+      let map = ref Cnf.Map.empty in
+      Cnf.Map.iter s
+        ~f:(fun ~key ~data ->
+          let l', t' = key, data in
+          match join t t' with
+          | None -> ()
+          | Some jt ->
+            if not Cnf.(is_false l') then
+              map := Cnf.Map.add !map ~key:l' ~data:jt
+        );
+      Some (reduce_switch !map)
+    end
   | _, _ -> None
 
 let cnf_map_of_alist lst =
@@ -539,8 +633,8 @@ let cnf_map_of_alist lst =
                   try
                     match join acc t with
                     | None -> None
-                    | Some (term, logic) ->
-                      cnf_constrs := Cnf.(!cnf_constrs * (key ==> logic));
+                    | Some term ->
+                      cnf_constrs := Cnf.(!cnf_constrs * key);
                       Some term
                   with _ -> None
               ) tl

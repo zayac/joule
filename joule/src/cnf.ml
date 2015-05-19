@@ -12,6 +12,7 @@ include Comparable.Make(T)
 
 let make_false = CSet.singleton (Logic.Set.singleton Logic.False)
 let make_true = CSet.empty
+let make_var s = CSet.singleton Logic.(Set.singleton (Var s))
 let is_false t = CSet.mem t Logic.(Set.singleton False)
 let is_true = CSet.is_empty
 
@@ -155,7 +156,6 @@ let evaluate bools t =
       | _, False -> False
       | _ -> True)
 
-let ( * ) t t' = simplify (CSet.union t t')
 let (+) t t' =
   let result =
     CSet.fold t ~init:CSet.empty
@@ -183,6 +183,9 @@ let (~-) t =
     let tmp = (List.map ~f:Logic.Set.of_list !lst) in
     let t' = CSet.of_list tmp in
     simplify t'
+let ( * ) t t' =
+  if t = ~-t' then make_false
+  else simplify (CSet.union t t')
 let (==>) t t' = simplify (~-t + t')
 let (<==) t t' = simplify (t + ~-t')
 let (<=>) t t' = simplify ((t ==> t') * (t' ==> t))
