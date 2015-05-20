@@ -795,20 +795,6 @@ let rec solve_senior depth constrs left right =
                           );
                         opt := !opt @ !opt3
                       end
-                      (*begin*)
-                        (*add_bool_constr (depth+1) Cnf.(logic ==> (~-g + ~-g'));*)
-                        (*let opt1 =*)
-                          (*List.map !opt*)
-                            (*~f:(fun (l, map) ->*)
-                              (*Cnf.(l * ~-g'), String.Map.add map ~key ~data:(g, t)*)
-                            (*) in*)
-                        (*let opt2 =*)
-                          (*List.map !opt*)
-                            (*~f:(fun (l, map) ->*)
-                              (*Cnf.(l * ~-g), String.Map.add map ~key ~data:(g', t')*)
-                            (*) in*)
-                          (*opt := opt1 @ opt2*)
-                      (*end*)
                   );
                 match Cnf.Map.of_alist !opt with
                 | `Duplicate_key key ->
@@ -854,7 +840,7 @@ let rec solve_senior depth constrs left right =
                         add_bool_constr depth Cnf.(logic ==> ~-g')
                     in
                     if Option.is_some v && not Cnf.(is_false (~-g * g')) then
-                      right_values := String.Map.add !right_values ~key ~data:(Cnf.(~-g * g'), t)
+                      right_values := String.Map.add !right_values ~key ~data:(Cnf.(~-g * g'), t')
                   end
                 | `Right el ->
                   right_values := String.Map.add !right_values ~key ~data:el
