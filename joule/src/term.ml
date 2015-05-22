@@ -211,11 +211,12 @@ let rec is_nil_exn t =
     | OrdinalInt _ | NominalInt _ | Symbol _ | Tuple _ | Choice (_, _) ->
       false
     | Switch x ->
-      let _ = Cnf.Map.iter
-        ~f:(fun ~key ~data ->
-          if not (Cnf.is_false key) && not (is_nil_exn data) then
-            raise (Non_Ground t)) x in
-      true
+      Cnf.Map.fold x ~init:true
+        ~f:(fun ~key ~data acc ->
+          match acc with
+          | false -> false
+          | true -> Cnf.is_false key || is_nil_exn data
+        )
   with Non_Ground _ -> raise (Non_Ground t)
 
 let canonize t =
@@ -438,6 +439,23 @@ let rec to_wff bools term =
     end
   | x -> x
 
+let flatten_map_of_switches map =
+  Cnf.Map.fold map ~init:Cnf.Map.empty
+    ~f:(fun ~key ~data acc ->
+      let logic = key in
+      match data with
+      | Switch s' ->
+        Cnf.Map.fold s' ~init:acc
+          ~f:(fun ~key ~data acc ->
+            if not Cnf.(is_false (key * logic)) then
+              Cnf.Map.add acc ~key:Cnf.(key * logic) ~data
+            else
+              acc
+          )
+      | _ ->
+        Cnf.Map.add acc ~key ~data
+    )
+
 let reduce_switch s =
   if Int.(Cnf.Map.length s = 1) then
     let _, data = List.hd_exn (Cnf.Map.to_alist s) in
@@ -445,25 +463,8 @@ let reduce_switch s =
   else
     match Cnf.Map.find s Cnf.make_true with
     | Some x -> x
-    | None -> (* fold switches *)
-      let result =
-        Cnf.Map.fold s ~init:Cnf.Map.empty
-          ~f:(fun ~key ~data acc ->
-            let logic = key in
-            match data with
-            | Switch s' ->
-              Cnf.Map.fold s' ~init:acc
-                ~f:(fun ~key ~data acc ->
-                  if not Cnf.(is_false (key * logic)) then
-                    Cnf.Map.add acc ~key:Cnf.(key * logic) ~data
-                  else
-                    acc
-                )
-            | _ ->
-              Cnf.Map.add acc ~key ~data
-          )
-      in
-      Switch result
+    | None -> Switch (flatten_map_of_switches s)
+
 
 let rec join t t' =
   let join_lst l l' =

@@ -94,3 +94,7 @@ val is_choice : t -> bool
 val get_map_exn : t -> (Cnf.t * t) String.Map.t
 
 val is_up_var : string -> bool
+
+val reduce_switch : t Cnf.Map.t -> t
+
+val flatten_map_of_switches : t Cnf.Map.t -> t Cnf.Map.t
