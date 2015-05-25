@@ -43,11 +43,11 @@ let get_bound constrs var =
   | Some upper -> upper
 
 let add_to_map depth map logic term =
-  if Option.is_some (Sat.solve Cnf.(~-(logic <=> Cnf.make_false))) then
+  if not (Cnf.is_false logic) then
     let added = ref false in
     let map = Cnf.Map.fold map ~init:Cnf.Map.empty
                 ~f:(fun ~key ~data acc ->
-                  if Option.is_some (Sat.solve Cnf.(~-(key <=> logic))) then (* FIXME bottleneck *)
+                  if Option.is_some (Sat.solve Cnf.(~-(key * logic) * (key + logic))) then (* FIXME bottleneck *)
                     Cnf.Map.add map ~key ~data
                   else
                     begin
@@ -57,10 +57,6 @@ let add_to_map depth map logic term =
                         let _ = add_bool_constr depth Cnf.(~-logic) in
                         acc
                       | Some glb ->
-                        (*Cnf.Set.iter c*)
-                          (*~f:(fun el ->*)
-                            (*add_bool_constr depth Cnf.((logic * key) ==> el)*)
-                           (* );*)
                         Cnf.Map.add map ~key ~data:glb
                     end
                 ) in
