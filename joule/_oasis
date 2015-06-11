@@ -21,11 +21,11 @@ Description:
 
 Flag static_picosat
   Description:    Link PicoSAT as a static library
-  Default:        false
+  Default:        true
 
 Flag static_ffi
   Description:    Link Foreign Function Interface (FFI) as a static library
-  Default:        false
+  Default:        true
 
 Executable joule
   Path:           src
@@ -39,7 +39,7 @@ Executable joule
                   threads,
                   ctypes,
                   ctypes.foreign
-  CompiledObject: best
+  CompiledObject: native
   ByteOpt:        -g
   if system(linux)
     CCLib:        -Xlinker --no-as-needed -lpicosat
@@ -51,6 +51,22 @@ Executable joule
     else
       DllLib:     -lpicosat
       CCLib:      -lpicosat
+
+Executable debug_solver
+  Path:           src
+  MainIs:         debug_solver.ml
+  BuildDepends:   core,
+                  sexplib,
+                  sexplib.syntax,
+                  comparelib,
+                  comparelib.syntax,
+                  ocamlgraph,
+                  threads,
+                  ctypes,
+                  ctypes.foreign
+  CompiledObject: native
+  BuildTools:     ocamlbuild
+  Install:        false
 
 Document "api-joule"
   Title: Documentation and API reference for Joule solver

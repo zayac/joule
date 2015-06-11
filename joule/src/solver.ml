@@ -47,6 +47,11 @@ let add_to_map depth map logic term =
     let added = ref false in
     let map = Cnf.Map.fold map ~init:Cnf.Map.empty
                 ~f:(fun ~key ~data acc ->
+                  (*print_endline "PING";*)
+                  (*print_endline (Cnf.to_string key);*)
+                  (*print_endline (Cnf.to_string logic);*)
+                  (*print_endline (Cnf.(to_string (~-(key * logic) * (key + logic))));*)
+                  (*print_endline "PONG";*)
                   if Option.is_some (Sat.solve Cnf.(~-(key * logic) * (key + logic))) then (* FIXME bottleneck *)
                     Cnf.Map.add map ~key ~data
                   else
@@ -84,8 +89,12 @@ let merge_bounds depth old_terms new_terms =
               begin
                 (* Notice that two terms that correspond to the same Boolean
                    guards may be added to the map *)
+                (*print_endline (Cnf.to_string logic);*)
+                (*print_endline Cnf.(to_string ~-logic');*)
+                (*print_endline "PING";*)
                 new_map := add_to_map depth !new_map Cnf.(logic * ~-logic') term;
                 new_map := add_to_map depth !new_map Cnf.(~-logic * logic') term';
+                (*print_endline "PONG";*)
                 match Term.join term term' with
                 | None ->
                   begin
@@ -94,6 +103,7 @@ let merge_bounds depth old_terms new_terms =
                 | Some join_term ->
                   (*Cnf.Set.iter log ~f:(fun el -> add_bool_constr depth Cnf.((logic * logic') ==> el));*)
                   new_map := add_to_map depth !new_map Cnf.(logic * logic') join_term
+                (*print_endline "!"*)
               end
             );
         );

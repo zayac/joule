@@ -24,13 +24,16 @@ let convert_constrs l r =
 %token SCOLON COLON COMMA BAR LEQ EQ NOMINAL EOF
 
 %start <Constr.t list * Cnf.t> parse
+%start <Logic.t> logic
 %%
 
 parse:
   | constrs* EOF
     {
       let open Core.Std in
-      List.concat_no_order $1, !bool_constrs 
+      let constrs = !bool_constrs in
+      bool_constrs := Cnf.CSet.empty;
+      List.concat_no_order $1, constrs
     }
 
 constrs:
@@ -89,7 +92,7 @@ term:
     { Term.List ($2, $3) }
 
 switch_entry:
-  | logical_term COLON term
+  | logic COLON term
     {
       $1, $3
     }
@@ -129,13 +132,13 @@ label:
     }
 
 guard:
-  | LPAREN logical_term RPAREN { $2 }
-  | LPAREN NOT logical_term RPAREN { Logic.(~-$3) }
-  | LPAREN OR logical_term logical_term+ RPAREN
+  | LPAREN logic RPAREN { $2 }
+  | LPAREN NOT logic RPAREN { Logic.(~-$3) }
+  | LPAREN OR logic logic+ RPAREN
     {
       Core.Std.List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a + b))
     }
-  | LPAREN AND logical_term logical_term+ RPAREN
+  | LPAREN AND logic logic+ RPAREN
     {
       Core.Std.List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a * b))
     }
@@ -144,7 +147,7 @@ guard:
       Errors.parse_error "invalid guard" $startpos $endpos
     }
 
-logical_term:
+logic:
   | TRUE { Logic.True }
   | FALSE { Logic.False }
   | ID
@@ -153,15 +156,16 @@ logical_term:
       T.initial_bool_variables := Core.Std.String.Set.add !T.initial_bool_variables $1;
       Logic.Var $1
     }
-  | LPAREN OR logical_term logical_term+ RPAREN
+  | LPAREN OR logic logic+ RPAREN
     {
       Core.Std.List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a + b))
     }
-  | LPAREN AND logical_term logical_term+ RPAREN
+  | LPAREN AND logic logic+ RPAREN
     {
       Core.Std.List.fold $4 ~init:$3 ~f:(fun a b -> Logic.(a * b))
     }
-  | LPAREN NOT logical_term RPAREN { Logic.(~-$3) }
+  | LPAREN NOT logic RPAREN { Logic.(~-$3) }
+  | LPAREN logic RPAREN { $2 }
   | UP_VAR
   | DOWN_VAR
     {

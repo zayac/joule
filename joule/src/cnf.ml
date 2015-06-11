@@ -10,14 +10,14 @@ end
 include T
 include Comparable.Make(T)
 
-type keys =
-  | Knot of t
-  | Kor of t * t
-  | Kand of t * t
-  | Kimp of t * t
-  | Keq of t * t
-with sexp, compare
-let cnf_table = Hashtbl.Poly.create ~size:100 ()
+(*type keys =*)
+  (*| Knot of t*)
+  (*| Kor of t * t*)
+  (*| Kand of t * t*)
+  (*| Kimp of t * t*)
+  (*| Keq of t * t*)
+(*with sexp, compare*)
+(*let cnf_table = Hashtbl.Poly.create ~size:100 ()*)
 
 let make_false = CSet.singleton (Logic.Set.singleton Logic.False)
 let make_true = CSet.empty
@@ -166,10 +166,10 @@ let evaluate bools t =
       | _ -> True)
 
 let (+) t t' =
-  let key = Kor (t, t') in
-  match Hashtbl.Poly.find cnf_table key with
-  | Some v -> v
-  | None ->
+  (*let key = Kor (t, t') in*)
+  (*match Hashtbl.Poly.find cnf_table key with*)
+  (*| Some v -> v*)
+  (*| None ->*)
     let result =
       CSet.fold t ~init:CSet.empty
         ~f:(fun acc set ->
@@ -179,14 +179,14 @@ let (+) t t' =
           )
       ) in
     let result = simplify result in
-    let _ = Hashtbl.Poly.add_exn cnf_table ~key:key ~data:result in
+    (*let _ = Hashtbl.Poly.add_exn cnf_table ~key:key ~data:result in*)
     result
 
 let (~-) t =
-  let key = Knot t in
-  match Hashtbl.Poly.find cnf_table key with
-  | Some v -> v
-  | None ->
+  (*let key = Knot t in*)
+  (*match Hashtbl.Poly.find cnf_table key with*)
+  (*| Some v -> v*)
+  (*| None ->*)
     if is_false t then make_true
     else if is_true t then make_false
     else
@@ -203,46 +203,46 @@ let (~-) t =
       let tmp = (List.map ~f:Logic.Set.of_list !lst) in
       let t' = CSet.of_list tmp in
       let result = simplify t' in
-      let _ = Hashtbl.Poly.add_exn cnf_table ~key:key ~data:result in
+      (*let _ = Hashtbl.Poly.add_exn cnf_table ~key:key ~data:result in*)
       result
 
 let ( * ) t t' =
-  let key = Kand (t, t') in
-  match Hashtbl.Poly.find cnf_table key with
-  | Some v -> v
-  | None ->
+  (*let key = Kand (t, t') in*)
+  (*match Hashtbl.Poly.find cnf_table key with*)
+  (*| Some v -> v*)
+  (*| None ->*)
     let result =
       if t = ~-t' then make_false
       else simplify (CSet.union t t')
     in
-    let _ = Hashtbl.Poly.add_exn cnf_table ~key:key ~data:result in
+    (*let _ = Hashtbl.Poly.add_exn cnf_table ~key:key ~data:result in*)
     result
 
 let (==>) t t' =
-  let key = Kimp (t, t') in
-  match Hashtbl.Poly.find cnf_table key with
-  | Some v -> v
-  | None ->
+  (*let key = Kimp (t, t') in*)
+  (*match Hashtbl.Poly.find cnf_table key with*)
+  (*| Some v -> v*)
+  (*| None ->*)
     let result = simplify (~-t + t') in
-    let _ = Hashtbl.Poly.add_exn cnf_table ~key:key ~data:result in
+    (*let _ = Hashtbl.Poly.add_exn cnf_table ~key:key ~data:result in*)
     result
 
 let (<==) t t' =
-  let key = Kimp (t', t) in
-  match Hashtbl.Poly.find cnf_table key with
-  | Some v -> v
-  | None ->
+  (*let key = Kimp (t', t) in*)
+  (*match Hashtbl.Poly.find cnf_table key with*)
+  (*| Some v -> v*)
+  (*| None ->*)
     let result = simplify (t + ~-t') in
-    let _ = Hashtbl.Poly.add_exn cnf_table ~key:key ~data:result in
+    (*let _ = Hashtbl.Poly.add_exn cnf_table ~key:key ~data:result in*)
     result
 
 let (<=>) t t' =
-let key = Keq (t', t) in
-  match Hashtbl.Poly.find cnf_table key with
-  | Some v -> v
-  | None ->
+(*let key = Keq (t', t) in*)
+  (*match Hashtbl.Poly.find cnf_table key with*)
+  (*| Some v -> v*)
+  (*| None ->*)
     let result = simplify ((t * t') + (~-t * ~-t')) in
-    let _ = Hashtbl.Poly.add_exn cnf_table ~key:key ~data:result in
+    (*let _ = Hashtbl.Poly.add_exn cnf_table ~key:key ~data:result in*)
     result
 
 let list_of_disjuncts lst =
