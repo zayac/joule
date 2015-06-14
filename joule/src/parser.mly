@@ -3,7 +3,7 @@
 module PLog = Log.Make(struct let section = "parser:" end)
 module LLog = Log.Make(struct let section = "logic:" end)
 
-let bool_constrs = ref Cnf.CSet.empty
+let bool_constrs = ref Core.Std.Set.Poly.empty
 
 let convert_constrs l r =
   let open Core.Std in
@@ -23,7 +23,7 @@ let convert_constrs l r =
 %token LBRACE RBRACE LPAREN RPAREN LBRACKET RBRACKET LANGULAR RANGULAR LSMILE RSMILE
 %token SCOLON COLON COMMA BAR LEQ EQ NOMINAL EOF
 
-%start <Constr.t list * Cnf.t> parse
+%start <Constr.t list * Cnf.t Core.Std.Set.Poly.t> parse
 %start <Logic.t> logic
 %%
 
@@ -32,7 +32,7 @@ parse:
     {
       let open Core.Std in
       let constrs = !bool_constrs in
-      bool_constrs := Cnf.CSet.empty;
+      bool_constrs := Set.Poly.empty;
       List.concat_no_order $1, constrs
     }
 
@@ -76,17 +76,23 @@ term:
     }
   | LANGULAR separated_nonempty_list(COMMA, switch_entry) RANGULAR
     {
-      Util.switch_of_alist_exn $2 bool_constrs
+      let t, constrs = Util.switch_of_alist_exn $2 in
+      bool_constrs := Core.Std.Set.Poly.union !bool_constrs constrs;
+      t
     }
   | LSMILE separated_nonempty_list(COMMA, choice_entry) rec_list_tail_choice? RSMILE
     {
-      Term.Choice (Util.map_of_alist_exn $2 bool_constrs, $3)
+      let map, constrs = Util.map_of_alist_exn $2 in
+      bool_constrs := Core.Std.Set.Poly.union !bool_constrs constrs;
+      Term.Choice (map, $3)
     }
   | LBRACE RBRACE { Term.Nil }
   | LBRACKET RBRACKET { Term.Nil }
   | LBRACE separated_nonempty_list(COMMA, rec_entry) rec_list_tail? RBRACE
     {
-      Term.Record (Util.map_of_alist_exn $2 bool_constrs, $3)
+      let map, constrs = Util.map_of_alist_exn $2 in
+      bool_constrs := Core.Std.Set.Poly.union !bool_constrs constrs;
+      Term.Record (map, $3)
     }
   | LBRACKET separated_nonempty_list(COMMA, term) rec_list_tail? RBRACKET
     { Term.List ($2, $3) }

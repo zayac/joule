@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: ddb67d789c7f622ed8b5c88a89de846d)
+# DO NOT EDIT (digest: bb80c1488f095f2fd3b63a5cce745f6c)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -29,6 +29,8 @@ true: annot, bin_annot
 "src/joule.native": package(sexplib.syntax)
 "src/joule.native": package(threads)
 # Executable debug_solver
+"src/debug_solver.native": oasis_executable_debug_solver_cclib
+"src/debug_solver.native": oasis_executable_debug_solver_dlllib
 "src/debug_solver.native": package(comparelib)
 "src/debug_solver.native": package(comparelib.syntax)
 "src/debug_solver.native": package(core)

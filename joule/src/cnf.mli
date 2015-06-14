@@ -2,13 +2,10 @@
 
 open Core.Std
 
-module CSet :
-  sig
-    include (module type of Set.Poly)
-  end
+(*module CSet = Set.Poly*)
 
 (** A Boolean expression in CNF *)
-type t = Logic.Set.t CSet.t
+type t = int
 
 val compare_t : t -> t -> int
 val t_of_sexp : Sexplib.Sexp.t -> t
@@ -44,11 +41,11 @@ val is_ground : t -> bool
 val from_logic : Logic.t -> t
 (** Replaces variables in a Boolean expression [t] with the ones provided in
     the map and simplifies the expression *)
-val evaluate : bool String.Map.t -> t -> Logic.t
+val evaluate : bool String.Map.t -> t -> bool
 (** Constructs a disjunction of Boolean expressions that are provided in a list *)
 val list_of_disjuncts : t list -> t
 (** Tries to reduce and to simplify a Boolean expression *)
-val simplify : t -> t
+(*val simplify : t -> t*)
 (** Given a list of Boolean expressions, constructs a Boolean expression that
     excludes all pairwise combinations of list elements *)
 val pairwise_not_and : t list -> t
@@ -56,14 +53,31 @@ val pairwise_not_and : t list -> t
 (** {2 Logical operators } *)
 
 (** Disjunction *)
+val c_or : t -> t -> t
 val ( + ) : t -> t -> t
+val c_lor : t list -> t
 (** Conjunction *)
+val c_and : t -> t -> t
 val ( * ) : t -> t -> t
+val c_land : t list -> t
 (** Negation *)
+val c_not : t -> t
 val ( ~- ) : t -> t
 (** Implication *)
 val ( ==> ) : t -> t -> t
-(** Converse implication *)
-val ( <== ) : t -> t -> t
 (** Equivalence *)
+val c_eq : t -> t -> t
 val ( <=> ) : t -> t -> t
+(** NOT OR *)
+val c_nor : t -> t -> t
+(** Exclusive OR *)
+val c_xor : t -> t -> t
+val c_nand : t -> t -> t
+
+val set_to_t : t Core.Std.Set.Poly.t -> t
+
+val get_cnf : unit -> t list list
+
+val int_to_var : t -> string option
+
+(*val int_string_var_table: (t, string) Core.Std.Hashtbl.Poly.t*)

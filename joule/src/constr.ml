@@ -37,7 +37,7 @@ let substitute constrs bools =
     (* store all terms that match a Boolean condition *)
     let candidates = ref Term.Set.empty in
     let f' ~key ~data =
-      if Logic.(Cnf.evaluate bools key = True) then
+      if Cnf.evaluate bools key then
         candidates := Term.Set.add !candidates (Term.to_wff bools data) in
     Cnf.Map.iter ~f:f' data;
     let result = Term.Set.fold !candidates ~init:None

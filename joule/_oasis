@@ -66,6 +66,17 @@ Executable debug_solver
                   ctypes.foreign
   CompiledObject: native
   BuildTools:     ocamlbuild
+  if system(linux)
+    CCLib:        -Xlinker --no-as-needed -lpicosat
+  else
+    if flag(static_ffi)
+      CCLib:        '-force_load /usr/local/Cellar/libffi/3.0.13/lib/libffi.a'
+    if flag(static_picosat)
+      CCLib:      '-force_load /usr/local/lib/libpicosat.a'
+    else
+      DllLib:     -lpicosat
+      CCLib:      -lpicosat
+
   Install:        false
 
 Document "api-joule"

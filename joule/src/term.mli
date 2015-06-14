@@ -98,3 +98,7 @@ val is_up_var : string -> bool
 val reduce_switch : t Cnf.Map.t -> t
 
 val flatten_map_of_switches : t Cnf.Map.t -> t Cnf.Map.t
+
+val same : t -> t -> bool
+
+val equal_map : t Cnf.Map.t -> t Cnf.Map.t -> bool

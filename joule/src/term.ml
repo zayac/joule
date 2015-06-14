@@ -415,7 +415,9 @@ let rec to_wff bools term =
   let transform map =
     String.Map.map 
       ~f:(fun (logic, data) ->
-        Cnf.(from_logic (evaluate bools logic)), (to_wff bools data)
+        match Cnf.evaluate bools logic with
+        | true -> Cnf.make_true, (to_wff bools data)
+        | false -> Cnf.make_false, (to_wff bools data)
       ) map in
   match term with
   | Record (map, v) -> Record (transform map, v)
@@ -428,7 +430,7 @@ let rec to_wff bools term =
         Cnf.Map.fold x ~init:None
           ~f:(fun ~key ~data result ->
             match result with
-            | None when Logic.equal Cnf.(evaluate bools key) Logic.True ->
+            | None when Cnf.evaluate bools key ->
               Some (to_wff bools data)
             | x -> x
           )
@@ -662,3 +664,54 @@ let get_map_exn = function
   | _ -> assert false
 
 let is_up_var s = String.is_prefix s ~prefix:"^"
+
+let rec same t1 t2 =
+  match t1, t2 with
+  | t1, t2 when t1 = t2 -> true
+  | Symbol s, Symbol s' -> String.equal s s'
+  | OrdinalInt i, OrdinalInt i'
+  | NominalInt i, NominalInt i' -> Int.equal i i'
+  | Tuple x, Tuple x'
+  | List (x, None), List (x', None) ->
+    begin
+      match List.zip x x' with
+      | Some l ->
+        List.fold l ~init:true
+          ~f:(fun acc (t, t') ->
+            if not acc then false
+            else same t t'
+          )
+      | None -> false
+    end
+  | Choice (map, None), Choice (map', None)
+  | Record (map, None), Record (map', None) ->
+    begin
+      let ret = ref true in
+      String.Map.iter2 map map'
+        ~f:(fun ~key ~data ->
+          match data with
+          | `Left (g, t)
+          | `Right (g, t) ->
+            ret := false
+          | `Both ((g, t), (g', t')) ->
+            if !ret then
+              ret := same t t' && Sat.equal g g'
+            else
+              ret := false
+        );
+      !ret
+    end
+  | _ ->
+    false
+
+let equal_map map map' =
+  try
+    let lst, lst' = Cnf.Map.to_alist map, Cnf.Map.to_alist map' in
+    List.fold2_exn ~init:true
+      ~f:(fun acc (cnf, term) (cnf', term') ->
+        (*printf "%s %s %s %s\n" (Cnf.to_string cnf) (Cnf.to_string cnf') (to_string term) (to_string term');*)
+        if not acc then false
+        else Sat.equal cnf cnf' && same term term'
+      ) lst lst'
+  with Invalid_argument _ -> false
+

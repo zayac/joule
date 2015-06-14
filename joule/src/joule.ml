@@ -43,7 +43,8 @@ let loop dot_output debug verbose format_output limit filename =
     Log.output_header "Syntax Analysis/Parsing";
     let constrs, logic = In_channel.with_file filename
         ~f:(fun inx -> Parser.parse Lexer.read (Lexing.from_channel inx)) in
-    let constrs, logic = Transform.union constrs logic in
+    let constrs, logic' = Transform.union constrs in
+    let logic = Set.Poly.union logic logic' in
     if verbose then
       begin
         printf "The network contains %d constraints:\n" (List.length constrs);

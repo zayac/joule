@@ -15,7 +15,7 @@ val get_free_bool_var : unit -> string
 
 (** transform a union term to a form specified in the description of [union]
     function and generated additional constraints for terms. *)
-val to_union : Cnf.t ref -> Term.t -> Term.t * (Term.t * Term.t) list
+val to_union : Term.t -> Term.t * (Term.t * Term.t) list * Cnf.t Set.Poly.t
 
 (** [union t l] transforms a set of constraints [t] under boolean assumptions
     [l] that contain union terms of the form [(union t t')].
@@ -32,4 +32,4 @@ val to_union : Cnf.t ref -> Term.t -> Term.t * (Term.t * Term.t) list
 
     Notice: the function transforms module variables
     [additional_bool_variables] and [union_term_variables]. *)
-val union : (Term.t * Term.t) list -> Cnf.t -> (Term.t * Term.t) list * Cnf.t
+val union : (Term.t * Term.t) list -> (Term.t * Term.t) list * Cnf.t Set.Poly.t

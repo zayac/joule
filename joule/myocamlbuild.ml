@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 438d2811386d07ceb8b19f8dc34840c1) *)
+(* DO NOT EDIT (digest: 1344f52229f6590466689153c95b8f03) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -677,7 +677,68 @@ let package_default =
           (["oasis_executable_joule_byte"; "ocaml"; "ocamldep"; "byte"],
             [(OASISExpr.EBool true, S [A "-g"])]);
           (["oasis_executable_joule_byte"; "ocaml"; "compile"; "byte"],
-            [(OASISExpr.EBool true, S [A "-g"])])
+            [(OASISExpr.EBool true, S [A "-g"])]);
+          (["oasis_executable_debug_solver_cclib"; "link"],
+            [
+               (OASISExpr.EBool true, S []);
+               (OASISExpr.ETest ("system", "linux"),
+                 S
+                   [
+                      A "-cclib";
+                      A "-Xlinker";
+                      A "-cclib";
+                      A "--no-as-needed";
+                      A "-cclib";
+                      A "-lpicosat"
+                   ]);
+               (OASISExpr.EAnd
+                  (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+                    OASISExpr.EFlag "static_ffi"),
+                 S
+                   [
+                      A "-cclib";
+                      A
+                        "-force_load /usr/local/Cellar/libffi/3.0.13/lib/libffi.a"
+                   ]);
+               (OASISExpr.EAnd
+                  (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+                    OASISExpr.EFlag "static_picosat"),
+                 S [A "-cclib"; A "-force_load /usr/local/lib/libpicosat.a"]);
+               (OASISExpr.EAnd
+                  (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+                    OASISExpr.ENot (OASISExpr.EFlag "static_picosat")),
+                 S [A "-cclib"; A "-lpicosat"])
+            ]);
+          (["oasis_executable_debug_solver_cclib"; "ocamlmklib"; "c"],
+            [
+               (OASISExpr.EBool true, S []);
+               (OASISExpr.ETest ("system", "linux"),
+                 S [A "-Xlinker"; A "--no-as-needed"; A "-lpicosat"]);
+               (OASISExpr.EAnd
+                  (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+                    OASISExpr.EFlag "static_ffi"),
+                 S
+                   [
+                      A
+                        "-force_load /usr/local/Cellar/libffi/3.0.13/lib/libffi.a"
+                   ]);
+               (OASISExpr.EAnd
+                  (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+                    OASISExpr.EFlag "static_picosat"),
+                 S [A "-force_load /usr/local/lib/libpicosat.a"]);
+               (OASISExpr.EAnd
+                  (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+                    OASISExpr.ENot (OASISExpr.EFlag "static_picosat")),
+                 S [A "-lpicosat"])
+            ]);
+          (["oasis_executable_debug_solver_dlllib"; "link"; "byte"],
+            [
+               (OASISExpr.EBool true, S []);
+               (OASISExpr.EAnd
+                  (OASISExpr.ENot (OASISExpr.ETest ("system", "linux")),
+                    OASISExpr.ENot (OASISExpr.EFlag "static_picosat")),
+                 S [A "-dllib"; P "-lpicosat"])
+            ])
        ];
      includes = []
   }
@@ -687,7 +748,7 @@ let conf = {MyOCamlbuildFindlib.no_automatic_syntax = false}
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default conf package_default;;
 
-# 691 "myocamlbuild.ml"
+# 752 "myocamlbuild.ml"
 (* OASIS_STOP *)
 
 open Ocamlbuild_plugin;;
