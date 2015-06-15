@@ -228,29 +228,9 @@ let reset () =
 (*| x -> simplify (CSet.singleton (Logic.Set.singleton (Logic.simplify x)))*)
 
 let evaluate bools t =
-  let lst = Hashtbl.Poly.find_exn cnf t in
-  List.fold lst ~init:true
-    ~f:(fun acc x ->
-      let result =
-        List.fold x ~init:false
-          ~f:(fun acc i ->
-            if Poly.(acc = true) then true
-            else
-              match Hashtbl.Poly.find int_string_var_table i with
-              | None -> true (* convention: priority goes to True *)
-              | Some s ->
-                begin
-                  match String.Map.find bools s with
-                  | Some true
-                  | None -> true (* convention: priority goes to True *)
-                  | Some false -> false
-                end
-          )
-      in
-      match acc, result with
-      | false, _
-      | _, false -> false
-      | _ -> true)
+  if t = make_true then true
+  else if t = make_false then false
+  else Int.Map.find_exn bools t
 
 let c_or x1 x2 =
   if x1 = x2 then x1

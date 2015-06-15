@@ -41,7 +41,7 @@ val is_ground : t -> bool
 val from_logic : Logic.t -> t
 (** Replaces variables in a Boolean expression [t] with the ones provided in
     the map and simplifies the expression *)
-val evaluate : bool String.Map.t -> t -> bool
+val evaluate : bool Int.Map.t -> t -> bool
 (** Constructs a disjunction of Boolean expressions that are provided in a list *)
 val list_of_disjuncts : t list -> t
 (** Tries to reduce and to simplify a Boolean expression *)

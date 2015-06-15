@@ -76,7 +76,7 @@ val get_vars : t -> String.Set.t
 val canonize_switch : t Logic.Map.t -> t Logic.Map.t * Logic.Set.t
 
 (** Converts term to a well-formed term given a set of Boolean values *)
-val to_wff : bool String.Map.t -> t -> t
+val to_wff : bool Int.Map.t -> t -> t
 
 (** Finds a join term for two terms *)
 val join : t -> t -> t option

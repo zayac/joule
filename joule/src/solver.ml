@@ -488,14 +488,19 @@ let rec set_bound_exn depth constrs var terms =
       let merged = merge_bounds (depth + 1) u terms in
       let merged = Term.flatten_map_of_switches merged in
       (*printf "VAR: %s\nOLD: %s\nNEW: %s\nEQUAL: %s\n" var (print_map u) (print_map merged)*)
-      (if Term.equal_map merged u then "true" else "false");
       if Cnf.Map.is_empty merged then
-        Errors.unsat_error
+        let _ = Errors.unsat_error
           (Printf.sprintf "the upper bounds for variable $%s are inconsistent"
              var)
+        in
+        Some u
       else if not (Term.equal_map merged u) then
-        SLog.logf "%s for variable $%s to <%s>" b var (print_map merged);
-      Some merged
+        let _ =
+          SLog.logf "%s for variable $%s to <%s>" b var (print_map merged)
+        in
+        Some merged
+      else
+        Some u
   )
 
 let poly_var_to_list depth constrs var logic_constr =
@@ -557,7 +562,7 @@ let set_left_choice_tail_var_constr depth constrs logic map v t =
               | None ->
                 g', Term.Choice (String.Map.singleton key data, None)
               | Some (g, _) ->
-                Cnf.(g' * ~- g), Term.Choice (String.Map.singleton key (Cnf.(g' * ~-g), t'), None)
+                Cnf.(g' * ~-g), Term.Choice (String.Map.singleton key (Cnf.(g' * ~-g), t'), None)
             in
             if not (Cnf.(is_false condition)) && not (Set.Poly.mem !choice_bool_var_cache (v, Cnf.(logic * condition), key, t')) then
             begin
@@ -1198,9 +1203,7 @@ let resolve_bound_constraints topo =
 let add_boolean_constraints constrs =
   String.Map.iter constrs
     ~f:(fun ~key ~data ->
-      let expr =
-        Cnf.Map.fold data ~init:Cnf.make_false
-          ~f:(fun ~key ~data acc -> Cnf.(key + acc)) in
+      let expr = Cnf.c_lor (Cnf.Map.keys data) in
       add_bool_constr 0 expr
     )
 
@@ -1270,14 +1273,26 @@ let solve_exn lst logic verbose limit =
     match Sat.solve_max ~verbose:!verbose_output (Cnf.set_to_t !boolean_constraints) with
     | None -> None
     | Some bool_map ->
-      let union =
-        String.Set.union !Transform.initial_bool_variables !Transform.additional_bool_variables in
-      let bool_map = String.Set.fold union ~init:bool_map
-                       ~f:(fun acc el ->
-                         if not (String.Map.mem bool_map el) then
-                           String.Map.add acc ~key:el ~data:false
-                         else acc
-                       ) in
-      Some (bool_map, (Constr.substitute constrs bool_map))
+      let union = String.Set.union !Transform.initial_bool_variables !Transform.additional_bool_variables in
+      let bool_map =
+        String.Set.fold union
+          ~init:bool_map
+          ~f:(fun acc el ->
+            let var = Cnf.make_var el in
+            if not (Int.Map.mem bool_map var) then
+              Int.Map.add acc ~key:var ~data:false
+            else acc
+          )
+      in
+      let ret =
+        Int.Map.fold
+          ~init:String.Map.empty
+          ~f:(fun ~key ~data acc ->
+            match Cnf.int_to_var key with
+            | Some s -> String.Map.add acc ~key:s ~data
+            | None -> acc
+          ) bool_map
+      in
+      Some (ret, (Constr.substitute constrs bool_map))
   with No_Solution t ->
     Errors.unsat_error t

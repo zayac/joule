@@ -36,4 +36,4 @@ val print_constraints : var_bounds String.Map.t -> unit
 (** [substitute ub bv] replaces Boolean variables in [ub] with ground Boolean
     values from [bv] and returns a map of well-formed terms that represent
     upper bounds for each variable in the map *)
-val substitute : var_bounds String.Map.t -> bool String.Map.t -> Term.t String.Map.t
+val substitute : var_bounds String.Map.t -> bool Int.Map.t -> Term.t String.Map.t
