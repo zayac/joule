@@ -532,7 +532,7 @@ let rec join t t' =
                 map := Cnf.Map.add !map ~key:Cnf.(~-l * l') ~data:t';
               match join t t' with
               | None ->
-                Some (Cnf.((l + l') * ~-(l * l')), reduce_switch !map)
+                Some (Cnf.xor l l', reduce_switch !map)
               | Some jt ->
                 begin
                   if not Cnf.(is_false (l * l')) then
@@ -562,7 +562,7 @@ let rec join t t' =
                 map := Cnf.Map.add !map ~key:Cnf.(~-l * l') ~data:t';
               match join t t' with
               | None ->
-                Some (Cnf.((l + l') * ~-(l * l')), reduce_switch !map)
+                Some (Cnf.xor l l', reduce_switch !map)
               | Some jt ->
                 begin
                   if not Cnf.(is_false (l * l')) then

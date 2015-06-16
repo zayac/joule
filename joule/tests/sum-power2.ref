@@ -1,9 +1,9 @@
 a = false
 b = false
 f_power__1_power_double = false
-f_power__1_power_int = false
+f_power__1_power_int = true
 
-$^power = (:"k": nil, "result": {"p": double}:)
+$^power = (:"k": nil:)
 $^sum = (:"k": nil, "result": {"p": double}:)
 $__1_power_double_1_power_int = nil
 $_sum_double = nil

@@ -245,6 +245,8 @@ let (<=>) t t' =
     (*let _ = Hashtbl.Poly.add_exn cnf_table ~key:key ~data:result in*)
     result
 
+let xor t t' = (t * ~-t') + (~-t * t')
+
 let list_of_disjuncts lst =
   match lst with
   | [] -> make_true

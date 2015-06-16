@@ -65,5 +65,7 @@ val ( ~- ) : t -> t
 val ( ==> ) : t -> t -> t
 (** Converse implication *)
 val ( <== ) : t -> t -> t
+
+val xor : t -> t -> t
 (** Equivalence *)
 val ( <=> ) : t -> t -> t

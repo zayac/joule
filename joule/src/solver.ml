@@ -52,7 +52,7 @@ let add_to_map depth map logic term =
                   (*print_endline (Cnf.to_string logic);*)
                   (*print_endline (Cnf.(to_string (~-(key * logic) * (key + logic))));*)
                   (*print_endline "PONG";*)
-                  if Option.is_some (Sat.solve Cnf.(~-(key * logic) * (key + logic))) then (* FIXME bottleneck *)
+                  if Option.is_some (Sat.solve (Cnf.xor key logic)) then (* FIXME bottleneck *)
                     Cnf.Map.add map ~key ~data
                   else
                     begin
