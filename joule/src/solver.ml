@@ -487,7 +487,7 @@ let rec set_bound_exn depth constrs var terms =
     | Some u ->
       let merged = merge_bounds (depth + 1) u terms in
       let merged = Term.flatten_map_of_switches merged in
-      (*printf "VAR: %s\nOLD: %s\nNEW: %s\nEQUAL: %s\n" var (print_map u) (print_map merged)*)
+      (*printf "VAR: %s\nOLD: %s\nNEW: %s\n" var (print_map u) (print_map merged);*)
       if Cnf.Map.is_empty merged then
         let _ = Errors.unsat_error
           (Printf.sprintf "the upper bounds for variable $%s are inconsistent"

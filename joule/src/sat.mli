@@ -10,3 +10,6 @@ val solve_max : ?verbose:bool -> Cnf.t -> bool Int.Map.t option
 val equal : Cnf.t -> Cnf.t -> bool
 
 val evaluate : bool Int.Map.t -> Cnf.t -> bool
+
+val is_not_false : Cnf.t -> bool
+val is_false : Cnf.t -> bool

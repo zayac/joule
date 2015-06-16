@@ -126,3 +126,5 @@ let evaluate bools l =
   in
   Option.is_some (solve Cnf.(c_land (l :: lst)))
 
+let is_not_false l = Option.is_some (solve l)
+let is_false l = Option.is_none (solve l)
