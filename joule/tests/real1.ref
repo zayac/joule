@@ -1,0 +1,11 @@
+ppd = false
+ppi = true
+ssd = false
+ssi = true
+
+$^power = none
+$^sum = none
+$_power_double = nil
+$_power_int = nil
+$_sum_double = nil
+$_sum_int = {"base": int}

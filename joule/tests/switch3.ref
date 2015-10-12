@@ -1,0 +1,7 @@
+a = true
+b = false
+c = true
+d = false
+
+$_v = nil
+$_w = nil

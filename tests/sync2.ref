@@ -1,6 +1,0 @@
-p = true
-
-$vdata = {x: int, y: int}
-$z = nil
-$rest = nil
-$wdata = nil

@@ -1,0 +1,6 @@
+a = false
+b = false
+c = false
+
+$_x = {"e": nil, "f": nil, "q": nil}
+$_y = {"q": nil}

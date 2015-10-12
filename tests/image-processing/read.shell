@@ -1,0 +1,4 @@
+send_color -> 1
+send_grayscale -> 1
+1[send_color/denoise_color]
+1[send_grayscale/denoise_grayscale]

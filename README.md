@@ -1,51 +1,44 @@
-Joule is a constraint solver for hierarchical data types with the support of
-abstraction and encapsulation.  The types are terms that are specified in Data
-Description Language (DDL).  Relations on terms form a set of constraints.  The
-purpose of Joule solver is to find a satisfiable model that consists of
-well-formed terms for every term variable present.
+This is a set of tools that serves a mechanism for interface reconciliation in
+[Kahn Process Networks](http://en.wikipedia.org/wiki/Kahn_process_networks) and
+is intended to be used in a component programming language based on streaming
+networks.  Meanwhile, the tools implement a Constraint Aggregation Layer in
+[AstraKahn](http://arxiv.org/abs/1306.6029) programming language.  The core of
+the mechanism is a constraint solver Joule.  It resolves a set of constraints
+that defines relations between input and output message format in the streaming
+network.
 
-The description of terms and constraints structure is yet to come.
+The project consists of the following parts:
 
-## Installation
+### Component Transformer
 
-Joule is being implemented in OCaml language. Therefore, you need to have
-a fully-fledged OCaml compiler installed in your system. The solver depends on
-the following OCaml packages:
+Transformer modifies a single component source file defined in C++ (a component
+protocol description is yet to come).
 
-* findlib
-* core
-* sexplib
-* comparelib
-* ocamlgraph
-* ctypes
-* menhir
+### Term Derivation Tool
 
-It is suggested to install them via [OPAM](http://opam.ocaml.org/) package
-manager:
+A tool infers input and output message interfaces described in Message
+Definition Language (MDL) (see AstraKahn preprint using the link above) from
+component's code.  It generates a '.term' file that contains description of the
+interface.
 
-```
-opam install core sexplib comparelib ocamlgraph ctypes menhir oasis
-```
+### Constraint Generator
 
-The solver also uses [PicoSAT](http://fmv.jku.at/picosat/) SAT solver (API
-version 953), so the PicoSAT library must be available in the system. The
-linker accesses it via `-lpicologic` flag.
+Given description of the network (defined as a netlist in a '.netlist' file)
+and a set of '.terms' files, the tool generates constraints for components that
+are connected via a channel and stores them in a '.constraints' file.
 
-### PicoSAT library installation details
+### Joule
 
-#### OS X
+Joule is a constraint solver for satisfying relations between message formats
+in the network described in MDL.  The purpose of Joule is to "contextualise"
+components (similar to template specialization in C++).  For all term variables
+the solver finds a satisfiable model, which represents a data format that can
+be used in the context of the network.
 
-The recommended way is to use [Homebrew](http://brew.sh/) to install PicoSAT
-library. The command below installs PicoSAT version 953.
+### Code Generator
 
-```
-brew install scripts/picosat.rb
-```
+TBD
 
-#### Ubuntu
+### Channel Splitter/Merger
 
-PicoSAT for Ubuntu is accessible from the official repository:
-
-```
-apt-get install picosat
-```
+TBD

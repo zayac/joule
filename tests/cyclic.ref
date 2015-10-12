@@ -1,7 +1,0 @@
-q = false
-
-$u = [char]
-$w = char
-$x = nil
-$y = [char]
-$z = [nil, char]

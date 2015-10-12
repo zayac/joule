@@ -1,0 +1,41 @@
+# OASIS_START
+# DO NOT EDIT (digest: 6a78062ec0f4e2106b285678deec2be8)
+# Ignore VCS directories, you can use the same kind of rule outside
+# OASIS_START/STOP if you want to exclude directories that contains
+# useless stuff for the build process
+true: annot, bin_annot
+<**/.svn>: -traverse
+<**/.svn>: not_hygienic
+".bzr": -traverse
+".bzr": not_hygienic
+".hg": -traverse
+".hg": not_hygienic
+".git": -traverse
+".git": not_hygienic
+"_darcs": -traverse
+"_darcs": not_hygienic
+# Executable netlist
+<src/main.{native,byte}>: oasis_executable_netlist_byte
+<src/*.ml{,i,y}>: oasis_executable_netlist_byte
+<src/main.{native,byte}>: package(comparelib)
+<src/main.{native,byte}>: package(comparelib.syntax)
+<src/main.{native,byte}>: package(core)
+<src/main.{native,byte}>: package(ctypes)
+<src/main.{native,byte}>: package(ctypes.foreign)
+<src/main.{native,byte}>: package(ocamlgraph)
+<src/main.{native,byte}>: package(sexplib)
+<src/main.{native,byte}>: package(sexplib.syntax)
+<src/main.{native,byte}>: package(threads)
+<src/*.ml{,i,y}>: package(comparelib)
+<src/*.ml{,i,y}>: package(comparelib.syntax)
+<src/*.ml{,i,y}>: package(core)
+<src/*.ml{,i,y}>: package(ctypes)
+<src/*.ml{,i,y}>: package(ctypes.foreign)
+<src/*.ml{,i,y}>: package(ocamlgraph)
+<src/*.ml{,i,y}>: package(sexplib)
+<src/*.ml{,i,y}>: package(sexplib.syntax)
+<src/*.ml{,i,y}>: package(threads)
+# OASIS_STOP
+<src/*.ml{,i}>: syntax_camlp4o
+<src/parser.mly>: package(core,threads), thread
+true: use_menhir

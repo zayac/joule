@@ -1,0 +1,5 @@
+{
+	"salvos": [	{ "name": "_1_kMeans", "mapping": [ { "channel": 1, "variant": "kMeans" }] },
+	{ "name": "_2_error", "mapping": [ { "channel": 2, "variant": "error" }] }],
+	"variants": [{ "name": "_1_init", "arguments": 2}]
+}

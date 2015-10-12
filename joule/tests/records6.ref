@@ -1,0 +1,10 @@
+a = false
+b = false
+c = false
+d = true
+e = false
+f = false
+g = true
+
+$_x = {"a": 0}
+$_y = nil

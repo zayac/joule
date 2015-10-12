@@ -1,0 +1,18 @@
+/*
+$__1_read_color <= $__1_read_color_1_read_unchanged_send_color;
+$__1_read_unchanged <= $__1_read_color_1_read_unchanged_send_color;
+$__1_read_color <= $__1_read_color_1_read_grayscale_1_read_unchanged_error;
+$__1_read_grayscale <= $__1_read_color_1_read_grayscale_1_read_unchanged_error;
+$__1_read_unchanged <= $__1_read_color_1_read_grayscale_1_read_unchanged_error;
+$__1_read_color <= $__1_read_color_1_read_unchanged_send_color;
+$__1_read_unchanged <= $__1_read_color_1_read_unchanged_send_color;
+$__1_read_grayscale <= $__1_read_grayscale_send_grayscale;
+$__1_read_color <= $__1_read_color_1_read_grayscale_1_read_unchanged_error;
+$__1_read_grayscale <= $__1_read_color_1_read_grayscale_1_read_unchanged_error;
+$__1_read_unchanged <= $__1_read_color_1_read_grayscale_1_read_unchanged_error;
+*/
+IN
+	1: (: read_color(f_read__1_read_color): {"fname": "std::basic_string<char, struct std::char_traits<char>, class std::allocator<char>>"| $__1_read_color}, read_grayscale(f_read__1_read_grayscale): {"fname": "std::basic_string<char, struct std::char_traits<char>, class std::allocator<char>>"| $__1_read_grayscale}, read_unchanged(f_read__1_read_unchanged): {"fname": "std::basic_string<char, struct std::char_traits<char>, class std::allocator<char>>"| $__1_read_unchanged}| $^read:)
+OUT
+	1: (:denoise_color(or f_read__1_read_color f_read__1_read_unchanged): {"img": "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>"| $__1_read_color_1_read_unchanged_send_color}, denoise_grayscale(f_read__1_read_grayscale): {"img": "std::vector<class std::vector<double, class std::allocator<double> >, class std::allocator<class std::vector<double, class std::allocator<double> > >>"| $__1_read_grayscale_send_grayscale}| $^read:)
+	2: (:error(or f_read__1_read_color f_read__1_read_grayscale f_read__1_read_unchanged): {"msg": "std::basic_string<char, struct std::char_traits<char>, class std::allocator<char>>"| $__1_read_color_1_read_grayscale_1_read_unchanged_error}:)

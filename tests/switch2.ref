@@ -1,7 +1,0 @@
-a = true
-b = false
-c = true
-d = false
-
-$v = nil
-$w = nil

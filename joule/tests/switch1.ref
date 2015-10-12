@@ -1,0 +1,9 @@
+a = true
+b = false
+c = false
+d = true
+e = false
+f = false
+
+$_x = 2
+$_y = 2
