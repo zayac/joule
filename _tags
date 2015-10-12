@@ -1,8 +1,9 @@
 # OASIS_START
-# DO NOT EDIT (digest: 8e6c60155defc3f2b8ebb1effba9cc6c)
+# DO NOT EDIT (digest: db2269c8a7977c07c528c4342875ff31)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
+true: annot, bin_annot
 <**/.svn>: -traverse
 <**/.svn>: not_hygienic
 ".bzr": -traverse
@@ -17,7 +18,7 @@
 <src/joule.{native,byte}>: oasis_executable_joule_cclib
 <src/joule.{native,byte}>: oasis_executable_joule_dlllib
 <src/joule.{native,byte}>: oasis_executable_joule_byte
-<src/*.ml{,i}>: oasis_executable_joule_byte
+<src/*.ml{,i,y}>: oasis_executable_joule_byte
 <src/joule.{native,byte}>: package(comparelib)
 <src/joule.{native,byte}>: package(comparelib.syntax)
 <src/joule.{native,byte}>: package(core)
@@ -27,15 +28,15 @@
 <src/joule.{native,byte}>: package(sexplib)
 <src/joule.{native,byte}>: package(sexplib.syntax)
 <src/joule.{native,byte}>: package(threads)
-<src/*.ml{,i}>: package(comparelib)
-<src/*.ml{,i}>: package(comparelib.syntax)
-<src/*.ml{,i}>: package(core)
-<src/*.ml{,i}>: package(ctypes)
-<src/*.ml{,i}>: package(ctypes.foreign)
-<src/*.ml{,i}>: package(ocamlgraph)
-<src/*.ml{,i}>: package(sexplib)
-<src/*.ml{,i}>: package(sexplib.syntax)
-<src/*.ml{,i}>: package(threads)
+<src/*.ml{,i,y}>: package(comparelib)
+<src/*.ml{,i,y}>: package(comparelib.syntax)
+<src/*.ml{,i,y}>: package(core)
+<src/*.ml{,i,y}>: package(ctypes)
+<src/*.ml{,i,y}>: package(ctypes.foreign)
+<src/*.ml{,i,y}>: package(ocamlgraph)
+<src/*.ml{,i,y}>: package(sexplib)
+<src/*.ml{,i,y}>: package(sexplib.syntax)
+<src/*.ml{,i,y}>: package(threads)
 # OASIS_STOP
 <src/*.ml{,i}>: syntax_camlp4o
 <src/parser.mly>: package(core,threads), thread
