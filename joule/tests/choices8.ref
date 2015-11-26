@@ -1,0 +1,4 @@
+p = true
+q = false
+
+$^v = (:"foo": int:)

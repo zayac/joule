@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: db2269c8a7977c07c528c4342875ff31)
+# DO NOT EDIT (digest: ddb67d789c7f622ed8b5c88a89de846d)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -15,19 +15,29 @@ true: annot, bin_annot
 "_darcs": -traverse
 "_darcs": not_hygienic
 # Executable joule
-<src/joule.{native,byte}>: oasis_executable_joule_cclib
-<src/joule.{native,byte}>: oasis_executable_joule_dlllib
-<src/joule.{native,byte}>: oasis_executable_joule_byte
+"src/joule.native": oasis_executable_joule_cclib
+"src/joule.native": oasis_executable_joule_dlllib
+"src/joule.native": oasis_executable_joule_byte
 <src/*.ml{,i,y}>: oasis_executable_joule_byte
-<src/joule.{native,byte}>: package(comparelib)
-<src/joule.{native,byte}>: package(comparelib.syntax)
-<src/joule.{native,byte}>: package(core)
-<src/joule.{native,byte}>: package(ctypes)
-<src/joule.{native,byte}>: package(ctypes.foreign)
-<src/joule.{native,byte}>: package(ocamlgraph)
-<src/joule.{native,byte}>: package(sexplib)
-<src/joule.{native,byte}>: package(sexplib.syntax)
-<src/joule.{native,byte}>: package(threads)
+"src/joule.native": package(comparelib)
+"src/joule.native": package(comparelib.syntax)
+"src/joule.native": package(core)
+"src/joule.native": package(ctypes)
+"src/joule.native": package(ctypes.foreign)
+"src/joule.native": package(ocamlgraph)
+"src/joule.native": package(sexplib)
+"src/joule.native": package(sexplib.syntax)
+"src/joule.native": package(threads)
+# Executable debug_solver
+"src/debug_solver.native": package(comparelib)
+"src/debug_solver.native": package(comparelib.syntax)
+"src/debug_solver.native": package(core)
+"src/debug_solver.native": package(ctypes)
+"src/debug_solver.native": package(ctypes.foreign)
+"src/debug_solver.native": package(ocamlgraph)
+"src/debug_solver.native": package(sexplib)
+"src/debug_solver.native": package(sexplib.syntax)
+"src/debug_solver.native": package(threads)
 <src/*.ml{,i,y}>: package(comparelib)
 <src/*.ml{,i,y}>: package(comparelib.syntax)
 <src/*.ml{,i,y}>: package(core)
@@ -41,3 +51,4 @@ true: annot, bin_annot
 <src/*.ml{,i}>: syntax_camlp4o
 <src/parser.mly>: package(core,threads), thread
 true: use_menhir, bin_annot
+false: debug

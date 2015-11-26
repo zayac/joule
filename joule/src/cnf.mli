@@ -20,10 +20,13 @@ include Comparable.S with type t := t
 val make_false : t
 (** Constructs a Boolean expression that evaluates to [true] *)
 val make_true : t
+(** Constructs a Boolean expression consisting of one variable *)
+val make_var : string -> t
 (** Checks whether a Boolean expression is {e syntactically} identical to [false] *)
 val is_false : t -> bool
 (** Checks whether a Boolean expression is {e syntactically} identical to [true] *)
 val is_true : t -> bool
+
 
 val to_string : t -> string
 
@@ -62,5 +65,7 @@ val ( ~- ) : t -> t
 val ( ==> ) : t -> t -> t
 (** Converse implication *)
 val ( <== ) : t -> t -> t
+
+val xor : t -> t -> t
 (** Equivalence *)
 val ( <=> ) : t -> t -> t

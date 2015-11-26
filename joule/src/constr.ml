@@ -45,11 +45,7 @@ let substitute constrs bools =
         match acc with
         | None -> Some el
         | Some old_el ->
-          begin
-            match Term.join old_el el with
-            | None -> None
-            | Some (s, _) -> Some s
-          end
+          Term.join old_el el
       ) in
     match result with
     | None ->
