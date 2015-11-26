@@ -18,6 +18,8 @@ let to_string ?(rel=" ⊑ ") (l, r) =
 
 let get_vars (l, r) = Term.get_vars l, Term.get_vars r
 
+let get_flags (l, r) = Term.get_flags l, Term.get_flags r
+
 let print_constraints map =
   let constr_to_string c =
     let l = Cnf.Map.to_alist c in

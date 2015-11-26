@@ -1,4 +1,5 @@
 open Core.Std
+open Statistics
 
 module SLog = Log.Make(struct let section = "solver:" end)
 module LLog = Log.Make(struct let section = "logic:" end)
@@ -79,6 +80,8 @@ let merge_bounds depth old_terms new_terms =
   else if Cnf.Map.equal Term.equal old_terms new_terms then old_terms
   else
     begin
+      Statistics.t.approximations <- Statistics.t.approximations + 1;
+      Statistics.t.average_approximations <- Statistics.t.approximations / Statistics.t.term_variables;
       let new_map = ref Cnf.Map.empty in
       Cnf.Map.iter old_terms
         ~f:(fun ~key ~data ->
@@ -1194,6 +1197,7 @@ let resolve_bound_constraints topo =
     else
       iter_counter := !iter_counter + 1
   done;
+  Statistics.t.iterations <- !iter_counter;
   !constrs
 
 let add_boolean_constraints constrs =
@@ -1245,6 +1249,7 @@ let solve_exn lst logic verbose limit =
   let _ = match limit with
     | None -> ()
     | Some limit -> iteration_limit := limit in
+  let begin_time = Time.now () in
   boolean_constraints := logic;
   let constrs = resolve_bound_constraints lst in
   add_boolean_constraints constrs;
@@ -1274,6 +1279,8 @@ let solve_exn lst logic verbose limit =
                            String.Map.add acc ~key:el ~data:false
                          else acc
                        ) in
+      Statistics.t.execution_time <- (Time.Span.to_string (Time.diff (Time.now ()) begin_time));
       Some (bool_map, (Constr.substitute constrs bool_map))
   with No_Solution t ->
+    Statistics.t.execution_time <- (Time.Span.to_string (Time.diff (Time.now ()) begin_time));
     Errors.unsat_error t

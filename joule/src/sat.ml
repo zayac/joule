@@ -106,9 +106,12 @@ let solve set =
 
 let solve_max ?(verbose=false) set =
   match find_models set false with
-  | Any -> Some String.Map.empty
+  | Any ->
+    Statistics.t.solutions <- 1;
+    Some String.Map.empty
   | Solutions [] -> None
   | Solutions (hd :: tl) ->
+    Statistics.t.solutions <- List.length tl + 1;
     let counter = ref 1 in
     let print_solution map =
       printf "%d | " !counter;

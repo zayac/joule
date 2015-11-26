@@ -69,3 +69,6 @@ val ( <== ) : t -> t -> t
 val xor : t -> t -> t
 (** Equivalence *)
 val ( <=> ) : t -> t -> t
+
+(** Returns a set of Boolean variables in the expression *)
+val get_vars : t -> String.Set.t

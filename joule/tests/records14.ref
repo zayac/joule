@@ -1,0 +1,6 @@
+k = false
+l = false
+m = false
+
+$_x = {"e": int, "f": int}
+$_y = {"f": int}

@@ -1,5 +1,6 @@
 open Core.Std
 open Network
+open Statistics
 
 let return_value = ref 0
 
@@ -34,16 +35,35 @@ let create_dot_output g dot_output =
   Out_channel.with_file dot_output
     ~f:(fun oc -> Dot.output_graph oc g)
 
-let loop dot_output debug verbose format_output limit filename =
+let loop dot_output debug verbose stats format_output limit filename =
   try
     Location.filename := filename;
+    Statistics.t.name <- filename;
     if debug then Log.set_output stdout;
     Log.logf "reading from %s" filename;
     (* get constraints from the file and generate boolean constraints *)
     Log.output_header "Syntax Analysis/Parsing";
     let constrs, logic = In_channel.with_file filename
-        ~f:(fun inx -> Parser.parse Lexer.read (Lexing.from_channel inx)) in
+                           ~f:(fun inx -> Parser.parse Lexer.read (Lexing.from_channel inx)) in
+    Statistics.t.constraints <- List.length constrs;
     let constrs, logic = Transform.union constrs logic in
+    Statistics.t.aux_constraints <- (List.length constrs) - Statistics.t.constraints;
+    Statistics.t.term_variables <-
+      String.Set.length
+        (List.fold ~init:String.Set.empty
+           ~f:(fun acc t ->
+             let v, v' = Constr.get_vars t in
+             String.Set.union acc (String.Set.union v v')
+           ) constrs
+        );
+    Statistics.t.flags <-
+      String.Set.length
+        (List.fold ~init:String.Set.empty
+           ~f:(fun acc t ->
+             let v, v' = Constr.get_flags t in
+             String.Set.union acc (String.Set.union v v')
+           ) constrs
+        );
     if verbose then
       begin
         printf "The network contains %d constraints:\n" (List.length constrs);
@@ -100,7 +120,9 @@ let loop dot_output debug verbose format_output limit filename =
           ~f:(fun x ->
             if Term.is_up_var x then f ~key:x ~data:Term.none
             else f ~key:x ~data:Term.Nil
-          )
+          );
+        if stats then
+          print_endline (Statistics.str ())
       end
   with Lexer.Syntax_Error msg
      | Errors.Parsing_Error msg
@@ -120,13 +142,14 @@ let command =
         graph in .dot format and store in a file provided as an argument"
       +> flag "-debug" no_arg ~doc:" print debug information"
       +> flag "-verbose" no_arg ~doc:" print auxiliary computation results"
+      +> flag "-stats" no_arg ~doc:" print statistics about execution"
       +> flag "-format-output" no_arg ~doc:" turn on indentation for result terms"
       +> flag "-iterations"(optional int) ~doc:"integer maximum number of \
            iterations for the solver"
       +> anon ("filename" %:string)
     )
-    (fun dot_output debug verbose format_output iterations filename () ->
-       loop dot_output debug verbose format_output iterations filename)
+    (fun dot_output debug verbose stats format_output iterations filename () ->
+       loop dot_output debug verbose stats format_output iterations filename)
 
 let _ =
   let picosat_version = Picosat.version () in

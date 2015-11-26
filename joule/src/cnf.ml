@@ -25,6 +25,17 @@ let make_var s = CSet.singleton Logic.(Set.singleton (Var s))
 let is_false t = CSet.mem t Logic.(Set.singleton False)
 let is_true = CSet.is_empty
 
+let get_vars t =
+  CSet.fold ~init:String.Set.empty
+    ~f:(fun acc set ->
+      Logic.Set.fold ~init:acc
+        ~f:(fun acc l ->
+          match l with
+          | Var s -> String.Set.add acc s
+          | _ -> acc
+        ) set
+    ) t
+
 let to_string t =
   if is_false t then "false"
   else if is_true t then "true"

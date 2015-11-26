@@ -167,6 +167,24 @@ let rec get_vars t =
     let f ~key:_ ~data acc = SS.union acc (get_vars data) in
     Cnf.Map.fold ~init:SS.empty ~f:f x
 
+let rec get_flags t =
+  let module SS = String.Set in
+  let module SM = String.Map in
+  let module L = List in
+  match t with
+  | DownVar _ | UpVar _ | Nil | NominalInt _ | OrdinalInt _ | Symbol _ -> SS.empty
+  | Tuple x -> L.fold_left ~init:SS.empty ~f:SS.union (L.map ~f:get_vars x)
+  | List (x, tail) ->
+    let tl = Option.value_map ~default:SS.empty ~f:SS.singleton tail in
+    SS.union tl (L.fold_left ~init:SS.empty ~f:SS.union (L.map ~f:get_vars x))
+  | Record (map, v)
+  | Choice (map, v) ->
+    let f ~key:_ ~data:(g, t) acc = SS.union (Cnf.get_vars g) (SS.union acc (get_vars t)) in
+    let tl = Option.value_map ~default:SS.empty ~f:SS.singleton v in
+    SS.union tl (SM.fold ~init:SS.empty ~f:f map)
+  | Switch x ->
+    let f ~key:g ~data acc = SS.union (Cnf.get_vars g) (SS.union acc (get_vars data)) in
+    Cnf.Map.fold ~init:SS.empty ~f:f x
 
 let rec is_nil = function
   | Nil -> Some true

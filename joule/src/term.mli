@@ -71,6 +71,10 @@ val seniority_exn : t -> t -> int
     of the form [Var s] that are contained in [t] *)
 val get_vars : t -> String.Set.t
 
+(** [get_flags t] returns a set of Boolean variables from terms of the form
+    [Var s] that are contained in [t] *)
+val get_flags : t -> String.Set.t
+
 (** Removes 'false' Boolean expressions from a switch.  Generates Boolean
     constraints if necessary. *)
 val canonize_switch : t Logic.Map.t -> t Logic.Map.t * Logic.Set.t

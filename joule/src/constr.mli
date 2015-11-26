@@ -26,9 +26,13 @@ val default : t
     specifies a string represenation for the seniority relation symbol *)
 val to_string : ?rel:string -> t -> string
 
-(** [vars t] returns two sets of variables from terms of the form [Vars s] in
-    the left and right parts of the constraint *)
+(** [get_vars t] returns two sets of variables from terms of in the left and
+    right parts of the constraint *)
 val get_vars : t -> String.Set.t * String.Set.t
+
+(** [get_flags t] returns two sets of Boolean variables from terms in the left
+    and right parts of the constraint *)
+val get_flags : t -> String.Set.t * String.Set.t
 
 (** A debugging function for printing the content of the upper bound array *)
 val print_constraints : var_bounds String.Map.t -> unit

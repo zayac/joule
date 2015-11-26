@@ -1,0 +1,5 @@
+x = true
+y = false
+
+$_p = {"frame": int}
+$_q = nil
