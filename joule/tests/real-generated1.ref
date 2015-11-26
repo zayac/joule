@@ -1,7 +1,7 @@
 f_power_power_double = false
-f_power_power_int = true
+f_power_power_int = false
 f_sum_sum_double = false
-f_sum_sum_int = true
+f_sum_sum_int = false
 
 $^f_power = (:"k": nil:)
 $^f_sum = (:"k": nil:)
@@ -10,4 +10,4 @@ $_power_int = nil
 $_sum_double = nil
 $_sum_int = nil
 $_union_power_double_power_int = (union nil nil)
-$_union_sum_int_sum_double = nil
+$_union_sum_int_sum_double = {"base": int}

@@ -1,0 +1,9 @@
+Solver
+
+1. Fix support of overrides in the solver
+2. Solver code refactoring
+3. Implement solver as a library
+
+Protocol
+1. Set negated Boolean flags in service interfaces by default
+2. Remove flow inheritance from cyclic networks
