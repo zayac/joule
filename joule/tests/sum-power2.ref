@@ -1,7 +1,7 @@
 a = false
 b = false
 f_power__1_power_double = false
-f_power__1_power_int = true
+f_power__1_power_int = false
 
 $^power = (:"k": nil:)
 $^sum = (:"k": nil, "result": {"p": double}:)

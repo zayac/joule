@@ -559,6 +559,12 @@ let set_left_choice_tail_var_constr depth constrs logic map v t =
               switch_map := Cnf.Map.add !switch_map ~key:bvar ~data:choice_term;
               switch_map := Cnf.Map.add !switch_map ~key:Cnf.(~-bvar) ~data:Term.none;
               cstrs := set_bound_exn (depth +1) !cstrs v (Cnf.Map.singleton logic (Term.reduce_switch !switch_map))
+              (*let cstrs' = ref (set_bound_exn (depth +1) !cstrs v (Cnf.Map.singleton logic (Term.reduce_switch !switch_map))) in*)
+              (*if not (String.Map.equal (Cnf.Map.equal Term.equal) !cstrs !cstrs') then*)
+              (*begin*)
+                (*cstrs := !cstrs';*)
+                (*print_endline "HELLO"*)
+              (*end*)
             end
           )
       | _ -> ()
@@ -916,8 +922,8 @@ let rec solve_senior depth constrs left right =
         let _ =
           match v' with
           | None -> ()
-          | Some s' ->
-            cstrs := set_right_record_tail_var_constr depth !cstrs logic_combined term_left r' s'
+          | Some s' -> ()
+            (*cstrs := set_right_record_tail_var_constr depth !cstrs logic_combined term_left r' s'*)
         in
         !cstrs
       end
@@ -1071,8 +1077,8 @@ let rec solve_senior depth constrs left right =
         let _ =
           match v with
           | None -> ()
-          | Some s ->
-            cstrs := set_left_choice_tail_var_constr depth !cstrs logic_combined r s term_right
+          | Some s -> ()
+            (*cstrs := set_left_choice_tail_var_constr depth !cstrs logic_combined r s term_right*)
         in
         !cstrs
       end

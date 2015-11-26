@@ -440,21 +440,36 @@ let rec to_wff bools term =
   | x -> x
 
 let flatten_map_of_switches map =
-  Cnf.Map.fold map ~init:Cnf.Map.empty
-    ~f:(fun ~key ~data acc ->
-      let logic = key in
-      match data with
-      | Switch s' ->
-        Cnf.Map.fold s' ~init:acc
-          ~f:(fun ~key ~data acc ->
-            if not Cnf.(is_false (key * logic)) then
-              Cnf.Map.add acc ~key:Cnf.(key * logic) ~data
-            else
-              acc
+  let map =
+    Cnf.Map.fold map ~init:Cnf.Map.empty
+      ~f:(fun ~key ~data acc ->
+        let logic = key in
+        match data with
+        | Switch s' ->
+          Cnf.Map.fold s' ~init:acc
+            ~f:(fun ~key ~data acc ->
+              if not Cnf.(is_false (key * logic)) then
+                Cnf.Map.add acc ~key:Cnf.(key * logic) ~data
+              else
+                acc
+            )
+        | _ ->
+          Cnf.Map.add acc ~key ~data
+      )
+  in
+  let reversed_map =
+    Cnf.Map.fold map ~init:Map.empty
+      ~f:(fun ~key ~data acc ->
+        Map.change acc data
+          (fun v ->
+             match v with
+             | None -> Some key
+             | Some logic -> Some Cnf.(key + logic)
           )
-      | _ ->
-        Cnf.Map.add acc ~key ~data
-    )
+      )
+  in
+  Map.fold reversed_map ~init:Cnf.Map.empty
+    ~f:(fun ~key ~data acc -> Cnf.Map.add acc ~key:data ~data:key)
 
 let reduce_switch s =
   if Int.(Cnf.Map.length s = 1) then
