@@ -12,7 +12,7 @@ private:
     int c;
 public:
     int b;
-    double f();
+    //double f();
     AClass(const AClass& cl) {}
     AClass() {
         a = 1;

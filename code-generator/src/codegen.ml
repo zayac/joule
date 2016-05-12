@@ -48,6 +48,12 @@ let rec get_method_type_from_term t =
       (*| Some (cnf, Nil) when Cnf.equal cnf Cnf.make_true -> Some ret, ""*)
       | _ -> raise (WrongFormat ("unexpected format of method body: " ^ (Term.to_string t)))
     end
+  | Choice (map, None) ->
+    begin
+      match String.Map.find map "\"code\"" with
+      | Some (cnf, Symbol s) when Cnf.equal cnf Cnf.make_true -> None, s
+      | _ -> raise (WrongFormat ("unexpected format of method body: " ^ (Term.to_string t)))
+    end
   | _ -> raise (WrongFormat ("unexpected format of method body: " ^ (Term.to_string t)))
 
 let method_to_string cl name t =

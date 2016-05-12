@@ -345,7 +345,7 @@ MyASTConsumer::MyASTConsumer(Rewriter &R) : HandlerForPrivateDecls(R, privateVar
     Matcher.addMatcher(accessSpecDecl().bind("accessSpecDecl"),
         &HandlerForPrivateDecls);
     /* private fields in constructor initializer list */
-    Matcher.addMatcher(constructorDecl(forEachConstructorInitializer(ctorInitializer(isWritten()).bind("ctorInitializer"))),
+    Matcher.addMatcher(cxxConstructorDecl(forEachConstructorInitializer(cxxCtorInitializer(isWritten()).bind("ctorInitializer"))),
         &HandlerForPrivateDecls);
 
     /* Function declarations/calls */

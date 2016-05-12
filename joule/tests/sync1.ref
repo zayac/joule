@@ -1,0 +1,6 @@
+p = false
+
+$^rest = none
+$_vdata = [int, int]
+$_wdata = nil
+$_z = nil

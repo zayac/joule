@@ -116,10 +116,10 @@ let constrs_to_graph_exn cstrs =
       (Constr.to_string c) (Node.to_string dest);
     g := G.add_edge_e !g vertex in
   List.iter ~f:add cstrs;
-  if not !env_in_found then
-    topo_error "The input of the network is not connected to the environment";
-  if not !env_out_found then
-    Log.logf "The output of the network is not connected to the environment";
+  (*if not !env_in_found then*)
+    (*topo_error "The input of the network is not connected to the environment";*)
+  (*if not !env_out_found then*)
+    (*Log.logf "The output of the network is not connected to the environment";*)
   Log.logf "merging nodes corresponding to the same set of vertices";
   g := merge_vertices !g;
   check_connectivity_exn !g;

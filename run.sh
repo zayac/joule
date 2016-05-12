@@ -1,7 +1,7 @@
 #!/bin/sh
 
-DERIVE_BIN=/Users/pzv/code/clang-llvm/llvm/build/bin/derive-terms
-TRANSFORM_COMP_BIN=/Users/pzv/code/clang-llvm/llvm/build/bin/transform-component
+DERIVE_BIN=/Users/pzv/code/clang-llvm/build/bin/derive-terms
+TRANSFORM_COMP_BIN=/Users/pzv/code/clang-llvm/build/bin/transform-component
 CONSTRAINT_GEN_BIN=./constraint-generator/main.native
 SOLVER=./joule/joule.native
 CODE_GENERATOR=./code-generator/main.native
@@ -28,7 +28,7 @@ clean_tool() {
     rm -f $dir/*.constraints $dir/*.solution
     rm -f $dir/*.json
     rm -f $dir/*CAL_FI_variables.h
-    #rm -f $dir/code-hash
+    rm -f $dir/code-hash
 }
 
 build_tool () {
@@ -52,9 +52,9 @@ build_tool () {
     for file in ${unique_files[@]}
     do
         echo "Transforming source file \"$file.cpp\"..."
-        test $TRANSFORM_COMP_BIN $dir/$file.cpp -- -stdlib=libc++ -std=c++11 -I/usr/local/include -I/usr/include -I/usr/local/Cellar/gcc/4.9.2_1/include/c++/4.9.2 -I/usr/local/Cellar/gcc/4.9.2_1/include/c++/4.9.2/x86_64-apple-darwin14.0.0
+        test $TRANSFORM_COMP_BIN $dir/$file.cpp -- -stdlib=libc++ -std=c++11 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/7.0.2/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/usr/include
         echo "Deriving interface from transformed source file \"$file.transformed.cpp\"..."
-        test $DERIVE_BIN $dir/$file.transformed.cpp -- -stdlib=libc++ -std=c++11 -I/usr/local/include -I/usr/include -I/usr/local/Cellar/gcc/4.9.2_1/include/c++/4.9.2 -I/usr/local/Cellar/gcc/4.9.2_1/include/c++/4.9.2/x86_64-apple-darwin14.0.0
+        test $DERIVE_BIN $dir/$file.transformed.cpp -- -stdlib=libc++ -std=c++11 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/7.0.2/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/usr/include
     done
     echo "Deriving constraints..."
     test $CONSTRAINT_GEN_BIN $filename
