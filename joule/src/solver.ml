@@ -606,6 +606,64 @@ let set_right_record_tail_var_constr depth constrs logic t map' v' =
     );
   !cstrs
 
+let substitute_record_tail depth constrs condition head tail =
+  let tail_values = bound_terms_exn depth constrs condition tail in
+  let substituted_values = ref Cnf.Map.empty in
+  let open Term in
+  Cnf.Map.iter tail_values
+    ~f:(fun ~key ~data ->
+      let logic = Cnf.(condition * key) in
+      let data =
+        match data with
+        | Nil -> Record (String.Map.empty, None)
+        | _ -> data
+      in
+      match data with
+      | Record (map, None) ->
+        begin
+          let opt = ref [logic, String.Map.empty] in
+          String.Map.iter2 head map
+            ~f:(fun ~key ~data ->
+              let condition = key in
+              match data with
+              | `Left el
+              | `Right el ->
+                opt :=
+                  List.map !opt
+                    ~f:(fun (l, map) ->
+                      l, String.Map.add map ~key ~data:el
+                    )
+              | `Both ((g, t), (g', t')) ->
+                begin
+                  let opt1 =
+                    List.map !opt
+                      ~f:(fun (l, map) ->
+                        Cnf.(l * ~-g'), String.Map.add map ~key ~data:(g, t)
+                      ) in
+                  let opt2 =
+                    List.map !opt
+                      ~f:(fun (l, map) ->
+                        Cnf.(l * ~-g), String.Map.add map ~key ~data:(g', t')
+                      ) in
+                  opt := opt1 @ opt2
+                end
+            );
+          match Cnf.Map.of_alist !opt with
+          | `Duplicate_key key ->
+            add_bool_constr (depth+1) Cnf.(condition ==> ~-key)
+          | `Ok map ->
+            substituted_values := Cnf.Map.merge !substituted_values map
+                                    ~f:(fun ~key -> function
+                                      | `Left x
+                                      | `Right x -> Some x
+                                      | `Both (x, y) ->
+                                        add_bool_constr (depth+1) Cnf.(condition ==> ~-key);
+                                        None
+                                    )
+        end
+      | _ -> ()
+    );
+  !substituted_values
 
 let rec solve_senior depth constrs left right =
   let logic_left, term_left = left in
@@ -818,33 +876,7 @@ let rec solve_senior depth constrs left right =
                               Cnf.(l * ~-g), String.Map.add map ~key ~data:(g', t')
                             ) in
                         opt := opt1 @ opt2;
-                        (* since term comparison can be done only for ground
-                           terms, we need to get ground values and for all pairs
-                           check whether the ground terms are equal.
-                           [b] --- body, [b'] --- variable *)
-                        let b = bound_terms_exn (depth+1) !cstrs Cnf.(logic * g * g') t in
-                        let b' = bound_terms_exn (depth+1) !cstrs Cnf.(logic * g * g') t' in
-                        let opt3 = ref [] in
-                        Cnf.Map.iter b
-                          ~f:(fun ~key ~data ->
-                            let gl, gt = key, data in
-                            Cnf.Map.iter b'
-                              ~f:(fun ~key ~data ->
-                                let gl', gt' = key, data in
-                                match Term.equivalent_exn gt' gt with
-                                | Some cnf ->
-                                  begin
-                                    let lst = List.map !opt
-                                                ~f:(fun (l, map) ->
-                                                  Cnf.(l * gl * gl' * cnf), String.Map.add map ~key:condition ~data:(Cnf.(g * g' * cnf), gt)
-                                                ) in
-                                    opt3 := !opt3 @ lst
-                                  end
-                                | None ->
-                                  add_bool_constr (depth+1) Cnf.(logic ==> ~-(gl * gl'))
-                              )
-                          );
-                        opt := !opt @ !opt3
+                        add_bool_constr (depth+1) Cnf.(logic ==> ~-(g * g'))
                       end
                   );
                 match Cnf.Map.of_alist !opt with
@@ -972,33 +1004,7 @@ let rec solve_senior depth constrs left right =
                               Cnf.(l * ~-g), String.Map.add map ~key ~data:(g', t')
                             ) in
                         opt := opt1 @ opt2;
-                        (* since term comparison can be done only for ground
-                           terms, we need to get ground values and for all pairs
-                           check whether the ground terms are equal.
-                            [b] --- body, [b'] --- variable *)
-                        let b = bound_terms_exn (depth+1) !cstrs Cnf.(logic * g * g') t in
-                        let b' = bound_terms_exn (depth+1) !cstrs Cnf.(logic * g * g') t' in
-                        let opt3 = ref [] in
-                        Cnf.Map.iter b
-                          ~f:(fun ~key ~data ->
-                            let gl, gt = key, data in
-                            Cnf.Map.iter b'
-                              ~f:(fun ~key ~data ->
-                                let gl', gt' = key, data in
-                                match Term.join gt' gt with
-                                | Some join_term ->
-                                  begin
-                                    let lst = List.map !opt
-                                                ~f:(fun (l, map) ->
-                                                  Cnf.(l * gl * gl'), String.Map.add map ~key:condition ~data:(Cnf.(g * g'), join_term)
-                                                ) in
-                                    opt3 := !opt3 @ lst
-                                  end
-                                | None ->
-                                  add_bool_constr (depth+1) Cnf.(logic ==> ~-(gl * gl'))
-                              )
-                          );
-                        opt := !opt @ !opt3
+                        add_bool_constr (depth+1) Cnf.(logic ==> ~-(g * g'))
                       end
                   );
                 match Cnf.Map.of_alist !opt with
