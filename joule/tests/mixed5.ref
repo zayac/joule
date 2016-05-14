@@ -1,0 +1,3 @@
+$^c = (:"code": abcd:)
+$_p = nil
+$_q = nil
