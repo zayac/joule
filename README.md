@@ -62,15 +62,15 @@ generate a header file that contains macro definitions for each value.  Given
 a header file, each service is compiled to a binary, which exposes its API to
 be used in a service-based application.
 
-<a name="ifm2016"></a>[1] Pavel Zaichenkov, Olga Tveretina, Alex Shafarenko:
+<a name="ifm2016">[1]</a> Pavel Zaichenkov, Olga Tveretina, Alex Shafarenko:
 A Constraint Satisfaction Method for Configuring Non-local Service Interfaces.
 IFM 2016: 474-488
 
-<a name="ifmcloud2016"></a>[2] Pavel Zaichenkov, Olga Tveretina, Alex
+<a name="ifmcloud2016">[2]</a> Pavel Zaichenkov, Olga Tveretina, Alex
 Shafarenko: Configuring Cloud-Service Interfaces Using Flow Inheritance.
 iFMCloud@IFM 2016: 27-34
 
-<a name="ppl208"></a>[3] Clemens Grelck, Sven-Bodo Scholz, Alexander V.
+<a name="ppl208">[3]</a> Clemens Grelck, Sven-Bodo Scholz, Alexander V.
 Shafarenko: A Gentle Introduction to S-Net: Typed Stream Processing and
 Declarative Coordination of Asynchronous Components. Parallel Processing
 Letters 18(2): 221-237 (2008)
