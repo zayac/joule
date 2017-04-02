@@ -72,7 +72,7 @@ IFM 2016: 474-488
 Shafarenko: Configuring Cloud-Service Interfaces Using Flow Inheritance.
 iFMCloud@IFM 2016: 27-34
 
-<a name="ppl208">[3]</a> Clemens Grelck, Sven-Bodo Scholz, Alexander V.
+<a name="ppl2008">[3]</a> Clemens Grelck, Sven-Bodo Scholz, Alexander V.
 Shafarenko: A Gentle Introduction to S-Net: Typed Stream Processing and
 Declarative Coordination of Asynchronous Components. Parallel Processing
 Letters 18(2): 221-237 (2008)
