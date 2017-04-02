@@ -62,6 +62,8 @@ generate a header file that contains macro definitions for each value.  Given
 a header file, each service is compiled to a binary, which exposes its API to
 be used in a service-based application.
 
+## References
+
 <a name="ifm2016">[1]</a> Pavel Zaichenkov, Olga Tveretina, Alex Shafarenko:
 A Constraint Satisfaction Method for Configuring Non-local Service Interfaces.
 IFM 2016: 474-488
