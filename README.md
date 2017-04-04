@@ -76,15 +76,18 @@ is illustrated in Ubuntu).
 
 ```shell
 # make sure that dependencies for the solver are installed
-$ apt-get install ocaml opam m4 libffi-dev picosat
+apt-get install ocaml opam m4 libffi-dev picosat
 # initialize the OCaml package manager
-$ opam init; eval `opam config env`
+opam init
+eval `opam config env`
 # install OCaml libraries that are required for compiling the solver
-$ opam install ocamlfind menhir comparelib core ctypes ctypes-foreign ocamlgraph sexplib
+opam install ocamlfind menhir comparelib core ctypes ctypes-foreign ocamlgraph sexplib
 # download sources and cd to the build directory
-$ git clone https://github.com/zayac/joule; cd joule/joule
+git clone https://github.com/zayac/joule
+cd joule/joule
 # configure the setup and build the solver
-$ ./configure; make
+./configure
+make
 ```
 
 ## References
