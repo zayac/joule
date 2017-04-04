@@ -64,6 +64,29 @@ generate a header file that contains macro definitions for each value.  Given
 a header file, each service is compiled to a binary, which exposes its API to
 be used in a service-based application.
 
+## Compiling the Solver
+
+The main contribution of this work is implementation of the solver that
+satisfies communication constraints for interfaces of a service-based
+application.  The solver is implemented in OCaml and uses
+[PicoSAT](http://fmv.jku.at/picosat/) for Boolean satisfiability.
+
+To build the solver, the following steps need to be perform (the build process
+is illustrated in Ubuntu).
+
+```shell
+# make sure that dependencies for the solver are installed
+$ apt-get install ocaml opam m4 libffi-dev picosat
+# initialize the OCaml package manager
+$ opam init; eval `opam config env`
+# install OCaml libraries that are required for compiling the solver
+$ opam install ocamlfind menhir comparelib core ctypes ctypes-foreign ocamlgraph sexplib
+# download sources and cd to the build directory
+$ git clone https://github.com/zayac/joule; cd joule/joule
+# configure the setup and build the solver
+$ ./configure; make
+```
+
 ## References
 
 <a name="ifm2016">[1]</a> Pavel Zaichenkov, Olga Tveretina, Alex Shafarenko:
